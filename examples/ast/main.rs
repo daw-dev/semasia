@@ -20,10 +20,10 @@ mod ast {
     #[non_terminal]
     type T = ExprNode;
 
-    #[token = ""]
+    #[token = r"\d+"]
     type Id = usize;
 
-    #[token = ""]
+    #[token = r"\+"]
     struct Plus;
 
     production!(P1, E -> (E, Plus, T), |(e, _, t)| ExprNode::BinExpr(Box::new(e), Operator::Plus, Box::new(t)));

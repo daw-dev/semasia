@@ -1,5 +1,5 @@
-pub mod token;
-pub mod non_terminal;
-pub mod production;
-pub mod symbol;
-pub mod expansion;
+pub mod grammar;
+pub mod lalr;
+pub mod parsing;
+
+pub use grammar::*;

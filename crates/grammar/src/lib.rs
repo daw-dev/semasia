@@ -1,8 +1,12 @@
+use dyn_grammar::{grammar::Grammar, non_terminal::NonTerminal, production::Production, token::Token};
 use itertools::Itertools;
 use proc_macro::TokenStream;
-use proc_macro_error::{emit_call_site_error, emit_error, emit_warning, proc_macro_error};
+use proc_macro_error::{emit_call_site_error, emit_call_site_warning, emit_error, proc_macro_error};
 use quote::quote;
-use syn::{Item, ItemMod, Meta, parse_macro_input, spanned::Spanned};
+use syn::{
+    Ident, Item, ItemEnum, ItemMod, ItemStruct, ItemType, Meta, Type, parse::Parse,
+    parse_macro_input, spanned::Spanned,
+};
 
 #[proc_macro_attribute]
 #[proc_macro_error]
@@ -16,72 +20,21 @@ pub fn grammar(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut tokens = Vec::new();
     let mut non_terminals = Vec::new();
     let mut productions = Vec::new();
-    let mut start_symbol = None;
+    let mut start_symbol: Option<usize> = None;
 
     for item in items.iter_mut() {
-        match item {
-            // Case A: It is a Struct (Potential Token or NonTerminal)
-            Item::Struct(s) => {
-                // Helper to check attributes (defined below)
-                if let Some(attr) = remove_attribute(&mut s.attrs, "token") {
-                    // It's a Token!
-                    tokens.push(s.ident.clone()); // Save the name (e.g., "Plus")
-                    eprintln!("Found Token: {}", s.ident);
-                } else if let Some(attr) = remove_attribute(&mut s.attrs, "non_terminal") {
-                    // It's a NonTerminal!
-                    non_terminals.push(s.ident.clone());
-                    eprintln!("Found NonTerminal: {}", s.ident);
+        if let Some(token) = extract_token(item) {
+            tokens.push(token);
+        } else if let Some((non_terminal, is_start)) = extract_non_terminal(item) {
+            if is_start {
+                if let Some(cur_start) = start_symbol {
+                    panic!("you can only declare one start symbol, found both {} and {}", non_terminals[cur_start], non_terminal);
                 }
+                start_symbol = Some(non_terminals.len());
             }
-
-            Item::Type(t) => {
-                if let Some(attr) = remove_attribute(&mut t.attrs, "token") {
-                    // It's a Token!
-                    tokens.push(t.ident.clone()); // Save the name (e.g., "Plus")
-                    eprintln!("Found Token: {}", t.ident);
-                } else if let Some(attr) = remove_attribute(&mut t.attrs, "non_terminal") {
-                    if let Some(start_attr) = remove_attribute(&mut t.attrs, "start_symbol") {
-                        if let Some(sym) = start_symbol {
-                            emit_error!(
-                                start_attr.span(),
-                                "only one start symbol is accepted, both {} and {} are declared as start symbol",
-                                sym,
-                                t.ident
-                            );
-                        }
-                        start_symbol = Some(t.ident.to_string());
-                    }
-                    // It's a NonTerminal!
-                    non_terminals.push(t.ident.clone());
-                    eprintln!("Found NonTerminal: {}", t.ident);
-                }
-            }
-
-            Item::Enum(e) => {
-                if let Some(attr) = remove_attribute(&mut e.attrs, "token") {
-                    // It's a Token!
-                    tokens.push(e.ident.clone()); // Save the name (e.g., "Plus")
-                    eprintln!("Found Token: {}", e.ident);
-                } else if let Some(attr) = remove_attribute(&mut e.attrs, "non_terminal") {
-                    // It's a NonTerminal!
-                    non_terminals.push(e.ident.clone());
-                    eprintln!("Found NonTerminal: {}", e.ident);
-                }
-            }
-
-            // Case B: It represents a Macro invocation (The production! calls)
-            Item::Macro(m) => {
-                if m.mac.path.is_ident("production") {
-                    // It's a production rule!
-                    // We will parse the body later.
-                    productions.push(m.clone());
-                    eprintln!("Found Production Macro");
-                }
-            }
-
-            _ => {
-                eprintln!("Something else found");
-            }
+            non_terminals.push(non_terminal);
+        } else if let Some(production) = extract_production(item) {
+            productions.push(production);
         }
     }
 
@@ -90,17 +43,18 @@ pub fn grammar(_attr: TokenStream, item: TokenStream) -> TokenStream {
             "every grammar has to have some non-terminals, tokens and productions. Found non-terminals: [{}], tokens: [{}], productions: [{}]",
             non_terminals.iter().format(","),
             tokens.iter().format(","),
-            productions.iter().map(|m| format!("{:?}", m.mac.path)).format(","),
+            productions.iter().format(","),
         );
     }
 
     if start_symbol.is_none() {
-        emit_warning!(
-            non_terminals[0].span(),
+        emit_call_site_warning!(
             "no start symbol was declared, using {}",
             non_terminals[0]
         );
     }
+
+    let grammar = Grammar::new(non_terminals, tokens, productions);
 
     quote! {
         #module
@@ -112,22 +66,133 @@ pub fn grammar(_attr: TokenStream, item: TokenStream) -> TokenStream {
     .into()
 }
 
-/// Checks if a list of attributes contains a specific identifier (e.g., #[token])
-fn remove_attribute(attrs: &mut Vec<syn::Attribute>, name: &str) -> Option<syn::Attribute> {
-    let index = attrs.iter().enumerate().find_map(|(i, attr)| {
-        // Parse the attribute meta to check its path
-        if let Meta::Path(path) = &attr.meta {
-            if path.is_ident(name) { Some(i) } else { None }
-        } else if let Meta::NameValue(name_value) = &attr.meta {
-            if name_value.path.is_ident(name) {
-                Some(i)
+fn extract_token(item: &mut Item) -> Option<Token> {
+    match item {
+        Item::Type(ItemType { attrs, ident, .. })
+        | Item::Struct(ItemStruct { attrs, ident, .. })
+        | Item::Enum(ItemEnum { attrs, ident, .. }) => {
+            if let Some(id) = attrs.iter().enumerate().find_map(|(i, attr)| {
+                if let Meta::NameValue(name_value) = &attr.meta {
+                    if name_value.path.is_ident("token") {
+                        return Some(i);
+                    }
+                }
+                None
+            }) {
+                let attr = attrs.remove(id);
+                let Meta::NameValue(name_value) = attr.meta else {
+                    unreachable!()
+                };
+                let syn::Expr::Lit(lit_value) = name_value.value else {
+                    emit_error!(
+                        ident.span(),
+                        "token attribute must define the corresponding regexpr, usage: #[token = \"\\d\"]"
+                    );
+                    panic!()
+                };
+                let syn::Lit::Str(lit_str_value) = lit_value.lit else {
+                    emit_error!(
+                        ident.span(),
+                        "token regexpr must be a string literal, usage: #[token = \"\\d\"]"
+                    );
+                    panic!()
+                };
+                Some(Token::new(ident.to_string(), lit_str_value.value()))
             } else {
                 None
             }
-        } else {
-            None
         }
-    });
+        _ => None,
+    }
+}
 
-    index.map(|i| attrs.remove(i))
+fn extract_non_terminal(item: &mut Item) -> Option<(NonTerminal, bool)> {
+    match item {
+        Item::Type(ItemType { attrs, ident, .. })
+        | Item::Struct(ItemStruct { attrs, ident, .. })
+        | Item::Enum(ItemEnum { attrs, ident, .. }) => {
+            if let Some(id) = attrs.iter().enumerate().find_map(|(i, attr)| {
+                if let Meta::Path(path) = &attr.meta {
+                    if path.is_ident("non_terminal") {
+                        return Some(i);
+                    }
+                }
+                None
+            }) {
+                attrs.remove(id);
+                let mut is_start = false;
+                if let Some(id) = attrs.iter().enumerate().find_map(|(i, attr)| {
+                    if let Meta::Path(path) = &attr.meta {
+                        if path.is_ident("start_symbol") {
+                            return Some(i);
+                        }
+                    }
+                    None
+                }) {
+                    attrs.remove(id);
+                    is_start = true;
+                }
+                Some((NonTerminal::new(ident.to_string()), is_start))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+fn extract_production(item: &mut Item) -> Option<Production> {
+    struct ProductionInternal {
+        name: Ident,
+        head: Ident,
+        body: Type,
+    }
+
+    impl Parse for ProductionInternal {
+        fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+            let name = input.parse()?;
+            input.parse::<syn::Token![,]>()?;
+            let head = input.parse()?;
+            input.parse::<syn::Token![->]>()?;
+            let body = input.parse()?;
+            input.parse::<syn::Token![,]>()?;
+            input.parse::<syn::Expr>()?;
+            Ok(ProductionInternal { name, head, body })
+        }
+    }
+
+    impl Into<Production> for ProductionInternal {
+        fn into(self) -> Production {
+            let name = self.name.to_string();
+            let head = self.head.to_string();
+            let body = match self.body {
+                Type::Path(type_path) => vec![type_path.path.get_ident().unwrap().to_string()],
+                Type::Tuple(type_tuple) => type_tuple
+                    .elems
+                    .iter()
+                    .map(|t| {
+                        let Type::Path(type_path) = t else {
+                            panic!("body of production has to be a tuple of named types")
+                        };
+                        type_path.path.get_ident().unwrap().to_string()
+                    })
+                    .collect(),
+                _ => panic!("type must be either a single type or a tuple"),
+            };
+
+            Production::new(name, head, body)
+        }
+    }
+
+    match item {
+        Item::Macro(mac) if mac.mac.path.is_ident("production") => {
+            let t = mac.mac.parse_body::<ProductionInternal>();
+            if let Ok(prod_internal) = t {
+                Some(prod_internal.into())
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
 }
