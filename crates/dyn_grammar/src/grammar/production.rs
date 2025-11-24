@@ -20,6 +20,10 @@ impl Production {
     pub fn name(&self) -> &String {
         &self.name
     }
+
+    pub fn arity(&self) -> usize {
+        self.body.len()
+    }
 }
 
 impl Display for Production {

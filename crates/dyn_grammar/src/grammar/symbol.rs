@@ -1,10 +1,10 @@
 use std::fmt::Display;
-use crate::{non_terminal::NonTerminal, token::Token};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Symbol {
-    NonTerminal(NonTerminal),
-    Token(Token),
+    NonTerminal(usize),
+    Token(usize),
+    EOF,
 }
 
 impl Display for Symbol {
@@ -12,6 +12,7 @@ impl Display for Symbol {
         match self {
             Symbol::Token(token) => write!(f, "`{}`", token),
             Symbol::NonTerminal(non_terminal) => write!(f, "{}", non_terminal),
+            Symbol::EOF => write!(f, "$"),
         }
     }
 }

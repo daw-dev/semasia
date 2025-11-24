@@ -1,10 +1,11 @@
 use std::hash::Hash;
 use crate::lalr::equation::SymbolicSet;
 
+#[derive(Clone)]
 pub struct LalrItem {
     production_name: String,
     marker_position: usize,
-    lookahead_set: SymbolicSet,
+    variable_id: usize,
 }
 
 impl Hash for LalrItem {
@@ -22,4 +23,10 @@ impl PartialEq for LalrItem {
 }
 
 impl Eq for LalrItem {}
+
+impl LalrItem {
+    pub fn new(production_name: String) -> Self {
+        todo!()
+    }
+}
 

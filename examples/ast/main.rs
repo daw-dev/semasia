@@ -24,7 +24,9 @@ mod ast {
     impl ExprNode {
         pub fn compute(self) -> usize {
             match self {
-                ExprNode::BinExpr(left, op, right) => op.compute_binary(left, right),
+                ExprNode::BinExpr(left, op, right) => {
+                    op.compute_binary(left.compute(), right.compute())
+                }
                 ExprNode::Value(v) => v,
             }
         }

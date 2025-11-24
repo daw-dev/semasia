@@ -1,7 +1,11 @@
-use dyn_grammar::{grammar::Grammar, non_terminal::NonTerminal, production::Production, token::Token};
+use dyn_grammar::{
+    grammar::Grammar, non_terminal::NonTerminal, production::Production, token::Token,
+};
 use itertools::Itertools;
 use proc_macro::TokenStream;
-use proc_macro_error::{emit_call_site_error, emit_call_site_warning, emit_error, proc_macro_error};
+use proc_macro_error::{
+    emit_call_site_error, emit_call_site_warning, emit_error, proc_macro_error,
+};
 use quote::quote;
 use syn::{
     Ident, Item, ItemEnum, ItemMod, ItemStruct, ItemType, Meta, Type, parse::Parse,
@@ -28,7 +32,10 @@ pub fn grammar(_attr: TokenStream, item: TokenStream) -> TokenStream {
         } else if let Some((non_terminal, is_start)) = extract_non_terminal(item) {
             if is_start {
                 if let Some(cur_start) = start_symbol {
-                    panic!("you can only declare one start symbol, found both {} and {}", non_terminals[cur_start], non_terminal);
+                    panic!(
+                        "you can only declare one start symbol, found both {} and {}",
+                        non_terminals[cur_start], non_terminal
+                    );
                 }
                 start_symbol = Some(non_terminals.len());
             }
@@ -47,14 +54,16 @@ pub fn grammar(_attr: TokenStream, item: TokenStream) -> TokenStream {
         );
     }
 
-    if start_symbol.is_none() {
-        emit_call_site_warning!(
-            "no start symbol was declared, using {}",
-            non_terminals[0]
-        );
-    }
+    let start_symbol = match start_symbol {
+        Some(start_symbol) => non_terminals[start_symbol].name().clone(),
+        None => {
+            emit_call_site_warning!("no start symbol was declared, using {}", non_terminals[0]);
+            non_terminals[0].name().clone()
+        }
+    };
 
-    let grammar = Grammar::new(non_terminals, tokens, productions);
+    let grammar = Grammar::new(non_terminals, tokens, productions, start_symbol);
+    // eprintln!("{grammar:?}");
 
     quote! {
         #module
@@ -72,10 +81,10 @@ fn extract_token(item: &mut Item) -> Option<Token> {
         | Item::Struct(ItemStruct { attrs, ident, .. })
         | Item::Enum(ItemEnum { attrs, ident, .. }) => {
             if let Some(id) = attrs.iter().enumerate().find_map(|(i, attr)| {
-                if let Meta::NameValue(name_value) = &attr.meta {
-                    if name_value.path.is_ident("token") {
-                        return Some(i);
-                    }
+                if let Meta::NameValue(name_value) = &attr.meta
+                    && name_value.path.is_ident("token")
+                {
+                    return Some(i);
                 }
                 None
             }) {
@@ -114,20 +123,20 @@ fn extract_non_terminal(item: &mut Item) -> Option<(NonTerminal, bool)> {
         | Item::Struct(ItemStruct { attrs, ident, .. })
         | Item::Enum(ItemEnum { attrs, ident, .. }) => {
             if let Some(id) = attrs.iter().enumerate().find_map(|(i, attr)| {
-                if let Meta::Path(path) = &attr.meta {
-                    if path.is_ident("non_terminal") {
-                        return Some(i);
-                    }
+                if let Meta::Path(path) = &attr.meta
+                    && path.is_ident("non_terminal")
+                {
+                    return Some(i);
                 }
                 None
             }) {
                 attrs.remove(id);
                 let mut is_start = false;
                 if let Some(id) = attrs.iter().enumerate().find_map(|(i, attr)| {
-                    if let Meta::Path(path) = &attr.meta {
-                        if path.is_ident("start_symbol") {
-                            return Some(i);
-                        }
+                    if let Meta::Path(path) = &attr.meta
+                        && path.is_ident("start_symbol")
+                    {
+                        return Some(i);
                     }
                     None
                 }) {
@@ -163,11 +172,11 @@ fn extract_production(item: &mut Item) -> Option<Production> {
         }
     }
 
-    impl Into<Production> for ProductionInternal {
-        fn into(self) -> Production {
-            let name = self.name.to_string();
-            let head = self.head.to_string();
-            let body = match self.body {
+    impl From<ProductionInternal> for Production {
+        fn from(value: ProductionInternal) -> Self {
+            let name = value.name.to_string();
+            let head = value.head.to_string();
+            let body = match value.body {
                 Type::Path(type_path) => vec![type_path.path.get_ident().unwrap().to_string()],
                 Type::Tuple(type_tuple) => type_tuple
                     .elems

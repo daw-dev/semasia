@@ -1,4 +1,4 @@
 mod item;
 mod equation;
-mod atutomaton;
+mod automaton;
 

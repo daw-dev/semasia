@@ -13,7 +13,7 @@ mod addition_grammar {
     // #[start_symbol]
     pub type T = f32;
 
-    #[token = r"\d+(\.\d*)?"]
+    #[token = r"\d+(\.\d+)?"]
     pub type Id = f32;
 
     #[token = "+"]
