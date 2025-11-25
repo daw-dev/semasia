@@ -37,7 +37,7 @@ impl SlrItem {
     pub fn display(&self, grammar: &Grammar) {
         let production = grammar.get_production_from_id(self.production_id).unwrap();
         let (first, second) = production.body().split_at(self.marker_position);
-        print!(
+        eprint!(
             "{}->({}) ",
             production.head(),
             first

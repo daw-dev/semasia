@@ -43,11 +43,11 @@ impl SlrState {
     }
 
     fn display(&self, grammar: &Grammar) {
-        print!("{{");
+        eprint!("{{");
         for item in self.kernel.iter() {
             item.display(grammar);
         }
-        println!("}}");
+        eprintln!("}}");
     }
 }
 
@@ -74,7 +74,7 @@ impl SlrAutomaton {
         self.add_state(first_state);
 
         while let Some(state) = self.states.iter_mut().find(|state| !state.marked) {
-            println!("current state:");
+            eprintln!("current state:");
             state.display(grammar);
             state.marked = true;
             let closure = state.closure(grammar);
@@ -110,7 +110,7 @@ impl SlrAutomaton {
             for (label, target_state) in transitions.iter().enumerate().filter_map(|(i, target)| {
                 target.map(|target| (grammar.get_symbol_name_from_id(i), &self.states[target]))
             }) {
-                print!("{label}: ");
+                eprint!("{label}: ");
                 target_state.display(grammar);
             }
             self.add_transitions(transitions);
@@ -127,20 +127,20 @@ impl SlrAutomaton {
 
     pub fn display_table(&self, grammar: &Grammar) {
         const COL_WIDTH: usize = 10;
-        print!("{}", " ".repeat(COL_WIDTH));
+        eprint!("{}", " ".repeat(COL_WIDTH));
         for sym in (0..grammar.symbols_count()).map(|i| grammar.get_symbol_name_from_id(i)) {
-            print!("{sym:^width$}", width = COL_WIDTH);
+            eprint!("{sym:^width$}", width = COL_WIDTH);
         }
-        println!();
+        eprintln!();
         for (row_i, row) in self.transitions.iter().enumerate() {
-            print!("{row_i:^width$}", width = COL_WIDTH);
+            eprint!("{row_i:^width$}", width = COL_WIDTH);
             for target_state in row.iter() {
                 match target_state {
-                    Some(id) => print!("{id:^width$}", width = COL_WIDTH),
-                    None => print!("{}", " ".repeat(COL_WIDTH)),
+                    Some(id) => eprint!("{id:^width$}", width = COL_WIDTH),
+                    None => eprint!("{}", " ".repeat(COL_WIDTH)),
                 }
             }
-            println!();
+            eprintln!();
         }
     }
 }

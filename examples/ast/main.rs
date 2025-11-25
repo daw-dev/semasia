@@ -4,28 +4,16 @@ use static_sdd::*;
 mod ast {
     use super::*;
 
-    enum Operator {
-        Plus,
-    }
-
-    impl Operator {
-        fn compute_binary(self, left: usize, right: usize) -> usize {
-            match self {
-                Operator::Plus => left + right,
-            }
-        }
-    }
-
     enum ExprNode {
-        BinExpr(Box<ExprNode>, Operator, Box<ExprNode>),
+        Plus(Box<ExprNode>, Box<ExprNode>),
         Value(usize),
     }
 
     impl ExprNode {
         pub fn compute(self) -> usize {
             match self {
-                ExprNode::BinExpr(left, op, right) => {
-                    op.compute_binary(left.compute(), right.compute())
+                ExprNode::Plus(left, right) => {
+                    left.compute() + right.compute()
                 }
                 ExprNode::Value(v) => v,
             }
@@ -45,7 +33,7 @@ mod ast {
     #[token = r"\+"]
     struct Plus;
 
-    production!(P1, E -> (E, Plus, T), |(e, _, t)| ExprNode::BinExpr(Box::new(e), Operator::Plus, Box::new(t)));
+    production!(P1, E -> (E, Plus, T), |(e, _, t)| ExprNode::Plus(Box::new(e), Box::new(t)));
 
     production!(P2, E -> T, |t| t);
 
