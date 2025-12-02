@@ -20,4 +20,17 @@ macro_rules! production {
             }
         }
     };
+    ($name:ident, $driver:ident -> $body:ty) => {
+        #[doc = concat!("Production: `", stringify!($driver), " -> ", stringify!($body), "`")]
+        struct $name;
+
+        impl static_sdd::Production for $name {
+            type Driver = $driver;
+            type Body = $body;
+
+            fn synthesize(body: Self::Body) -> Self::Driver {
+                body.into()
+            }
+        }
+    };
 }
