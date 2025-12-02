@@ -14,6 +14,12 @@ mod sat {
         ImpliedBy(Box<Formula>, Box<Formula>),
     }
 
+    impl From<(Not, Formula)> for Formula {
+        fn from((_, f): (Not, Formula)) -> Self {
+            Formula::Negation(Box::new(f))
+        }
+    }
+
     #[non_terminal]
     #[start_symbol]
     pub type I = Formula;
@@ -62,7 +68,7 @@ mod sat {
     production!(P6, D -> C);
     production!(P7, C -> (C, And, N), |(c, _, n)| Formula::Conjunction(Box::new(c), Box::new(n)));
     production!(P8, C -> N);
-    production!(P9, N -> (Not, I), |(_, i)| Formula::Negation(Box::new(i)));
+    production!(P9, N -> (Not, I));
     production!(P10, N -> Atom, |a| Formula::Atom(a));
     production!(P11, N -> (OpenPar, I, ClosePar), |(_, i, _)| i);
 }
