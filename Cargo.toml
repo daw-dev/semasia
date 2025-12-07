@@ -10,6 +10,7 @@ members = ["crates/*"]
 [dependencies]
 grammar = { path = "crates/grammar" }
 production = { path = "crates/production" }
+inherited = { path = "crates/inherited" }
 
 [[example]]
 name = "addition"
@@ -30,3 +31,11 @@ path = "./examples/generic_addition/main.rs"
 [[example]]
 name = "sat"
 path = "./examples/sat/main.rs"
+
+[[example]]
+name = "ambiguous"
+path = "./examples/ambiguous/main.rs"
+
+[[example]]
+name = "array_type"
+path = "./examples/array_type/main.rs"
