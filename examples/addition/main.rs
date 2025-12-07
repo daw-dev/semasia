@@ -27,5 +27,5 @@ mod addition_grammar {
 }
 
 fn main() {
-    parse();
+    addition_grammar::parse("Hello World!");
 }

@@ -68,5 +68,5 @@ fn array_test() {
 }
 
 fn main() {
-    parse();
+    arrays::parse("int[2][3]");
 }

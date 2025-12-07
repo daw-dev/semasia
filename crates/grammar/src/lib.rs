@@ -9,8 +9,7 @@ use proc_macro_error::{
 };
 use quote::quote;
 use syn::{
-    Ident, Item, ItemEnum, ItemMod, ItemStruct, ItemType, Meta, Type, parse::Parse,
-    parse_macro_input, spanned::Spanned,
+    parse::Parse, parse_macro_input, parse_quote, spanned::Spanned, Ident, Item, ItemEnum, ItemMod, ItemStruct, ItemType, Meta, Type
 };
 
 #[proc_macro_attribute]
@@ -68,14 +67,15 @@ pub fn grammar(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let automaton = SlrAutomaton::compute(&grammar);
     automaton.display_table(&grammar);
 
-    quote! {
-        #module
-
-        pub fn parse() {
-            println!("Hello World!");
+    let parse_fn = parse_quote! {
+        pub fn parse(word: impl Into<String>) {
+            println!("{}", word.into());
         }
-    }
-    .into()
+    };
+
+    items.push(parse_fn);
+
+    quote! { #module }.into()
 }
 
 fn extract_token(item: &mut Item) -> Option<Token> {

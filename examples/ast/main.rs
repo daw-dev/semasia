@@ -4,7 +4,7 @@ use static_sdd::*;
 mod ast {
     use super::*;
 
-    enum ExprNode {
+    pub enum ExprNode {
         Plus(Box<ExprNode>, Box<ExprNode>),
         Value(usize),
     }
@@ -22,16 +22,16 @@ mod ast {
 
     #[non_terminal]
     #[start_symbol]
-    type E = ExprNode;
+    pub type E = ExprNode;
 
     #[non_terminal]
-    type T = ExprNode;
+    pub type T = ExprNode;
 
     #[token = r"\d+"]
-    type Id = usize;
+    pub type Id = usize;
 
     #[token = r"\+"]
-    struct Plus;
+    pub struct Plus;
 
     production!(P1, E -> (E, Plus, T), |(e, _, t)| ExprNode::Plus(Box::new(e), Box::new(t)));
 
@@ -41,5 +41,5 @@ mod ast {
 }
 
 fn main() {
-    parse();
+    ast::parse("1+2+3");
 }

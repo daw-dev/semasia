@@ -60,5 +60,5 @@ mod ambiguous {
 }
 
 fn main() {
-    parse();
+    ambiguous::parse("Hello World!");
 }

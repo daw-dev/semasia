@@ -74,5 +74,5 @@ mod sat {
 }
 
 fn main() {
-    todo!();
+    sat::parse("a|b&c->d->e&f");
 }

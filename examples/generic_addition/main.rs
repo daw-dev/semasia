@@ -26,5 +26,5 @@ mod addition_grammar {
 }
 
 fn main() {
-    parse();
+    addition_grammar::parse("1.38+4.12+6");
 }

@@ -5,14 +5,14 @@ mod balanced {
     use super::*;
 
     #[token = "a"]
-    struct A;
+    pub struct A;
 
     #[token = "b"]
-    struct B;
+    pub struct B;
 
     #[non_terminal]
     #[start_symbol]
-    struct S {
+    pub struct S {
         count: usize,
     }
 
@@ -22,5 +22,5 @@ mod balanced {
 }
 
 fn main() {
-    parse();
+    balanced::parse("aaabbb");
 }
