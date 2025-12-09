@@ -58,6 +58,27 @@ impl<T: 'static> Inherited<T> {
         res
     }
 
+    pub fn inherit_multiple(other_inheriteds: impl IntoIterator<Item = Self> + 'static) -> Self
+    where
+        T: Clone,
+    {
+        let res = Self::new();
+        let my_state = res.state.clone();
+
+        res.register_callback(move || {
+            let val = my_state
+                .borrow_mut()
+                .value
+                .take()
+                .expect("The value was already moved, consider using inherit_cloned");
+
+            other_inheriteds
+                .into_iter()
+                .for_each(|mut inh| inh.set(val.clone()));
+        });
+        res
+    }
+
     pub fn inherit_cloned(mut other_promise: Self) -> Self
     where
         T: Clone,
@@ -425,7 +446,7 @@ impl<T: 'static, U: 'static> State<T, U> {
         todo!()
     }
 
-    fn hop_map<F>(mapper: F) -> Self
+    fn base_map<F>(mapper: F) -> Self
     where
         F: FnOnce(T) -> U + 'static,
     {
@@ -445,15 +466,44 @@ impl<T: 'static, U: 'static> State<T, U> {
 }
 
 impl<T: 'static> State<T, T> {
-    fn hop() -> Self {
-        Self::hop_map(|t| t)
+    fn base() -> Self {
+        Self::base_map(|t| t)
     }
 }
 
-pub struct Inherited2<T> {
-    internal: State<T>,
+pub struct InheritOnce<T, U = T> {
+    state: State<T, U>,
 }
 
-pub struct Deferred2<T> {
-    internal: State<T>,
+impl<T: 'static, U: 'static> InheritOnce<T, U> {
+    pub fn inherit<F, G>(other_inherited: Self, pass_down_mapper: F, pass_up_mapper: G) -> Self
+    where
+        F: FnOnce(T) -> T + 'static,
+        G: FnOnce(U) -> U + 'static,
+    {
+        Self {
+            state: State::Internal(Internal {
+                pass_down: PassDown {
+                    next_step: Box::new(other_inherited.state),
+                    mapper: Box::new(pass_down_mapper),
+                },
+                pass_up: PassUp {
+                    mapper: Box::new(pass_up_mapper),
+                },
+            }),
+        }
+    }
+
+    pub fn into_set(self, value: T) -> U {
+        self.state.into_set(value)
+    }
+
+    pub fn base_map<F>(mapper: F) -> Self
+    where
+        F: FnOnce(T) -> U + 'static,
+    {
+        Self {
+            state: State::base_map(mapper),
+        }
+    }
 }

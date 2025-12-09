@@ -13,7 +13,7 @@ mod ambiguous {
 
     #[token = "+"]
     pub struct Plus;
-    
+
     #[token = "-"]
     pub struct Minus;
 

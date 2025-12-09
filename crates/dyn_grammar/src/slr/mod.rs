@@ -1,3 +1,2 @@
-mod item;
 pub mod automaton;
-
+mod item;

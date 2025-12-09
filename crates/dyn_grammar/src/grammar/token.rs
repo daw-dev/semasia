@@ -8,10 +8,7 @@ pub struct Token {
 
 impl Token {
     pub fn new(name: String, regexpr: String) -> Self {
-        Self {
-            name,
-            regexpr,
-        }
+        Self { name, regexpr }
     }
 
     pub fn name(&self) -> &String {

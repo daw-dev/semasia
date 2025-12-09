@@ -1,5 +1,5 @@
 pub mod grammar;
-pub mod slr;
 pub mod parsing;
+pub mod slr;
 
 pub use grammar::*;

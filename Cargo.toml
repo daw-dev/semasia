@@ -37,5 +37,9 @@ name = "ambiguous-expressions"
 path = "./examples/ambiguous/expressions/main.rs"
 
 [[example]]
-name = "array_type"
-path = "./examples/array_type/main.rs"
+name = "array-typing"
+path = "./examples/inheritance/array-typing/main.rs"
+
+[[example]]
+name = "correct-operator"
+path = "./examples/inheritance/correct-operator/main.rs"

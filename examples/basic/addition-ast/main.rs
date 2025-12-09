@@ -12,9 +12,7 @@ mod ast {
     impl ExprNode {
         pub fn compute(self) -> usize {
             match self {
-                ExprNode::Plus(left, right) => {
-                    left.compute() + right.compute()
-                }
+                ExprNode::Plus(left, right) => left.compute() + right.compute(),
                 ExprNode::Value(v) => v,
             }
         }

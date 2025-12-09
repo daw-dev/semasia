@@ -15,13 +15,10 @@ mod arrays {
     pub type T = ComputedType;
 
     #[non_terminal]
-    pub struct C {
-        base_type: Inherited<String>,
-        computed_type: Deferred<ComputedType>,
-    }
+    pub type Computed = InheritOnce<String, ComputedType>;
 
     #[token = "int|float"]
-    pub type B = String;
+    pub type Base = String;
 
     #[token = "["]
     pub struct LeftSquarePar;
@@ -32,33 +29,24 @@ mod arrays {
     #[token = r"\d+"]
     pub type Size = usize;
 
-    production!(P1, T -> (B, C), |(b, mut c)| {
-        c.base_type.set(b);
-        c.computed_type.unwrap()
-    });
+    production!(P1, T -> (Base, Computed), |(b, c)| c.into_set(b));
 
-    production!(P2, C -> (LeftSquarePar, Size, RightSquarePar, C), |(_, size, _, c)| {
-        C {
-            base_type: Inherited::inherit(c.base_type),
-            computed_type: c.computed_type.map(move |t| ComputedType::Array(size, Box::new(t))),
-        }
-    });
+    production!(P2, Computed -> (LeftSquarePar, Size, RightSquarePar, Computed), |(_, size, _, c)|
+        InheritOnce::inherit(
+            c,
+            |t| t,
+            move |t| ComputedType::Array(size, Box::new(t)),
+        )
+    );
 
-    production!(P3, C -> (), |_| {
-        let (from, into) = Inherited::channel_map(ComputedType::BaseType);
-
-        C {
-            base_type: from,
-            computed_type: into,
-        }
-    });
+    production!(P3, Computed -> (), |_| InheritOnce::base_map(ComputedType::BaseType));
 }
 
 #[test]
 fn array_test() {
     use arrays::*;
 
-    let base_type = B::from("int");
+    let base_type = Base::from("int");
     let c3 = P3::synthesize(());
     let c2 = P2::synthesize((LeftSquarePar, 3, RightSquarePar, c3));
     let c1 = P2::synthesize((LeftSquarePar, 2, RightSquarePar, c2));

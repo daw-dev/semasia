@@ -7,9 +7,7 @@ pub struct NonTerminal {
 
 impl NonTerminal {
     pub fn new(name: String) -> Self {
-        Self {
-            name,
-        }
+        Self { name }
     }
 
     pub fn name(&self) -> &String {
