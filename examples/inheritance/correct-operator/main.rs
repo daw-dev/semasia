@@ -54,7 +54,7 @@ mod division {
     #[non_terminal]
     pub struct Expr {
         use_decimal: bool,
-        pub decimal: InheritOnce<bool, (bool, Number)>,
+        pub decimal: Pipe<bool, (bool, Number)>,
     }
 
     #[non_terminal]
@@ -72,12 +72,12 @@ mod division {
     #[token = r"/"]
     pub struct Division;
 
-    production!(P0, S -> Expr, |e| e.decimal.resolve(e.use_decimal).1);
+    production!(P0, S -> Expr, |e| e.decimal.supply(e.use_decimal).1);
 
     production!(P1, Expr -> (Expr, Times, Term), |(e, _, t)| {
         Expr {
             use_decimal: e.use_decimal || t.is_decimal(),
-            decimal: e.decimal.pass_up_with(move |(use_decimal, e_result)| {
+            decimal: e.decimal.map_out(move |(use_decimal, e_result)| {
                 (
                     use_decimal,
                     if use_decimal {
@@ -93,7 +93,7 @@ mod division {
     production!(P11, Expr -> (Expr, Division, Term), |(e, _, t)| {
         Expr {
             use_decimal: e.use_decimal || t.is_decimal(),
-            decimal: e.decimal.pass_up_with(move |(use_decimal, e_result)| {
+            decimal: e.decimal.map_out(move |(use_decimal, e_result)| {
                 let t = if use_decimal {
                     t.cast_to_decimal()
                 } else {
@@ -113,7 +113,7 @@ mod division {
 
     production!(P2, Expr -> Term, |t| Expr {
         use_decimal: t.is_decimal(),
-        decimal: InheritOnce::base_map(|use_decimal| (
+        decimal: Pipe::new(|use_decimal| (
             use_decimal,
             if use_decimal {
                 t.cast_to_decimal()
