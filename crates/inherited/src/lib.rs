@@ -299,11 +299,11 @@ pub trait PassDown<TPrime = Self> {
     fn pass_down(self) -> TPrime;
 }
 
-pub trait PassUp<U> {
+pub trait PassUp<U = Self> {
     fn pass_up(self) -> U;
 }
 
-pub struct InheritOnce<T, U = T> {
+pub struct InheritOnce<T, U> {
     mapper: Box<dyn FnOnce(T) -> U>,
 }
 
