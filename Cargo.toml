@@ -10,7 +10,7 @@ members = ["crates/*"]
 [dependencies]
 grammar = { path = "crates/grammar" }
 production = { path = "crates/production" }
-inherited = { path = "crates/inherited" }
+pipe = { path = "crates/pipe" }
 
 [[example]]
 name = "basic-addition"
