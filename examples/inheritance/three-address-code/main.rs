@@ -16,6 +16,7 @@ mod compiler {
     #[start_symbol]
     pub type P = Code;
 
+    #[derive(Clone)]
     pub struct SNext {
         label: String,
     }
@@ -68,13 +69,9 @@ mod compiler {
     );
 
     production!(P2, S -> (If, B, S), |(_, b, s)| {
-        let s_next = Rc::new(RefCell::new(None));
-        let s_next_clone = s_next.clone();
-        s.inspect_in(move |s_next| {
-            *s_next_clone.borrow_mut() = Some(s_next.label.clone());
-        }).map_out(move |s_code| {
+        s.passthrough().map_out(move |(s_next, s_code)| {
             let mut res = b.supply(BLabels {
-                    t: new_label(), f: Rc::try_unwrap(s_next).unwrap().into_inner().unwrap()
+                    t: new_label(), f: s_next.label
                 });
             res.lines.extend(s_code.lines);
             res

@@ -49,9 +49,26 @@ impl<In: 'static, Out: 'static> Pipe<In, Out> {
         Pipe::new(|t| mapper(self.supply(t)))
     }
 
-    pub fn chain<NewOut, F>(self, next: Pipe<Out, NewOut>) -> Pipe<In, NewOut>
+    pub fn map_out_with_in<G>(self, mapper: G) -> Pipe<In, Out>
     where
-        NewOut: 'static,
+        In: Clone,
+        G: FnOnce(In, Out) -> Out + 'static,
+    {
+        Pipe::new(|input: In| {
+            let input_clone = input.clone();
+            mapper(input_clone, self.supply(input))
+        })
+    }
+
+    pub fn passthrough(self) -> Pipe<In, (In, Out)>
+    where In: Clone,
+    {
+        Pipe::new(|input: In| (input.clone(), self.supply(input)))
+    }
+
+    pub fn chain<Final>(self, next: Pipe<Out, Final>) -> Pipe<In, Final>
+    where
+        Final: 'static,
     {
         Pipe::new(|input| next.supply(self.supply(input)))
     }

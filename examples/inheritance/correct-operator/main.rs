@@ -54,7 +54,7 @@ mod division {
     #[non_terminal]
     pub struct Expr {
         use_decimal: bool,
-        pub decimal: Pipe<bool, (bool, Number)>,
+        decimal: Pipe<bool, Number>,
     }
 
     #[non_terminal]
@@ -72,20 +72,17 @@ mod division {
     #[token = r"/"]
     pub struct Division;
 
-    production!(P0, S -> Expr, |e| e.decimal.supply(e.use_decimal).1);
+    production!(P0, S -> Expr, |e| e.decimal.supply(e.use_decimal));
 
     production!(P1, Expr -> (Expr, Times, Term), |(e, _, t)| {
         Expr {
             use_decimal: e.use_decimal || t.is_decimal(),
-            decimal: e.decimal.map_out(move |(use_decimal, e_result)| {
-                (
-                    use_decimal,
-                    if use_decimal {
-                        Number::Decimal(e_result.unwrap_decimal() * t.unwrap_decimal())
-                    } else {
-                        Number::Integer(e_result.unwrap_integer() * t.unwrap_integer())
-                    }
-                )
+            decimal: e.decimal.passthrough().map_out(move |(use_decimal, e_result)| {
+                if use_decimal {
+                    Number::Decimal(e_result.unwrap_decimal() * t.unwrap_decimal())
+                } else {
+                    Number::Integer(e_result.unwrap_integer() * t.unwrap_integer())
+                }
             })
         }
     });
@@ -93,34 +90,30 @@ mod division {
     production!(P11, Expr -> (Expr, Division, Term), |(e, _, t)| {
         Expr {
             use_decimal: e.use_decimal || t.is_decimal(),
-            decimal: e.decimal.map_out(move |(use_decimal, e_result)| {
+            decimal: e.decimal.passthrough().map_out(move |(use_decimal, e_result)| {
                 let t = if use_decimal {
                     t.cast_to_decimal()
                 } else {
                     t.assert_integer()
                 };
-                (
-                    use_decimal,
-                    if use_decimal {
-                        Number::Decimal(e_result.unwrap_decimal() / t.unwrap_decimal())
-                    } else {
-                        Number::Integer(e_result.unwrap_integer() / t.unwrap_integer())
-                    }
-                )
+                if use_decimal {
+                    Number::Decimal(e_result.unwrap_decimal() / t.unwrap_decimal())
+                } else {
+                    Number::Integer(e_result.unwrap_integer() / t.unwrap_integer())
+                }
             })
         }
     });
 
     production!(P2, Expr -> Term, |t| Expr {
         use_decimal: t.is_decimal(),
-        decimal: Pipe::new(|use_decimal| (
-            use_decimal,
+        decimal: Pipe::new(|use_decimal|
             if use_decimal {
                 t.cast_to_decimal()
             } else {
                 t.assert_integer()
             }
-        ))
+        )
     });
 
     production!(P3, Term -> Integer, |i| Number::Integer(i));
@@ -131,16 +124,16 @@ mod division {
 fn integer_test() {
     use division::*;
 
-    let (i1, op1, i2, op2, i3) = (5, Times, 3, Times, 4);
+    let (i1, op1, i2, op2, i3) = (5, Division, 2, Times, 1);
     let t1 = P3::synthesize(i1);
     let e1 = P2::synthesize(t1);
     let t2 = P3::synthesize(i2);
-    let e12 = P1::synthesize((e1, op1, t2));
+    let e12 = P11::synthesize((e1, op1, t2));
     let t3 = P3::synthesize(i3);
     let e123 = P1::synthesize((e12, op2, t3));
     let res = P0::synthesize(e123);
 
-    assert_eq!(res, Number::Integer(60));
+    assert_eq!(res, Number::Integer(2));
 }
 
 #[test]
@@ -159,4 +152,6 @@ fn decimal_test() {
     assert_eq!(res, Number::Decimal(2.5));
 }
 
-fn main() {}
+fn main() {
+    division::parse("5/2*1.0");
+}
