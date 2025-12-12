@@ -67,7 +67,7 @@ impl<Inh: 'static, Syn: 'static> FromInherited<Inh, Syn> {
         FromInherited::new(|input| next.resolve(self.resolve(input)))
     }
 
-    pub fn join<OtherInh, OtherSyn>(
+    pub fn zip<OtherInh, OtherSyn>(
         self,
         other: FromInherited<OtherInh, OtherSyn>,
     ) -> FromInherited<(Inh, OtherInh), (Syn, OtherSyn)>
@@ -78,7 +78,10 @@ impl<Inh: 'static, Syn: 'static> FromInherited<Inh, Syn> {
         FromInherited::new(|(t, t1)| (self.resolve(t), other.resolve(t1)))
     }
 
-    pub fn split<OtherSyn>(self, other: FromInherited<Inh, OtherSyn>) -> FromInherited<Inh, (Syn, OtherSyn)>
+    pub fn split<OtherSyn>(
+        self,
+        other: FromInherited<Inh, OtherSyn>,
+    ) -> FromInherited<Inh, (Syn, OtherSyn)>
     where
         Inh: Clone,
         OtherSyn: 'static,

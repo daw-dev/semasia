@@ -76,6 +76,8 @@ mod compiler {
             res
         })
     });
+
+    production!(P3, S -> Skip, |_| FromInherited::new(|next: SNext| Code { lines: vec![Statement::Label(next.label)] }));
 }
 
 fn main() {
