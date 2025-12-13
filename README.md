@@ -47,6 +47,11 @@ What follows is a small comparison with tools that are in different ways similar
 
 ### Rust Parser Generators
 
+The following are rust parser generators - same category as this tool - so they all have some features in common:
+
+- bottom up parsing
+- semantic actions are called during parsing
+
 | Feature                | This Tool                                                  | LALRPOP                              | grmtools (lrpar)                          | Pomelo                           |
 |------------------------|------------------------------------------------------------|--------------------------------------|-------------------------------------------|----------------------------------|
 | Philosophy             | Use rust type system and module system to define a grammar | Rust version of bison                | Bison-compatible parser generator in rust | Rust version of lemon            |
@@ -59,4 +64,15 @@ What follows is a small comparison with tools that are in different ways similar
 | Error recovery         | Expressive errors and suggestions                          | !token / Recovery                    | Advanced (CPCT+)                          | No (panic!)                      |
 | Grammar Definition     | Attributes inside a normal rust module, production! macro  | .lalrpop file with custom syntax     | .y file with Yacc syntax (mostly)         | pomelo! macro with custom syntax |
 | IDE Support            | Works with rust-analyzer                                   | Custom LSP                           | Yacc LSP                                  | Very limited                     |
+
+### Foreign Parser Generators
+
+The following are also parser generators, but they have a different target language, the features will be similar to the ones above
+
+
+
+### Other parsers (mostly Parser Combinators)
+
+The following are not parser generators, but they still parse, so even if the goal is slightly similar, some takeaways can be taken by looking into these:
+
 
