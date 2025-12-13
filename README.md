@@ -69,7 +69,15 @@ The following are rust parser generators - same category as this tool - so they 
 
 The following are also parser generators, but they have a different target language, the features will be similar to the ones above
 
-
+| Feature                | Bison                            | ANTLR4                                | Menhir                               |
+|------------------------|----------------------------------|---------------------------------------|--------------------------------------|
+| Target Language        | C/C++                            | C++/C#/Java/js/PHP/Python/Swift/TS/GO | OCaml                                |
+| Algorithm              | LALR(1)/GLR                      | Adaptive LL(*)                        | LR(1)                                |
+| Execution Time         | Ahead of time (generates C code) | Ahead of time (generates code)        | Ahead of time (generates OCaml code) |
+| Lexing                 | External (flex)                  | Internal                              | External                             |
+| Synthesized Attributes | Yes ($$)                         | Yes                                   | Yes                                  |
+| Inherited Attributes   | Yes (through mid-rule actions)   | Yes (discouraged)                     | Not really                           |
+| Zero-Copy              | No                               | No                                    | No                                   |
 
 ### Other parsers (mostly Parser Combinators)
 
