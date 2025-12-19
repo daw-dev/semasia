@@ -9,7 +9,8 @@ use proc_macro_error::{
 };
 use quote::quote;
 use syn::{
-    parse::Parse, parse_macro_input, parse_quote, punctuated::Punctuated, spanned::Spanned, Attribute, Ident, Item, ItemEnum, ItemMod, ItemStruct, ItemType, ItemUse, Meta, Type, UseGroup, UseName, UsePath, UseRename, UseTree
+    Attribute, Ident, Item, ItemEnum, ItemMod, ItemStruct, ItemType, ItemUse, Meta, Type, UseGroup,
+    UseTree, parse::Parse, parse_macro_input, parse_quote,
 };
 
 #[proc_macro_attribute]

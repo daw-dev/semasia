@@ -51,4 +51,8 @@ impl Board {
     }
 
     pub fn do_move(&mut self, chess_move: Move) {}
+
+    pub fn best_move(&mut self) -> Move {
+        todo!()
+    }
 }
