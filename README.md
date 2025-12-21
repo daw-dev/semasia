@@ -235,39 +235,39 @@ The following are rust parser generators - same category as this tool - so they 
 - bottom up parsing
 - semantic actions are called during parsing
 
-| Feature                | This Tool                                                  | LALRPOP                              | grmtools (lrpar)                          | Pomelo                           |
-|------------------------|------------------------------------------------------------|--------------------------------------|-------------------------------------------|----------------------------------|
-| Philosophy             | Use rust type system and module system to define a grammar | Rust version of bison                | Bison-compatible parser generator in rust | Rust version of lemon            |
-| Algorithm              | LALR(1)                                                    | LALR(1)/LR(1)                        | LR(1)/GLR                                 | LALR(1) (lemon)                  |
-| Execution time         | Compile time (proc macro attribute)                        | Compile Time (build.rs)              | Compile Time (build.rs)                   | Compile Time (proc macro)        |
-| Lexing                 | Internal (custom implementation or logos.rs)               | Internal (basic) or External         | External (lrlex)                          | External (expects Token enum)    |
-| Synthesized Attributes | Yes (return types)                                         | Yes (return types)                   | Yes                                       | Yes (types)                      |
-| Inherited Attributes   | Yes (helper types and compiler context)                    | No                                   | No                                        | No (%extra_args)                 |
-| Zero-Copy              | Yes                                                        | Limited                              | Limited                                   | No                               |
-| Error recovery         | Expressive errors and suggestions                          | !token / Recovery                    | Advanced (CPCT+)                          | No (panic!)                      |
-| Grammar Definition     | Attributes inside a normal rust module, production! macro  | .lalrpop file with custom syntax     | .y file with Yacc syntax (mostly)         | pomelo! macro with custom syntax |
-| IDE Support            | Works with rust-analyzer                                   | Custom LSP                           | Yacc LSP                                  | Very limited                     |
+| Feature | This Tool | LALRPOP | grmtools (lrpar) | Pomelo |
+|----|----|----|----|----|
+| Philosophys| Use rust type system and module system to define a grammar | Rust version of bison | Bison-compatible parser generator in rust | Rust version of lemon |
+| Algorithms| LALR(1) | LALR(1)/LR(1) | LR(1)/GLR | LALR(1) (lemon) |
+| Execution time | Compile time (proc macro attribute) | Compile Time (build.rs) | Compile Time (build.rs) | Compile Time (proc macro) |
+| Lexing | Internal (custom implementation or logos.rs) | Internal (basic) or External | External (lrlex) | External (expects Token enum) |
+| Synthesized Attributes | Yes (return types) | Yes (return types) | Yes | Yes (types) |
+| Inherited Attributes | Yes (helper types and compiler context) | No | No | No (%extra_args) |
+| Zero-Copy | Yes | Limited | Limited | No |
+| Error recovery | Expressive errors and suggestions | !token / Recovery | Advanced (CPCT+) | No (panic!) |
+| Grammar Definition | Attributes inside a normal rust module, production! macro | .lalrpop file with custom syntax | .y file with Yacc syntax (mostly) | pomelo! macro with custom syntax |
+| IDE Support | Works with rust-analyzer | Custom LSP | Yacc LSP | Very limited |
 
 ### Foreign Parser Generators
 
 The following are also parser generators, but they have a different target language, the features will be similar to the ones above
 
-| Feature                | Bison                            | ANTLR4                                | Menhir                               |
-|------------------------|----------------------------------|---------------------------------------|--------------------------------------|
-| Target Language        | C/C++                            | C++/C#/Java/js/PHP/Python/Swift/TS/GO | OCaml                                |
-| Algorithm              | LALR(1)/GLR                      | Adaptive LL(*)                        | LR(1)                                |
-| Execution time         | Ahead of time (generates C code) | Ahead of time (generates code)        | Ahead of time (generates OCaml code) |
-| Lexing                 | External (flex)                  | Internal                              | External                             |
-| Synthesized Attributes | Yes ($$)                         | Yes                                   | Yes                                  |
-| Inherited Attributes   | Yes (through mid-rule actions)   | Yes (discouraged)                     | Not really (parameterized non-terminals)|
-| Zero-Copy              | No                               | No                                    | No                                   |
+| Feature | Bison | ANTLR4 | Menhir |
+|----|----|----|----|
+| Target Language | C/C++ | C++/C#/Java/js/PHP/Python/Swift/TS/GO | OCaml |
+| Algorithm | LALR(1)/GLR | Adaptive LL(*) | LR(1) |
+| Execution time | Ahead of time (generates C code) | Ahead of time (generates code) | Ahead of time (generates OCaml code) |
+| Lexing | External (flex) | Internal | External |
+| Synthesized Attributes | Yes ($$) | Yes | Yes |
+| Inherited Attributes | Yes (through mid-rule actions) | Yes (discouraged) | Not really (parameterized non-terminals)|
+| Zero-Copy | No | No | No |
 
-### Alternative Approaches (Non-LALR)
+### Alternative Approaches (Not Parser Generators)
 
-These tools use different parsing philosophies compared to bottom-up LR/LALR generators. They are often preferred for binary formats or when a separate grammar file is undesirable.
+These tools use different parsing philosophies compared to parser generators. They are often preferred for binary formats or when a separate grammar file is undesirable.
 
 | Feature | Parser Combinators (nom, chumsky) | PEG Generators (pest) | Tree-sitter |
-| ---- | ---- | ---- | ---- |
+|----|----|----|----|
 | Category | Parser Combinators | PEG Parser Generator | Incremental GLR Parser |
 | Philosophy | Grammar is defined as executable Rust functions | Grammar defined in external `.pest` file | Error-resilient parsing designed for IDEs |
 | Algorithm | Recursive Descent (LL) | Packrat / PEG (Top-down) | GLR (Generalized LR) |
