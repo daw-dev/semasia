@@ -170,6 +170,14 @@ match res {
 }
 ```
 
+The output would be:
+
+```console
+Found unexpected token Times, expected tokens are Num or OpenPar
+1.  `1*5+*3`
+         ^
+```
+
 Furthermore, the error should contain the stack that is used for the parsing so that if errors are fixed the parsing
 can resume.
 
@@ -210,6 +218,8 @@ mod daw_lang {
     production!(P1, Statement -> FlowControlStatement);
 }
 ```
+
+Ideally, this would also speed-up parsing because each grammar uses different and smaller parsing tables.
 
 ## Tool Comparison
 
