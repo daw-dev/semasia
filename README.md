@@ -59,12 +59,12 @@ The main feature that separates this tool from other parser generators is how th
 defines a grammar through the rust programming language: a grammar is a module, symbols are types (structs, enums,
 type aliases or use directives) with either `#[non_terminal]` or `#[token = r"regex"]` and productions are created
 using the `production!(Ident, Head -> Body, <semantic action>)` macro, but in practice they're `impl`s of the `Production`
-for trait the newly created type at the first parameter of the production.
+trait for the newly created type at the first parameter of the production.
 
 The semantic action is meant to look like a closure and it can either have 1 parameter, in that case the parameter is
 the body of the production, or it can have 2 parameters, in that case the first is a mutable reference of the compiler context
-(see more later) and the second one is the body of the production. Note, since in most cases the body will be a touple,
-it can be useful to create a touple to capture the different values of the body:
+(see more later) and the second one is the body of the production. Note, since in most cases the body will be a tuple,
+it can be useful to create a tuple to capture the different values of the body:
 `production!(P0, A -> (B, C, D), |ctx, (b, c, d)| todo!("synthesize A"))`
 
 ### Inherited attributes
