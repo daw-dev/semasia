@@ -165,8 +165,6 @@ let res = arithmetic::parse("1*5+*3");
 match res {
     Ok(res) => println!("result is {res}"),
     Err(err) => eprintln!("{err}"),
-    // `1*5+*3`         found unexpected token Times, expected tokens are Num or OpenPar
-    //      ^
 }
 ```
 
@@ -220,6 +218,11 @@ mod daw_lang {
 ```
 
 Ideally, this would also speed-up parsing because each grammar uses different and smaller parsing tables.
+
+#### Table generation caching
+
+The procedural macro is invoked at every compilation, even when the grammar itself wasn't changed, when that happens,
+the engine is able to notice it and in that case it doesn't have to re-compute the parsing table and just uses a chached one.
 
 ## Tool Comparison
 
