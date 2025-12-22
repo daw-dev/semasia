@@ -120,4 +120,12 @@ impl Grammar {
     pub fn symbols_count(&self) -> usize {
         self.tokens.len() + self.non_terminals.len() + 1
     }
+
+    pub fn tokens(&self) -> &Vec<Token> {
+        &self.tokens
+    }
+
+    pub fn non_terminals(&self) -> &Vec<NonTerminal> {
+        &self.non_terminals
+    }
 }
