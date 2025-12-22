@@ -21,6 +21,7 @@ pub fn grammar(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
         inject_items(items, grammar, compiler_ctx);
 
+        // eprintln!("whaat?!");
         let parse_fn = parse_quote! {
             pub fn parse(word: impl Into<String>) {
                 println!("{}", word.into());
@@ -28,6 +29,7 @@ pub fn grammar(_attr: TokenStream, item: TokenStream) -> TokenStream {
         };
 
         items.push(parse_fn);
+
 
         quote! { #module }.into()
     } else if let Ok(File { items, .. }) = &mut syn::parse(item) {
@@ -63,10 +65,10 @@ macro_rules! dummy_attribute {
     };
 }
 
-dummy_attribute!(token, "type aliases, structs or enums");
-dummy_attribute!(start_symbol, "type aliases, structs or enums");
-dummy_attribute!(non_terminal, "type aliases, structs or enums");
+dummy_attribute!(token, "type aliases, structs, enums or use directives");
+dummy_attribute!(start_symbol, "type aliases, structs, enums or use directives");
+dummy_attribute!(non_terminal, "type aliases, structs, enums or use directives");
 dummy_attribute!(left_associative, "production macros");
 dummy_attribute!(right_associative, "production macros");
 dummy_attribute!(precedence, "production marcos");
-dummy_attribute!(context, "ONLY ONE type alias, struct or enum");
+dummy_attribute!(context, "ONLY ONE type alias, struct, enum or use directive");

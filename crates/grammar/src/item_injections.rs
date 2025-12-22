@@ -1,4 +1,4 @@
-use dyn_grammar::{non_terminal::NonTerminal, token::Token, Grammar};
+use dyn_grammar::{Grammar, non_terminal::NonTerminal, token::Token};
 use proc_macro2::Span;
 use syn::{Ident, Item, parse_quote};
 
@@ -25,17 +25,31 @@ fn compiler_context(compiler_ctx: Option<Ident>) -> Item {
         })
 }
 
-fn token_enum(tokens: &Vec<Token>) -> Item {
-    let tokens = tokens.iter().map(|token| Ident::new(token.name(), Span::call_site()));
-    parse_quote! {
+fn token_enum(tokens: &Vec<Token>) -> Vec<Item> {
+    let tokens: Vec<_> = tokens
+        .iter()
+        .map(|token| Ident::new(token.name(), Span::call_site()))
+        .collect();
+    let file: syn::File = parse_quote! {
         pub enum Token {
             #(#tokens (#tokens),)*
         }
-    }
+
+        impl std::fmt::Display for Token {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    #(#tokens (_) => write!(f, stringify!(#tokens)),)*
+                }
+            }
+        }
+    };
+    file.items
 }
 
 fn non_terminal_enum(non_terminals: &Vec<NonTerminal>) -> Item {
-    let non_terminals = non_terminals.iter().map(|non_terminal| Ident::new(non_terminal.name(), Span::call_site()));
+    let non_terminals = non_terminals
+        .iter()
+        .map(|non_terminal| Ident::new(non_terminal.name(), Span::call_site()));
     parse_quote! {
         pub enum NonTerminal {
             #(#non_terminals (#non_terminals),)*
