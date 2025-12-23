@@ -2,6 +2,9 @@ pub mod non_terminal;
 pub mod production;
 pub mod token;
 
+use std::fmt::Display;
+
+use itertools::Itertools;
 use syn::Ident;
 
 use crate::{
@@ -13,8 +16,8 @@ pub struct EnrichedGrammar {
     context: Option<Ident>,
     non_terminals: Vec<EnrichedNonTerminal>,
     tokens: Vec<EnrichedToken>,
-    productions: Vec<EnrichedProduction>,
     start_symbol: EnrichedNonTerminal,
+    productions: Vec<EnrichedProduction>,
 }
 
 impl EnrichedGrammar {
@@ -22,15 +25,15 @@ impl EnrichedGrammar {
         context: Option<Ident>,
         non_terminals: Vec<EnrichedNonTerminal>,
         tokens: Vec<EnrichedToken>,
-        productions: Vec<EnrichedProduction>,
         start_symbol: EnrichedNonTerminal,
+        productions: Vec<EnrichedProduction>,
     ) -> Self {
         Self {
             context,
             non_terminals,
             tokens,
-            productions,
             start_symbol,
+            productions,
         }
     }
 
@@ -62,5 +65,28 @@ impl EnrichedGrammar {
         self.non_terminals()
             .iter()
             .position(|val| val.ident() == non_terminal)
+    }
+}
+
+impl Display for EnrichedGrammar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EnrichedGrammar {{ ")?;
+        write!(f, "context: ")?;
+        match self.context.as_ref() {
+            Some(ctx) => write!(f, "Some({}), ", ctx.to_string())?,
+            None => write!(f, "None, ")?,
+        }
+        write!(
+            f,
+            "non_terminals: [{}], tokens: [{}], ",
+            self.non_terminals.iter().format(", "),
+            self.tokens.iter().format(", ")
+        )?;
+        write!(f, "start_symbol: {}, ", self.start_symbol.ident().to_string())?;
+        write!(
+            f,
+            "productions: [{}] }}",
+            self.productions.iter().format(", ")
+        )
     }
 }

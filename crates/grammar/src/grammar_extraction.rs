@@ -62,8 +62,8 @@ pub fn extract_grammar(items: &mut Vec<Item>) -> EnrichedGrammar {
         compiler_ctx,
         non_terminals,
         tokens,
-        productions,
         start_symbol,
+        productions,
     )
 }
 
@@ -178,6 +178,9 @@ fn extract_production(item: &mut Item) -> Option<EnrichedProduction> {
             let head = input.parse()?;
             input.parse::<syn::Token![->]>()?;
             let body = input.parse()?;
+            if input.is_empty() {
+                return Ok(ProductionInternal { name, head, body });
+            }
             input.parse::<syn::Token![,]>()?;
             input.parse::<syn::Expr>()?;
             Ok(ProductionInternal { name, head, body })
@@ -189,7 +192,13 @@ fn extract_production(item: &mut Item) -> Option<EnrichedProduction> {
             let name = value.name;
             let head = value.head;
             let body = match value.body {
-                Type::Path(type_path) => vec![type_path.path.get_ident().unwrap().clone()],
+                Type::Path(type_path) => vec![
+                    type_path
+                        .path
+                        .get_ident()
+                        .expect("use only one type")
+                        .clone(),
+                ],
                 Type::Tuple(type_tuple) => type_tuple
                     .elems
                     .iter()
@@ -197,7 +206,11 @@ fn extract_production(item: &mut Item) -> Option<EnrichedProduction> {
                         let Type::Path(type_path) = t else {
                             panic!("body of production has to be a tuple of named types")
                         };
-                        type_path.path.get_ident().unwrap().clone()
+                        type_path
+                            .path
+                            .get_ident()
+                            .expect("tuple of named types")
+                            .clone()
                     })
                     .collect(),
                 _ => panic!("type must be a unit, a single type or a tuple"),
@@ -213,6 +226,7 @@ fn extract_production(item: &mut Item) -> Option<EnrichedProduction> {
             if let Ok(prod_internal) = t {
                 Some(prod_internal.into())
             } else {
+                eprintln!("macro is not a production");
                 None
             }
         }

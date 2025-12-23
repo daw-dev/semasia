@@ -17,6 +17,8 @@ pub fn grammar(_attr: TokenStream, item: TokenStream) -> TokenStream {
         let enriched_grammar = extract_grammar(items);
         let symbolic_grammar = SymbolicGrammar::from(&enriched_grammar);
 
+        eprintln!("{enriched_grammar}");
+        eprintln!("{symbolic_grammar:?}");
         let automaton = SlrAutomaton::compute(&symbolic_grammar);
 
         inject_items(items, enriched_grammar);

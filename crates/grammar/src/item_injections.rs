@@ -38,7 +38,7 @@ fn token_enum(tokens: &Vec<EnrichedToken>) -> Vec<Item> {
         impl std::fmt::Display for Token {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
-                    #(#tokens (_) => write!(f, stringify!(#tokens)),)*
+                    #(Self::#tokens (_) => write!(f, stringify!(#tokens)),)*
                 }
             }
         }

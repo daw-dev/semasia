@@ -15,7 +15,7 @@ impl SlrItem {
     }
 
     pub fn pointed_symbol(&self, grammar: &SymbolicGrammar) -> SymbolicSymbol {
-        let production = grammar.get_production(self.production_id).unwrap();
+        let production = grammar.get_production(self.production_id).expect("production not found");
         production.body().get(self.marker_position).cloned().unwrap_or(SymbolicSymbol::EOF)
     }
 

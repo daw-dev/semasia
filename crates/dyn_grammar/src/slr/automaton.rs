@@ -29,16 +29,20 @@ impl SlrState {
     fn closure(&self, grammar: &SymbolicGrammar) -> HashSet<SlrItem> {
         let mut stack = self.kernel.iter().cloned().collect_vec();
         let mut res = self.kernel.clone();
+        eprintln!("finding closure");
         while let Some(item) = stack.pop() {
+            eprintln!("iter");
             let SymbolicSymbol::NonTerminal(non_terminal) = item.pointed_symbol(grammar) else {
                 continue;
             };
+            eprintln!("non terminal found");
 
             for new_item in grammar
                 .get_productions_with_head(non_terminal)
                 .into_iter()
                 .map(|prod| SlrItem::new(prod.id()))
             {
+                eprintln!("new_item");
                 if res.contains(&new_item) {
                     continue;
                 }
@@ -72,7 +76,9 @@ impl SlrAutomaton {
 
         while let Some(state) = self.states.iter_mut().find(|state| !state.marked) {
             state.marked = true;
+            eprintln!("ciao");
             let closure = state.closure(grammar);
+            eprintln!("ciao");
             let mut token_transitions = vec![HashSet::new(); grammar.token_count()];
             let mut non_terminal_transitions = vec![HashSet::new(); grammar.non_terminal_count()];
             for (symbol, mut item) in closure.into_iter().filter_map(|item| {
@@ -81,9 +87,11 @@ impl SlrAutomaton {
                 item.move_marker();
                 match symbol {
                     SymbolicSymbol::Token(tok) => {
+                        eprintln!("transition table is {}, tok is {}", token_transitions.len(), tok);
                         token_transitions[tok].insert(item);
                     }
                     SymbolicSymbol::NonTerminal(nt) => {
+                        eprintln!("transition table is {}, nt is {}", non_terminal_transitions.len(), nt);
                         non_terminal_transitions[nt].insert(item);
                     }
                     SymbolicSymbol::EOF => unreachable!(),

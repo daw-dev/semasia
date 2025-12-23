@@ -13,6 +13,7 @@ pub enum SymbolicSymbol {
     EOF,
 }
 
+#[derive(Debug)]
 pub struct SymbolicProduction {
     production_id: usize,
     head: SymbolicNonTerminal,
@@ -31,17 +32,30 @@ impl SymbolicProduction {
     pub fn arity(&self) -> usize {
         self.body.len()
     }
+
+    pub fn special_production(start_symbol: SymbolicNonTerminal) -> Self {
+        Self {
+            production_id: usize::MAX,
+            head: usize::MAX,
+            body: vec![SymbolicSymbol::NonTerminal(start_symbol)],
+        }
+    }
 }
 
+#[derive(Debug)]
 pub struct SymbolicGrammar {
     token_count: usize,
     non_terminal_count: usize,
     start_symbol: SymbolicNonTerminal,
+    special_production: SymbolicProduction,
     productions: Vec<SymbolicProduction>,
 }
 
 impl SymbolicGrammar {
     pub fn get_production(&self, id: usize) -> Option<&SymbolicProduction> {
+        if id == usize::MAX {
+            return Some(&self.special_production);
+        }
         self.productions.get(id)
     }
 
@@ -93,10 +107,12 @@ impl SymbolicGrammar {
 
 impl From<&EnrichedGrammar> for SymbolicGrammar {
     fn from(value: &EnrichedGrammar) -> Self {
+        let start_symbol = value.non_terminal_id(value.start_symbol().ident()).unwrap();
         Self {
             token_count: value.tokens().len(),
             non_terminal_count: value.non_terminals().len(),
-            start_symbol: value.non_terminal_id(value.start_symbol().ident()).unwrap(),
+            start_symbol,
+            special_production: SymbolicProduction::special_production(start_symbol),
             productions: value
                 .productions()
                 .iter()
