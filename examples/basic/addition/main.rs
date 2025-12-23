@@ -22,6 +22,7 @@ mod addition_grammar {
 #[test]
 fn showcase() {
     use addition_grammar::*;
+
     let str = "1+2+3";
     let mut lex = vec![
         Token::Id(1f32),
@@ -31,22 +32,22 @@ fn showcase() {
         Token::Id(3f32),
     ]
     .into_iter();
-    let Token::Id(id1) = lex.next().unwrap() else {
+    let Some(Token::Id(id1)) = lex.next() else {
         unreachable!()
     };
     let e1 = P2::synthesize(&mut (), id1);
-    let Token::Plus(p1) = lex.next().unwrap() else {
+    let Some(Token::Plus(p1)) = lex.next() else {
         unreachable!()
     };
-    let Token::Id(id2) = lex.next().unwrap() else {
+    let Some(Token::Id(id2)) = lex.next() else {
         unreachable!()
     };
     let e2 = P2::synthesize(&mut (), id2);
     let e12 = P1::synthesize(&mut (), (e1, p1, e2));
-    let Token::Plus(p2) = lex.next().unwrap() else {
+    let Some(Token::Plus(p2)) = lex.next() else {
         unreachable!()
     };
-    let Token::Id(id3) = lex.next().unwrap() else {
+    let Some(Token::Id(id3)) = lex.next() else {
         unreachable!()
     };
     let e3 = P2::synthesize(&mut (), id3);
