@@ -2,8 +2,8 @@ use crate::symbolic_grammar::{SymbolicGrammar, SymbolicSymbol};
 
 #[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub struct SlrItem {
-    production_id: usize,
-    marker_position: usize,
+    pub(crate) production_id: usize,
+    pub(crate) marker_position: usize,
 }
 
 impl SlrItem {

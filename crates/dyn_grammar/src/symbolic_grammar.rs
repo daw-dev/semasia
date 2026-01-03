@@ -1,16 +1,27 @@
-use syn::Ident;
-
 use crate::{EnrichedGrammar, production::EnrichedProduction};
+use itertools::Itertools;
+use std::fmt::Display;
+use syn::Ident;
 
 pub type SymbolicToken = usize;
 
 pub type SymbolicNonTerminal = usize;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum SymbolicSymbol {
     Token(SymbolicToken),
     NonTerminal(SymbolicNonTerminal),
     EOF,
+}
+
+impl Display for SymbolicSymbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SymbolicSymbol::Token(tok) => write!(f, "`{tok}`"),
+            SymbolicSymbol::NonTerminal(nt) => write!(f, "{nt}"),
+            SymbolicSymbol::EOF => write!(f, "$"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -20,9 +31,25 @@ pub struct SymbolicProduction {
     body: Vec<SymbolicSymbol>,
 }
 
+impl Display for SymbolicProduction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}: {} -> ({})",
+            self.production_id,
+            self.head,
+            self.body().iter().format(", ")
+        )
+    }
+}
+
 impl SymbolicProduction {
     pub fn id(&self) -> usize {
         self.production_id
+    }
+
+    pub fn head(&self) -> &SymbolicNonTerminal {
+        &self.head
     }
 
     pub fn body(&self) -> &Vec<SymbolicSymbol> {
@@ -49,6 +76,20 @@ pub struct SymbolicGrammar {
     start_symbol: SymbolicNonTerminal,
     special_production: SymbolicProduction,
     productions: Vec<SymbolicProduction>,
+}
+
+impl Display for SymbolicGrammar {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SymbolicGrammar {{ ")?;
+        write!(
+            f,
+            "non_terminals: [{}], ",
+            (0..self.non_terminal_count).format(", ")
+        )?;
+        write!(f, "tokens: [{}], ", (0..self.token_count).map(|i| format!("`{i}`")).format(", "))?;
+        write!(f, "start_symbol: {}, ", self.start_symbol.to_string())?;
+        write!(f, "productions: [{}] }}", self.productions.iter().format(", "))
+    }
 }
 
 impl SymbolicGrammar {

@@ -29,6 +29,10 @@ name = "boolean"
 path = "./examples/basic/boolean/main.rs"
 
 [[example]]
+name = "arithmetic"
+path = "./examples/basic/arithmetic/main.rs"
+
+[[example]]
 name = "generic-addition"
 path = "./examples/generics/addition/main.rs"
 

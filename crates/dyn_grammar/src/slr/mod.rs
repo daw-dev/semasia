@@ -1,2 +1,2 @@
 pub mod automaton;
-mod item;
+pub mod item;
