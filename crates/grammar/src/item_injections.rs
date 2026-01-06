@@ -34,6 +34,7 @@ pub fn inject_items(
     items_to_add.extend(stacks_struct());
     items_to_add.push(parse_one_result());
     items_to_add.push(parse_one_fn());
+    items_to_add.push(parse_one_eof_result());
     items_to_add.push(parse_one_eof_fn(enriched_grammar.tokens().len()));
     items_to_add.push(parse_fn(enriched_grammar.start_symbol().ident()));
     match internal_mod_name {
@@ -44,12 +45,11 @@ pub fn inject_items(
 
                 #(#items_to_add)*
             }
-        }),
+}),
         None => {
             items.extend(items_to_add);
         }
     }
-    // items.push(parse_one_fn());
     // items.push(lex_fn());
     // items.push(parse_fn(todo!()));
     // items.push(parse_str_fn(todo!()));
@@ -317,6 +317,7 @@ fn parse_one_result() -> Item {
         pub enum ParseOneResult {
             Shifted,
             Reduced(Token),
+            Error,
         }
     }
 }
@@ -350,11 +351,21 @@ fn parse_one_fn() -> Item {
     }
 }
 
+fn parse_one_eof_result() -> Item {
+    parse_quote! {
+        pub enum ParseOneEofResult {
+            Reduced,
+            Accepted,
+            Error,
+        }
+    }
+}
+
 fn parse_one_eof_fn(token_count: usize) -> Item {
     parse_quote! {
-        pub fn parse_one_eof(ctx: &mut __CompilerContext, stacks: &mut Stacks) -> bool {
+        pub fn parse_one_eof(ctx: &mut __CompilerContext, stacks: &mut Stacks) -> ParseOneEofResult {
             let current_state = stacks.state_stack.last();
-            let Some(&current_state) = current_state else { return false; };
+            let Some(&current_state) = current_state else { return ParseOneEofResult::Error; };
             let id = #token_count;
             let action = &ACTION_TABLE[current_state][id];
             let Some(action) = action else { panic!("couldn't parse!") };
@@ -366,10 +377,10 @@ fn parse_one_eof_fn(token_count: usize) -> Item {
                     let Some(new_state) = &GOTO_TABLE[current_state][id] else { panic!("couldn't parse") };
                     stacks.state_stack.push(*new_state);
                     stacks.symbol_stack.push(Symbol::NonTerminal(head));
-                    return true;
+                    ParseOneEofResult::Reduced
                 }
                 Action::Accept => {
-                    return false;
+                    ParseOneEofResult::Accepted
                 }
                 Action::Shift(_) => unreachable!(),
             }
@@ -386,7 +397,7 @@ fn parse_fn(start_symbol: &Ident) -> Item {
                     token = curr;
                 }
             }
-            while parse_one_eof(&mut ctx, &mut stacks) {}
+            while let ParseOneEofResult::Reduced = parse_one_eof(&mut ctx, &mut stacks) {}
             let Some(Symbol::NonTerminal(NonTerminal::#start_symbol (res))) = stacks.symbol_stack.pop() else { panic!() };
             res
         }

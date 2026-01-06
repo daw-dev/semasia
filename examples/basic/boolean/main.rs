@@ -82,12 +82,12 @@ fn main() {
         [
             Token::Atom("p".to_string()),
             Token::RightArrow(RightArrow),
-            // Token::OpenPar(OpenPar),
+            Token::OpenPar(OpenPar),
             Token::Not(Not),
             Token::Atom("q".to_string()),
             Token::Or(Or),
             Token::Atom("r".to_string()),
-            // Token::ClosePar(ClosePar),
+            Token::ClosePar(ClosePar),
         ],
     );
     println!("{t:?}")

@@ -80,7 +80,8 @@ pub struct SymbolicFollowSet {
 }
 
 #[derive(Debug)]
-pub struct SymbolicGrammar {
+pub struct SymbolicGrammar<'a> {
+    enriched_grammar: &'a EnrichedGrammar,
     token_count: usize,
     non_terminal_count: usize,
     start_symbol: SymbolicNonTerminal,
@@ -88,7 +89,7 @@ pub struct SymbolicGrammar {
     productions: Vec<SymbolicProduction>,
 }
 
-impl Display for SymbolicGrammar {
+impl Display for SymbolicGrammar<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "SymbolicGrammar {{ ")?;
         write!(
@@ -110,7 +111,7 @@ impl Display for SymbolicGrammar {
     }
 }
 
-impl SymbolicGrammar {
+impl<'a> SymbolicGrammar<'a> {
     pub fn get_production(&self, id: usize) -> Option<&SymbolicProduction> {
         if id == usize::MAX {
             return Some(&self.special_production);
@@ -177,7 +178,11 @@ impl SymbolicGrammar {
         }
     }
 
-    pub fn first_set(&self, beta: &[SymbolicSymbol]) -> SymbolicFirstSet {
+    fn first_set_helper(
+        &self,
+        beta: &[SymbolicSymbol],
+        visited: &mut HashSet<usize>,
+    ) -> SymbolicFirstSet {
         if beta.is_empty() {
             return SymbolicFirstSet {
                 tokens: HashSet::new(),
@@ -198,8 +203,14 @@ impl SymbolicGrammar {
                 }
                 SymbolicSymbol::NonTerminal(non_terminal) => {
                     let productions = self.get_productions_with_head(*non_terminal);
-                    for body in productions.into_iter().map(SymbolicProduction::body) {
-                        let firsts = self.first_set(body);
+                    for prod in productions
+                        .into_iter()
+                        .filter(|prod| visited.insert(prod.id()))
+                        .collect_vec()
+                        .into_iter()
+                    {
+                        let body = prod.body();
+                        let firsts = self.first_set_helper(body, visited);
                         res.tokens.extend(firsts.tokens);
                         if !firsts.nullable {
                             return res;
@@ -213,12 +224,17 @@ impl SymbolicGrammar {
         res.nullable = true;
         res
     }
+
+    pub fn first_set(&self, beta: &[SymbolicSymbol]) -> SymbolicFirstSet {
+        self.first_set_helper(beta, &mut HashSet::new())
+    }
 }
 
-impl From<&EnrichedGrammar> for SymbolicGrammar {
-    fn from(value: &EnrichedGrammar) -> Self {
+impl<'a> From<&'a EnrichedGrammar> for SymbolicGrammar<'a> {
+    fn from(value: &'a EnrichedGrammar) -> Self {
         let start_symbol = value.non_terminal_id(value.start_symbol().ident()).unwrap();
         Self {
+            enriched_grammar: value,
             token_count: value.tokens().len(),
             non_terminal_count: value.non_terminals().len(),
             start_symbol,

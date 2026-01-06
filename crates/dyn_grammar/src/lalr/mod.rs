@@ -222,7 +222,7 @@ impl LalrState {
 }
 
 pub struct LalrAutomaton<'a> {
-    grammar: &'a SymbolicGrammar,
+    grammar: &'a SymbolicGrammar<'a>,
     states: Vec<LalrState>,
     transitions: TransitionTables,
 }
@@ -331,14 +331,6 @@ impl<'a> LalrAutomaton<'a> {
             self.states.iter().enumerate().zip(self.transitions.iter())
         {
             action_table.add_state();
-            for (token, target) in token_transitions.iter().enumerate() {
-                action_table[(state_id, SymbolicSymbol::Token(token))] =
-                    (*target).map(Action::Shift)
-            }
-            goto_table.add_state();
-            for (non_terminal, target) in non_terminal_transitions.iter().enumerate() {
-                goto_table[(state_id, SymbolicSymbol::NonTerminal(non_terminal))] = *target;
-            }
 
             for reducing_item in state
                 .kernel
@@ -351,8 +343,29 @@ impl<'a> LalrAutomaton<'a> {
                     } else {
                         Action::Reduce(reducing_item.production_id)
                     };
-                    action_table[(state_id, symbol)] = Some(action);
+                    let entry = &mut action_table[(state_id, symbol)];
+                    if let Some(reduce) = entry.take() {
+                        eprintln!("reduce/reduce conflict");
+                        eprintln!("current reduce: {reduce:?}");
+                        eprintln!("new reduce: {action:?}");
+                    }
+                    *entry = Some(action);
                 }
+            }
+
+            for (token, target) in token_transitions.iter().flatten().enumerate() {
+                let entry = &mut action_table[(state_id, SymbolicSymbol::Token(token))];
+                if let Some(reduce) = entry.take() {
+                    eprintln!("shift/reduce conflict");
+                    eprintln!("shift: {:?}", Action::Shift(*target));
+                    eprintln!("reduce: {reduce:?}");
+                }
+                *entry = Some(Action::Shift(*target));
+            }
+
+            goto_table.add_state();
+            for (non_terminal, target) in non_terminal_transitions.iter().enumerate() {
+                goto_table[(state_id, SymbolicSymbol::NonTerminal(non_terminal))] = *target;
             }
         }
 

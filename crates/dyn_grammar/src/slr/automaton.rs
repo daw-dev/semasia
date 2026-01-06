@@ -50,7 +50,7 @@ impl SlrState {
 
 #[derive(Debug)]
 pub struct SlrAutomaton<'a> {
-    pub(crate) grammar: &'a SymbolicGrammar,
+    pub(crate) grammar: &'a SymbolicGrammar<'a>,
     pub(crate) states: Vec<SlrState>,
     pub(crate) transitions: TransitionTables,
 }
