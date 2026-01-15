@@ -14,19 +14,19 @@ mod expressions {
     #[non_terminal]
     pub type Factor = usize;
 
-    #[token = r"\d+"]
+    #[token(regex = r"\d+")]
     pub type Number = usize;
 
-    #[token = r"\+"]
+    #[token("+")]
     pub struct Plus;
 
-    #[token = r"\*"]
+    #[token("*")]
     pub struct Times;
 
-    #[token = r"\("]
+    #[token("(")]
     pub struct OpenPar;
 
-    #[token = r"\)"]
+    #[token(")")]
     pub struct ClosedPar;
 
     production!(Addition, Expression -> (Expression, Plus, Term), |(e, _ ,t)| e + t);

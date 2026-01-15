@@ -1,15 +1,15 @@
 use dyn_grammar::{
     EnrichedGrammar, non_terminal::EnrichedNonTerminal, production::EnrichedBaseProduction,
-    token::EnrichedToken,
+    token::{EnrichedToken, Match},
 };
 use itertools::Itertools;
 use proc_macro_error::{emit_call_site_error, emit_call_site_warning, emit_error};
 use syn::{
-    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, Meta, Type, UseGroup, UseTree,
-    parse::Parse,
+    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitInt, LitStr, Meta, Type,
+    UseGroup, UseTree, parse::Parse,
 };
 
-pub fn extract_grammar(items: &mut[Item]) -> EnrichedGrammar {
+pub fn extract_grammar(items: &mut [Item]) -> EnrichedGrammar {
     let mut tokens = Vec::new();
     let mut non_terminals = Vec::new();
     let mut productions = Vec::new();
@@ -107,35 +107,29 @@ fn extract_context(item: &mut Item) -> Option<Ident> {
 
 fn extract_token(item: &mut Item) -> Option<EnrichedToken> {
     let (attrs, ident) = extract_info(item)?;
-    let id = attrs.iter().enumerate().find_map(|(i, attr)| {
-        if let Meta::NameValue(name_value) = &attr.meta
-            && name_value.path.is_ident("token")
-        {
-            return Some(i);
+    let mut res = None;
+    attrs.retain(|attr| {
+        if !attr.path().is_ident("token") { return true; }
+        let match_string = attr.parse_args_with(|input: syn::parse::ParseStream| {
+            if input.peek(syn::Ident) && input.peek2(syn::Token![=]) {
+                let regex_ident: Ident = input.parse()?;
+                if regex_ident != "regex" {
+                    return Err(syn::Error::new(regex_ident.span(), "expected optional \"regex\""));
+                }
+                input.parse::<syn::Token![=]>()?;
+                let regex: LitStr = input.parse()?;
+                Ok(Match::Regex(regex.value()))
+            } else {
+                Ok(Match::Literal(input.parse::<LitStr>()?.value()))
+            }
+        });
+        if let Ok(match_string) = match_string {
+            res = Some(match_string);
+            return false;
         }
-        None
-    })?;
-    // TODO: maybe `token` should be an actual attribute that automatically creates the
-    // DFA?
-    let attr = attrs.remove(id);
-    let Meta::NameValue(name_value) = attr.meta else {
-        unreachable!()
-    };
-    let syn::Expr::Lit(lit_value) = name_value.value else {
-        emit_error!(
-            ident.span(),
-            "token attribute must define the corresponding regexpr, usage: #[token = r\"\\d\"]"
-        );
-        panic!()
-    };
-    let syn::Lit::Str(lit_str_value) = lit_value.lit else {
-        emit_error!(
-            ident.span(),
-            "token regexpr must be a string literal, usage: #[token = r\"\\d\"]"
-        );
-        panic!()
-    };
-    Some(EnrichedToken::new(ident, lit_str_value.value()))
+        true
+    });
+    res.map(|match_string| EnrichedToken::new(ident, match_string.into()))
 }
 
 fn extract_non_terminal(item: &mut Item) -> Option<(EnrichedNonTerminal, bool)> {

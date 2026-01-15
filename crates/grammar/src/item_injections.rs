@@ -28,6 +28,7 @@ pub fn inject_items(
     items.push(compiler_context(enriched_grammar.context()));
 
     let mut items_to_add = Vec::new();
+    items_to_add.push(logos_use());
     items_to_add.extend(token_enum(enriched_grammar.tokens()));
     items_to_add.extend(non_terminal_enum(enriched_grammar.non_terminals()));
     items_to_add.extend(symbol_enum());
@@ -71,13 +72,32 @@ fn compiler_context(compiler_ctx: &Option<Ident>) -> Item {
         })
 }
 
+fn logos_use() -> Item {
+    parse_quote!(use logos::Logos;)
+}
+
 fn token_enum(tokens: &[EnrichedToken]) -> Vec<Item> {
+    let variants = tokens.iter().map(|token| {
+        let ident = token.ident();
+        match token.match_string() {
+            dyn_grammar::token::Match::Literal(lit) => quote! {
+                #[token(#lit, |_| #ident)]
+                #ident(#ident)
+            },
+            dyn_grammar::token::Match::Regex(regex) => quote! {
+                #[regex(#regex, |lex| lex.slice().parse().ok())]
+                #ident(#ident)
+            }
+        }
+    });
     let tokens: Vec<_> = tokens.iter().map(|token| token.ident()).collect();
     let counter = 0usize..;
     let file: syn::File = parse_quote! {
         #[doc("Enum that contains every token")]
+        #[derive(Logos)]
+        #[logos(skip r"[ \t\n\f]+")]
         pub enum Token {
-            #(#tokens (#tokens),)*
+            #(#variants,)*
         }
 
         impl std::fmt::Display for Token {
