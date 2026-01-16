@@ -44,8 +44,8 @@ impl EnrichedGrammar {
         }
     }
 
-    pub fn context(&self) -> &Option<Ident> {
-        &self.context
+    pub fn context(&self) -> Option<&Ident> {
+        self.context.as_ref()
     }
 
     pub fn tokens(&self) -> &Vec<EnrichedToken> {

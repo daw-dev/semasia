@@ -1,12 +1,14 @@
 use dyn_grammar::{
-    EnrichedGrammar, non_terminal::EnrichedNonTerminal, production::EnrichedBaseProduction,
+    EnrichedGrammar,
+    non_terminal::EnrichedNonTerminal,
+    production::EnrichedBaseProduction,
     token::{EnrichedToken, Match},
 };
 use itertools::Itertools;
 use proc_macro_error::{emit_call_site_error, emit_call_site_warning, emit_error};
 use syn::{
-    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitInt, LitStr, Meta, Type,
-    UseGroup, UseTree, parse::Parse,
+    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitStr, Meta, Type,
+    UseGroup, UseTree,
 };
 
 pub fn extract_grammar(items: &mut [Item]) -> EnrichedGrammar {
@@ -109,12 +111,17 @@ fn extract_token(item: &mut Item) -> Option<EnrichedToken> {
     let (attrs, ident) = extract_info(item)?;
     let mut res = None;
     attrs.retain(|attr| {
-        if !attr.path().is_ident("token") { return true; }
+        if !attr.path().is_ident("token") {
+            return true;
+        }
         let match_string = attr.parse_args_with(|input: syn::parse::ParseStream| {
             if input.peek(syn::Ident) && input.peek2(syn::Token![=]) {
                 let regex_ident: Ident = input.parse()?;
                 if regex_ident != "regex" {
-                    return Err(syn::Error::new(regex_ident.span(), "expected optional \"regex\""));
+                    return Err(syn::Error::new(
+                        regex_ident.span(),
+                        "expected optional \"regex\"",
+                    ));
                 }
                 input.parse::<syn::Token![=]>()?;
                 let regex: LitStr = input.parse()?;
@@ -159,71 +166,47 @@ fn extract_non_terminal(item: &mut Item) -> Option<(EnrichedNonTerminal, bool)> 
 }
 
 fn extract_production(item: &mut Item) -> Option<EnrichedBaseProduction> {
-    struct ProductionInternal {
-        name: Ident,
-        head: Ident,
-        body: Type,
-    }
-
-    impl Parse for ProductionInternal {
-        fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-            let name = input.parse()?;
-            input.parse::<syn::Token![,]>()?;
-            let head = input.parse()?;
-            input.parse::<syn::Token![->]>()?;
-            let body = input.parse()?;
-            if input.is_empty() {
-                return Ok(ProductionInternal { name, head, body });
-            }
-            input.parse::<syn::Token![,]>()?;
-            input.parse::<syn::Expr>()?;
-            Ok(ProductionInternal { name, head, body })
-        }
-    }
-
-    impl From<ProductionInternal> for EnrichedBaseProduction {
-        fn from(value: ProductionInternal) -> Self {
-            let name = value.name;
-            let head = value.head;
-            let body = match value.body {
-                Type::Path(type_path) => vec![
-                    type_path
-                        .path
-                        .get_ident()
-                        .expect("use only one type")
-                        .clone(),
-                ],
-                Type::Tuple(type_tuple) => type_tuple
-                    .elems
-                    .iter()
-                    .map(|t| {
-                        let Type::Path(type_path) = t else {
-                            panic!("body of production has to be a tuple of named types")
-                        };
+    match item {
+        Item::Macro(mac) if mac.mac.path.is_ident("production") => mac
+            .mac
+            .parse_body_with(|input: syn::parse::ParseStream| {
+                let name = input.parse()?;
+                input.parse::<syn::Token![,]>()?;
+                let head = input.parse()?;
+                input.parse::<syn::Token![->]>()?;
+                let body = input.parse()?;
+                let body = match body {
+                    Type::Path(type_path) => vec![
                         type_path
                             .path
                             .get_ident()
-                            .expect("tuple of named types")
-                            .clone()
-                    })
-                    .collect(),
-                _ => panic!("type must be a unit, a single type or a tuple"),
-            };
-
-            EnrichedBaseProduction::new(name, head, body)
-        }
-    }
-
-    match item {
-        Item::Macro(mac) if mac.mac.path.is_ident("production") => {
-            let t = mac.mac.parse_body::<ProductionInternal>();
-            if let Ok(prod_internal) = t {
-                Some(prod_internal.into())
-            } else {
-                eprintln!("macro is not a production");
-                None
-            }
-        }
+                            .expect("use only one type")
+                            .clone(),
+                    ],
+                    Type::Tuple(type_tuple) => type_tuple
+                        .elems
+                        .iter()
+                        .map(|t| {
+                            let Type::Path(type_path) = t else {
+                                panic!("body of production has to be a tuple of named types")
+                            };
+                            type_path
+                                .path
+                                .get_ident()
+                                .expect("tuple of named types")
+                                .clone()
+                        })
+                        .collect(),
+                    _ => panic!("type must be a unit, a single type or a tuple"),
+                };
+                if input.is_empty() {
+                    return Ok(EnrichedBaseProduction::new(name, head, body));
+                }
+                input.parse::<syn::Token![,]>()?;
+                input.parse::<syn::Expr>()?;
+                Ok(EnrichedBaseProduction::new(name, head, body))
+            })
+            .ok(),
         _ => None,
     }
 }

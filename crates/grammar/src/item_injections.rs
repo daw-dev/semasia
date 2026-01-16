@@ -41,6 +41,7 @@ pub fn inject_items(
     items_to_add.push(parse_one_eof_result());
     items_to_add.push(parse_one_eof_fn(enriched_grammar.tokens().len()));
     items_to_add.push(parse_fn(enriched_grammar.start_symbol().ident()));
+    items_to_add.push(parse_str_fn(enriched_grammar.start_symbol().ident()));
     match internal_mod_name {
         Some(name) => items.push(parse_quote! {
                 #[doc("generated using the static_sdd library")]
@@ -54,12 +55,9 @@ pub fn inject_items(
             items.extend(items_to_add);
         }
     }
-    // items.push(lex_fn());
-    // items.push(parse_fn(todo!()));
-    // items.push(parse_str_fn(todo!()));
 }
 
-fn compiler_context(compiler_ctx: &Option<Ident>) -> Item {
+fn compiler_context(compiler_ctx: Option<&Ident>) -> Item {
     compiler_ctx
         .as_ref()
         .map(|ctx| {
@@ -441,18 +439,10 @@ fn parse_fn(start_symbol: &Ident) -> Item {
     }
 }
 
-fn lex_fn() -> Item {
+fn parse_str_fn(start_symbol: &Ident) -> Item {
     parse_quote! {
-        pub fn lex(word: impl Into<String>) -> Lex {
-            todo!()
-        }
-    }
-}
-
-fn parse_str_fn(start_symbol: Ident) -> Item {
-    parse_quote! {
-        pub fn parse_str(ctx: __CompilerContext, word: impl Into<String>) -> #start_symbol {
-            parse(ctx, lex(word))
+        pub fn parse_str(ctx: __CompilerContext, source: &<Token as Logos<'_>>::Source) -> Result<#start_symbol, Stacks> {
+            parse(ctx, Token::lexer(source).flatten())
         }
     }
 }

@@ -1,3 +1,4 @@
+use logos::Logos;
 use static_sdd::*;
 
 #[grammar]
@@ -56,4 +57,8 @@ fn main() {
     ).ok().expect("couldn't parse");
 
     println!("result is {res}");
+
+    let res = parse_str((), "1 + 2 + 3 + 4").ok().expect("couldn't parse");
+
+    println!("second result is {res}");
 }
