@@ -8,28 +8,28 @@ mod ambiguous {
     #[start_symbol]
     pub type E = usize;
 
-    #[token = r"\d+"]
+    #[token(regex = r"\d+")]
     pub type Id = usize;
 
-    #[token = "+"]
+    #[token("+")]
     pub struct Plus;
 
-    #[token = "-"]
+    #[token("-")]
     pub struct Minus;
 
-    #[token = "*"]
+    #[token("*")]
     pub struct Times;
 
-    #[token = "/"]
+    #[token("/")]
     pub struct Division;
 
-    #[token = "^"]
+    #[token("^")]
     pub struct Power;
 
-    #[token = "("]
+    #[token("(")]
     pub struct OpenPar;
 
-    #[token = ")"]
+    #[token(")")]
     pub struct ClosePar;
 
     // #[precedence = 0]

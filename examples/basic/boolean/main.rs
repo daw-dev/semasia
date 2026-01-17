@@ -34,31 +34,31 @@ mod sat {
     #[non_terminal]
     pub type N = Formula;
 
-    #[token = r"\w+"]
+    #[token(regex = r"\w+")]
     pub type Atom = String;
 
-    #[token = "->"]
+    #[token("->")]
     pub struct RightArrow;
 
-    #[token = "<-"]
+    #[token("<-")]
     pub struct LeftArrow;
 
-    #[token = "<->"]
+    #[token("<->")]
     pub struct LeftRightArrow;
 
-    #[token = "|"]
+    #[token("|")]
     pub struct Or;
 
-    #[token = "&"]
+    #[token("&")]
     pub struct And;
 
-    #[token = "!"]
+    #[token("!")]
     pub struct Not;
 
-    #[token = "("]
+    #[token("(")]
     pub struct OpenPar;
 
-    #[token = ")"]
+    #[token(")")]
     pub struct ClosePar;
 
     production!(P1, I -> (D, RightArrow, I), |(d, _, i)| Formula::Implies(Box::new(d), Box::new(i)));

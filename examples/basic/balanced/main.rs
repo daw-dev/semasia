@@ -4,10 +4,10 @@ use static_sdd::*;
 mod balanced {
     use super::*;
 
-    #[token = "a"]
+    #[token("a")]
     pub struct A;
 
-    #[token = "b"]
+    #[token("b")]
     pub struct B;
 
     #[non_terminal]
@@ -22,5 +22,5 @@ mod balanced {
 }
 
 fn main() {
-    balanced::parse("aaabbb");
+    balanced::parse_str((), "aaabbb");
 }

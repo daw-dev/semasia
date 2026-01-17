@@ -8,10 +8,10 @@ mod addition_grammar {
     #[start_symbol]
     pub type E = f32;
 
-    #[token = r"\d+(\.\d+)?"]
+    #[token(regex = r"\d+(\.\d+)?")]
     pub type Id = f32;
 
-    #[token = "+"]
+    #[token("+")]
     pub struct Plus;
 
     production!(P1, E -> (E, Plus, Id), |(e, _, id)| e + id);

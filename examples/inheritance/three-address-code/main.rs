@@ -38,6 +38,10 @@ mod compiler {
         fn new() -> Self {
             Self { lines: Vec::new() }
         }
+
+        pub fn len(&self) -> usize {
+            self.lines.len()
+        }
     }
 
     impl FromIterator<Statement> for Code {
@@ -89,22 +93,22 @@ mod compiler {
     #[non_terminal]
     pub type Condition = FromInherited<ConditionLabels, Code>;
 
-    #[token = "skip"]
+    #[token("skip")]
     pub struct Skip;
 
-    #[token = "true"]
+    #[token("true")]
     pub struct True;
 
-    #[token = "false"]
+    #[token("false")]
     pub struct False;
 
-    #[token = "||"]
+    #[token("||")]
     pub struct OrOp;
 
-    #[token = "&&"]
+    #[token("&&")]
     pub struct AndOp;
 
-    #[token = "if"]
+    #[token("if")]
     pub struct If;
 
     production!(ProgramIsStatement, Program -> FutureStatement, |ctx, s| s.resolve(ctx.new_label()));
@@ -150,11 +154,6 @@ mod compiler {
 use compiler::*;
 
 fn main() {
-    let res = parse(Default::default(), [
-        Token::If(If),
-        Token::True(True),
-        Token::OrOp(OrOp),
-        Token::False(False),
-        Token::Skip(Skip),
-    ]).expect("couldn't parse");
+    let res = parse_str(Default::default(), "if false || true skip").expect("couldn't parse");
+    eprintln!("code is {} lines long", res.len());
 }

@@ -17,25 +17,35 @@ mod arrays {
     #[non_terminal]
     pub type Computed = FromInherited<String, ComputedType>;
 
-    #[token = "int|float"]
+    #[non_terminal]
     pub type Base = String;
 
-    #[token = "["]
+    #[token("int")]
+    pub struct Int;
+
+    #[token("float")]
+    pub struct Float;
+
+    #[token("[")]
     pub struct LeftSquarePar;
 
-    #[token = "]"]
+    #[token("]")]
     pub struct RightSquarePar;
 
-    #[token = r"\d+"]
+    #[token(regex = r"\d+")]
     pub type Size = usize;
 
-    production!(P1, T -> (Base, Computed), |(b, c)| c.resolve(b));
+    production!(FinalType, T -> (Base, Computed), |(b, c)| c.resolve(b));
 
-    production!(P2, Computed -> (LeftSquarePar, Size, RightSquarePar, Computed), |(_, size, _, c)|
+    production!(ArrayType, Computed -> (LeftSquarePar, Size, RightSquarePar, Computed), |(_, size, _, c)|
         c.map(move |val| ComputedType::Array(size, Box::new(val)))
     );
 
-    production!(P3, Computed -> (), |_| FromInherited::new(ComputedType::BaseType));
+    production!(NoArray, Computed -> (), |_| FromInherited::new(ComputedType::BaseType));
+
+    production!(BaseIsInt, Base -> Int, |_| "int".to_string());
+
+    production!(BaseIsFloat, Base -> Float, |_| "int".to_string());
 }
 
 #[test]
@@ -52,5 +62,6 @@ fn array_test() {
 }
 
 fn main() {
-    arrays::parse("int[2][3]");
+    let res = arrays::parse_str((), "int[2][3]").expect("couldn't parse");
+    println!("{res:?}");
 }

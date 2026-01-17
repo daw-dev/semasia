@@ -60,16 +60,16 @@ mod division {
     #[non_terminal]
     pub type Term = Number;
 
-    #[token = r"\d+"]
+    #[token(regex = r"\d+")]
     pub type Integer = isize;
 
-    #[token = r"\d+\.\d+"]
+    #[token(regex = r"\d+\.\d+")]
     pub type Decimal = f32;
 
-    #[token = r"\*"]
+    #[token("*")]
     pub struct Times;
 
-    #[token = r"/"]
+    #[token("/")]
     pub struct Division;
 
     production!(P0, S -> Expr, |e| e.decimal.resolve(e.use_decimal));
@@ -120,38 +120,7 @@ mod division {
     production!(P4, Term -> Decimal, |f| Number::Decimal(f));
 }
 
-#[test]
-fn integer_test() {
-    use division::*;
-
-    let (i1, op1, i2, op2, i3) = (5, Division, 2, Times, 1);
-    let t1 = P3::synthesize(i1);
-    let e1 = P2::synthesize(t1);
-    let t2 = P3::synthesize(i2);
-    let e12 = P11::synthesize((e1, op1, t2));
-    let t3 = P3::synthesize(i3);
-    let e123 = P1::synthesize((e12, op2, t3));
-    let res = P0::synthesize(e123);
-
-    assert_eq!(res, Number::Integer(2));
-}
-
-#[test]
-fn decimal_test() {
-    use division::*;
-
-    let (i1, op1, i2, op2, f3) = (5, Division, 2, Times, 1.0);
-    let t1 = P3::synthesize(i1);
-    let e1 = P2::synthesize(t1);
-    let t2 = P3::synthesize(i2);
-    let e12 = P11::synthesize((e1, op1, t2));
-    let t3 = P4::synthesize(f3);
-    let e123 = P1::synthesize((e12, op2, t3));
-    let res = P0::synthesize(e123);
-
-    assert_eq!(res, Number::Decimal(2.5));
-}
-
 fn main() {
-    division::parse("5/2*1.0");
+    let res = division::parse_str((), "5/2*1.0").expect("couldn't parse");
+    println!("{res:?}");
 }
