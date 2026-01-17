@@ -17,6 +17,7 @@ pub fn inject_items(
     items: &mut Vec<Item>,
     enriched_grammar: EnrichedGrammar,
 ) {
+    eprintln!("{enriched_grammar}");
     let symbolic_grammar = SymbolicGrammar::from(&enriched_grammar);
 
     let automaton = LalrAutomaton::compute(&symbolic_grammar);

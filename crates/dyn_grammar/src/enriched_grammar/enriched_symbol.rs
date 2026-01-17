@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{non_terminal::EnrichedNonTerminal, token::EnrichedToken};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EnrichedSymbol {
     Token(EnrichedToken),
     NonTerminal(EnrichedNonTerminal),

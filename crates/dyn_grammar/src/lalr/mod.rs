@@ -249,6 +249,15 @@ impl<'a> LalrAutomaton<'a> {
         while let Some(state) = self.states.iter_mut().find(|state| !state.marked) {
             state.marked = true;
             let closure = state.closure(&mut counter, self.grammar);
+            for eps_item in closure.iter().filter(|item| {
+                self.grammar
+                    .get_production(item.production_id)
+                    .unwrap()
+                    .arity()
+                    == 0
+            }) {
+                state.kernel.insert(eps_item.clone());
+            }
             let mut token_transitions = vec![HashSet::new(); self.grammar.token_count()];
             let mut non_terminal_transitions =
                 vec![HashSet::new(); self.grammar.non_terminal_count()];
@@ -354,7 +363,9 @@ impl<'a> LalrAutomaton<'a> {
             }
 
             for (token, target) in token_transitions.iter().enumerate() {
-                let Some(target) = target else { continue; };
+                let Some(target) = target else {
+                    continue;
+                };
                 let entry = &mut action_table[(state_id, SymbolicSymbol::Token(token))];
                 if let Some(reduce) = entry.take() {
                     eprintln!("shift/reduce conflict");

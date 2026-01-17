@@ -1,15 +1,13 @@
 use itertools::Itertools;
 use std::fmt::Display;
-use syn::{Ident, token};
-
+use syn::Ident;
 use crate::{
-    EnrichedGrammar,
     enriched_symbol::EnrichedSymbol,
-    non_terminal::{self, EnrichedNonTerminal},
+    non_terminal::EnrichedNonTerminal,
     token::EnrichedToken,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EnrichedBaseProduction {
     ident: Ident,
     head: Ident,
@@ -77,7 +75,7 @@ impl Display for EnrichedBaseProduction {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EnrichedProduction {
     ident: Ident,
     head: Ident,

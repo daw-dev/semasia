@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use syn::Ident;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Match {
     Literal(String),
     Regex(String),
@@ -17,7 +17,7 @@ impl Display for Match {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EnrichedToken {
     ident: Ident,
     match_string: Match,

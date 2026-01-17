@@ -13,3 +13,4 @@ quote = "1.0.42"
 syn = { version = "2.0.110", features = ["full", "extra-traits"] }
 itertools = "0.14.0"
 dyn_grammar = {path = "../dyn_grammar"}
+ebnf_parser = { path = "../ebnf_parser" }

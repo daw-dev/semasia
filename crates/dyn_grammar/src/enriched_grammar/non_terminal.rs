@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use syn::Ident;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EnrichedNonTerminal {
     ident: Ident,
 }

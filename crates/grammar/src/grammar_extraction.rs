@@ -1,19 +1,23 @@
+use std::collections::HashSet;
+
 use dyn_grammar::{
     EnrichedGrammar,
     non_terminal::EnrichedNonTerminal,
     production::EnrichedBaseProduction,
     token::{EnrichedToken, Match},
 };
+use ebnf_parser::EbnfProduction;
 use itertools::Itertools;
 use proc_macro_error::{emit_call_site_error, emit_call_site_warning, emit_error};
 use syn::{
-    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitStr, Meta, Type,
-    UseGroup, UseTree,
+    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitStr, Meta, Type, UseGroup,
+    UseTree,
 };
 
 pub fn extract_grammar(items: &mut [Item]) -> EnrichedGrammar {
     let mut tokens = Vec::new();
     let mut non_terminals = Vec::new();
+    let mut ebnf_extra_non_terminals = HashSet::new();
     let mut productions = Vec::new();
     let mut start_symbol = None;
     let mut compiler_ctx = None;
@@ -43,6 +47,15 @@ pub fn extract_grammar(items: &mut [Item]) -> EnrichedGrammar {
             non_terminals.push(non_terminal);
         } else if let Some(production) = extract_production(item) {
             productions.push(production);
+        } else if let Some(ebnf) = extract_ebnf_production(item) {
+            let extra_prods = ebnf.into_extra_productions();
+            let extra_nts = extra_prods
+                .iter()
+                .map(EnrichedBaseProduction::head)
+                .cloned()
+                .map(EnrichedNonTerminal::new);
+            ebnf_extra_non_terminals.extend(extra_nts);
+            productions.extend(extra_prods);
         }
     }
 
@@ -60,9 +73,11 @@ pub fn extract_grammar(items: &mut [Item]) -> EnrichedGrammar {
         non_terminals[0].clone()
     });
 
+    non_terminals.extend(ebnf_extra_non_terminals);
+
     EnrichedGrammar::new(
         compiler_ctx,
-        non_terminals,
+        non_terminals.into_iter().unique().collect(),
         tokens,
         start_symbol,
         productions,
@@ -199,14 +214,24 @@ fn extract_production(item: &mut Item) -> Option<EnrichedBaseProduction> {
                         .collect(),
                     _ => panic!("type must be a unit, a single type or a tuple"),
                 };
+                let res = Ok(EnrichedBaseProduction::new(name, head, body));
                 if input.is_empty() {
-                    return Ok(EnrichedBaseProduction::new(name, head, body));
+                    return res;
                 }
                 input.parse::<syn::Token![,]>()?;
                 input.parse::<syn::Expr>()?;
-                Ok(EnrichedBaseProduction::new(name, head, body))
+                res
             })
             .ok(),
+        _ => None,
+    }
+}
+
+fn extract_ebnf_production(item: &mut Item) -> Option<EbnfProduction> {
+    match item {
+        Item::Macro(mac) if mac.mac.path.is_ident("ebnf") => {
+            mac.mac.parse_body::<EbnfProduction>().ok()
+        },
         _ => None,
     }
 }
