@@ -41,34 +41,43 @@ mod chess {
     #[non_terminal]
     pub use tile::Tile;
 
-    #[token = "K"]
+    #[token("K")]
     pub struct KingPiece;
 
-    #[token = "Q"]
+    #[token("Q")]
     pub struct QueenPiece;
 
-    #[token = "R"]
+    #[token("R")]
     pub struct RookPiece;
 
-    #[token = "B"]
+    #[token("B")]
     pub struct BishopPiece;
 
-    #[token = "N"]
+    #[token("N")]
     pub struct KnightPiece;
 
-    #[token = "x"]
+    #[token("x")]
     pub struct Takes;
 
-    #[token = "0-0|O-O"]
+    #[token("+")]
+    pub struct Check;
+
+    #[token("#")]
+    pub struct CheckMate;
+
+    #[token("=")]
+    pub struct Promotes;
+
+    #[token(regex = "0-0|O-O")]
     pub struct KingSideCastling;
 
-    #[token = "0-0-0|O-O-O"]
+    #[token(regex = "0-0-0|O-O-O")]
     pub struct QueenSideCastling;
 
-    #[token = r"[a-h]"]
+    #[token(regex = "[a-h]")]
     pub type File = char;
 
-    #[token = r"[1-8]"]
+    #[token(regex = "[1-8]")]
     pub type Rank = usize;
 
     // GAME
@@ -92,10 +101,21 @@ mod chess {
     production!(M4, Move -> Castling, |c| Move::Castling(c));
 
     // MOVE
-    production!(M5, SimpleMove -> (PieceType, Tile), |(ty, pos)| SimpleMove::piece_moved(ty, pos));
-    production!(M6, SimpleMove -> Tile, |pos| SimpleMove::piece_moved(PieceType::Pawn, pos));
-    production!(M7, SimpleMove -> (PieceType, Takes, Tile), |(ty, _, pos)| SimpleMove::takes(ty, pos));
-    production!(M8, SimpleMove -> (PieceType, File, Tile), |(ty, sf, pos)| todo!());
+    // production!(M5, SimpleMove -> (PieceType, Tile), |(ty, pos)| SimpleMove::piece_moved(ty, pos));
+    // production!(M7, SimpleMove -> (PieceType, Takes, Tile), |(ty, _, pos)| SimpleMove::takes(ty, pos));
+    // production!(M8, SimpleMove -> (PieceType, File, Tile), |(ty, sf, pos)| todo!());
+    ebnf!(
+        SimpleMoveProd,
+        SimpleMove -> (
+            PieceType,
+            File?,
+            Rank?,
+            Takes?,
+            Tile,
+            Promotes?,
+            PieceType?,
+            CheckType { Check | CheckMate }
+        ), |(ty, file, rank, takes, tile, promotes, piece_type, check)| todo!());
 
     // PIECE TYPES
     production!(P0, PieceType -> KingPiece, |_| PieceType::King);
@@ -103,6 +123,7 @@ mod chess {
     production!(P2, PieceType -> RookPiece, |_| PieceType::Rook);
     production!(P3, PieceType -> BishopPiece, |_| PieceType::Bishop);
     production!(P4, PieceType -> KnightPiece, |_| PieceType::Knight);
+    production!(P5, PieceType -> (), |_| PieceType::Pawn);
 }
 
 fn main() {}

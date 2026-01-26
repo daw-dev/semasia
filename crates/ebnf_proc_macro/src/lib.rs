@@ -35,6 +35,11 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
                 enum_ident,
                 variants_types,
             } => {
+                items.push(quote! {
+                    enum #enum_ident {
+                        #(#variants_types(#variants_types),)*
+                    }
+                });
                 for variant in variants_types.into_iter() {
                     let prod_name = EbnfProduction::alternative_ident(
                         &ebnf_production_name,
@@ -110,10 +115,6 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
     };
 
     items.push(ebnf_root_production);
-
-    for item in items.iter() {
-        eprintln!("{item}");
-    }
 
     quote! {
         #(#items)*

@@ -20,9 +20,11 @@ impl Parse for EbnfBodyItem {
             braced!(variants_content in input);
             let variants: Punctuated<Ident, Token![|]> =
                 variants_content.parse_terminated(Ident::parse, Token![|])?;
+            let variants_types = variants.into_iter().collect();
+            eprintln!("{variants_types:?}");
             Ok(Self::Alternatives {
                 enum_ident: ident,
-                variants_types: variants.into_iter().collect(),
+                variants_types,
             })
         } else if input.peek(Token![?]) {
             input.parse::<Token![?]>()?;
@@ -30,13 +32,8 @@ impl Parse for EbnfBodyItem {
         } else if input.peek(Token![*]) {
             input.parse::<Token![*]>()?;
             Ok(Self::Repetition(ident))
-        } else if input.is_empty() {
-            Ok(Self::Ident(ident))
         } else {
-            Err(syn::Error::new(
-                ident.span(),
-                "unexpected token in ebnf item",
-            ))
+            Ok(Self::Ident(ident))
         }
     }
 }
