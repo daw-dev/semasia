@@ -2,7 +2,7 @@ use dyn_grammar::{
     EnrichedGrammar,
     lalr::LalrAutomaton,
     non_terminal::EnrichedNonTerminal,
-    parsing::tables::{ActionTable, GoToTable},
+    parsing::tables::{EofTable, NonTerminalTable, TokenTable},
     production::EnrichedProduction,
     symbolic_grammar::SymbolicGrammar,
     token::EnrichedToken,
@@ -21,28 +21,27 @@ pub fn inject_items(
     let symbolic_grammar = SymbolicGrammar::from(&enriched_grammar);
     eprintln!("{symbolic_grammar}");
     let automaton = LalrAutomaton::compute(&symbolic_grammar);
+    let states_count = automaton.states_count();
     eprintln!("{automaton}");
-    let (action_table, goto_table) = automaton.generate_tables();
-    eprintln!("{action_table}");
-    eprintln!("{goto_table}");
+    let (token_table, eof_table, non_terminal_table) = automaton.generate_tables();
+    eprintln!("{token_table}");
+    eprintln!("{non_terminal_table}");
 
     items.push(compiler_context(enriched_grammar.context()));
 
     let mut items_to_add = Vec::new();
-    items_to_add.push(logos_use());
+    items_to_add.extend(uses());
     items_to_add.extend(token_enum(enriched_grammar.tokens()));
     items_to_add.extend(non_terminal_enum(enriched_grammar.non_terminals()));
-    items_to_add.extend(symbol_enum());
     items_to_add.extend(production_enum(enriched_grammar.productions()));
-    items_to_add.push(action_enum());
-    items_to_add.extend(table_const(&enriched_grammar, action_table, goto_table));
-    items_to_add.extend(stacks_struct());
-    items_to_add.push(parse_one_result());
-    items_to_add.push(parse_one_fn());
-    items_to_add.push(parse_one_eof_result());
-    items_to_add.push(parse_one_eof_fn(enriched_grammar.tokens().len()));
-    items_to_add.push(parse_fn(enriched_grammar.start_symbol().ident()));
-    items_to_add.push(parse_str_fn(enriched_grammar.start_symbol().ident()));
+    eprintln!("added enums");
+    items_to_add.extend(tables_as_consts(&enriched_grammar, states_count, token_table, eof_table, non_terminal_table));
+
+    for item in items_to_add.iter() {
+        println!("------------------------------");
+        println!("{}", quote!(#item));
+    }
+
     match internal_mod_name {
         Some(name) => items.push(parse_quote! {
                 #[doc("generated using the static_sdd library")]
@@ -71,8 +70,12 @@ fn compiler_context(compiler_ctx: Option<&Ident>) -> Item {
         })
 }
 
-fn logos_use() -> Item {
-    parse_quote!(use logos::Logos;)
+fn uses() -> Vec<Item> {
+    let file: syn::File = parse_quote!{
+        use logos::Logos;
+        use parser::Symbol;
+    };
+    file.items
 }
 
 fn token_enum(tokens: &[EnrichedToken]) -> Vec<Item> {
@@ -148,35 +151,6 @@ fn non_terminal_enum(non_terminals: &[EnrichedNonTerminal]) -> Vec<Item> {
     file.items
 }
 
-fn symbol_enum() -> Vec<Item> {
-    let file: syn::File = parse_quote! {
-        pub enum Symbol {
-            Token(Token),
-            NonTerminal(NonTerminal),
-        }
-
-        impl std::fmt::Debug for Symbol {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    Self::Token(tok) => write!(f, "{tok}"),
-                    Self::NonTerminal(nt) => write!(f, "{nt}"),
-                }
-            }
-        }
-
-        impl std::fmt::Display for Symbol {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    Self::Token(tok) => write!(f, "{tok}"),
-                    Self::NonTerminal(nt) => write!(f, "{nt}"),
-                }
-            }
-        }
-    };
-
-    file.items
-}
-
 fn production_enum(productions: &[EnrichedProduction]) -> Vec<Item> {
     let idents = productions
         .iter()
@@ -202,7 +176,6 @@ fn production_enum(productions: &[EnrichedProduction]) -> Vec<Item> {
                         stacks.state_stack.pop();
                     }
                 }
-                dyn_grammar::enriched_symbol::EnrichedSymbol::EOF => unreachable!(),
             }
         }).rev();
         let vars = (0usize..prod.arity()).map(|i| Ident::new(&format!("t{i}"), Span::call_site().into()));
@@ -216,7 +189,7 @@ fn production_enum(productions: &[EnrichedProduction]) -> Vec<Item> {
         }
     });
     let file: syn::File = parse_quote! {
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub enum ProductionName {
             #(#idents,)*
         }
@@ -229,8 +202,8 @@ fn production_enum(productions: &[EnrichedProduction]) -> Vec<Item> {
             }
         }
 
-        impl ProductionName {
-            fn reduce(&self, ctx: &mut __CompilerContext, stacks: &mut Stacks) -> NonTerminal {
+        impl parser::Reduce<NonTerminal, Token, __CompilerContext> for ProductionName {
+            fn reduce(&self, ctx: &mut __CompilerContext, stacks: &mut Stacks<NonTerminal, Token>) -> NonTerminal {
                 match self {
                     #(Self::#idents => #reductions,)*
                 }
@@ -240,38 +213,30 @@ fn production_enum(productions: &[EnrichedProduction]) -> Vec<Item> {
     file.items
 }
 
-fn action_enum() -> Item {
-    parse_quote! {
-        #[derive(Debug)]
-        pub enum Action {
-            Shift(usize),
-            Reduce(ProductionName),
-            Accept,
-        }
-    }
-}
-
-fn table_const(
+fn tables_as_consts(
     enriched_grammar: &EnrichedGrammar,
-    action_table: ActionTable,
-    goto_table: GoToTable,
+    state_count: usize,
+    token_table: TokenTable,
+    eof_table: EofTable,
+    non_terminal_table: NonTerminalTable,
 ) -> Vec<Item> {
-    let (atw, ath) = action_table.dimensions();
-    let actions = action_table.table.into_iter().map::<syn::Expr, _>(|row| {
+    let token_count = enriched_grammar.tokens().len();
+    let non_terminal_count = enriched_grammar.non_terminals().len();
+
+    let token_actions = token_table.table.into_iter().map::<syn::Expr, _>(|row| {
         let row = row.into_iter().map::<syn::Expr, _>(|action| {
             match action.map::<syn::Expr, _>(|action| match action {
-                dyn_grammar::parsing::action::Action::Shift(state) => {
-                    parse_quote!(Action::Shift(#state))
+                dyn_grammar::parsing::action::TokenAction::Shift(state) => {
+                    parse_quote!(parser::TokenAction::Shift(#state))
                 }
-                dyn_grammar::parsing::action::Action::Reduce(prod_id) => {
+                dyn_grammar::parsing::action::TokenAction::Reduce(prod_id) => {
                     let actual_production = enriched_grammar
                         .productions()
                         .get(prod_id)
                         .expect("production not found");
                     let prod_name = actual_production.ident();
-                    parse_quote!(Action::Reduce(ProductionName::#prod_name))
+                    parse_quote!(parser::TokenAction::Reduce(ProductionName::#prod_name))
                 }
-                dyn_grammar::parsing::action::Action::Accept => parse_quote!(Action::Accept),
             }) {
                 Some(expr) => parse_quote!(Some(#expr)),
                 None => parse_quote!(None),
@@ -282,8 +247,25 @@ fn table_const(
         }
     });
 
-    let (gtw, gth) = goto_table.dimensions();
-    let gotos = goto_table.table.into_iter().map::<syn::Expr, _>(|row| {
+    let eof_actions = eof_table.table.into_iter().map::<syn::Expr, _>(|action| {
+        match action.map::<syn::Expr, _>(|action| match action {
+            dyn_grammar::parsing::action::EofAction::Reduce(prod_id) => {
+                let actual_production = enriched_grammar
+                    .productions()
+                    .get(prod_id)
+                    .expect("production not found");
+                let prod_name = actual_production.ident();
+                parse_quote!(parser::EofAction::Reduce(ProductionName::#prod_name))
+            }
+            dyn_grammar::parsing::action::EofAction::Accept => parse_quote!(parser::EofAction::Accept),
+        }) {
+                Some(expr) => parse_quote!(Some(#expr)),
+                None => parse_quote!(None),
+            }
+        }
+    );
+
+    let gotos = non_terminal_table.table.into_iter().map::<syn::Expr, _>(|row| {
         let row = row.into_iter().map::<syn::Expr, _>(|state| {
             match state {
                 Some(expr) => parse_quote!(Some(#expr)),
@@ -296,148 +278,35 @@ fn table_const(
     });
 
     let file: syn::File = parse_quote! {
-        pub const ACTION_TABLE: [[Option<Action>; #atw]; #ath] = [
-            #(#actions,)*
-        ];
+        pub struct ConstTables;
 
-        pub const GOTO_TABLE: [[Option<usize>; #gtw]; #gth] = [
-            #(#gotos,)*
-        ];
-    };
-    file.items
-}
+        impl ConstTables {
+            pub const TOKEN_TABLE: [[Option<parser::TokenAction<ProductionName>>; #token_count]; #state_count] = [
+                #(#token_actions,)*
+            ];
+            
+            pub const EOF_TABLE: [Option<parser::EofAction<ProductionName>>; #state_count] = [
+                #(#eof_actions,)*
+            ];
 
-fn stacks_struct() -> Vec<Item> {
-    let file: syn::File = parse_quote! {
-        #[derive(Debug)]
-        pub struct Stacks {
-            pub state_stack: Vec<usize>,
-            pub symbol_stack: Vec<Symbol>,
+            pub const NON_TERMINAL_TABLE: [[Option<usize>; #non_terminal_count]; #state_count] = [
+                #(#gotos,)*
+            ];
         }
 
-        impl std::fmt::Display for Stacks {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "Stacks {{ ")?;
-                write!(f, "state_stack: {:?}, ", self.state_stack)?;
-                write!(f, "symbol_stack: {:?} ", self.symbol_stack)?;
-                write!(f, "}}")
+        impl parser::Tables<NonTerminal, Token, ProductionName> for ConstTables {
+            fn query_token_table(current_state: usize, current_token: &Token) -> Option<parser::TokenAction<ProductionName>> {
+                ConstTables::TOKEN_TABLE[current_state][current_token.id()].clone()
             }
-        }
-
-        impl Stacks {
-            pub fn new() -> Self {
-                Self {
-                    state_stack: vec![0],
-                    symbol_stack: Vec::new(),
-                }
+            fn query_eof_table(current_state: usize) -> Option<parser::EofAction<ProductionName>> {
+                ConstTables::EOF_TABLE[current_state].clone()
+            }
+            fn query_goto_table(current_state: usize, non_terminal: &NonTerminal) -> Option<usize> {
+                ConstTables::NON_TERMINAL_TABLE[current_state][non_terminal.id()].clone()
             }
         }
     };
-
     file.items
-}
-
-fn parse_one_result() -> Item {
-    parse_quote! {
-        pub enum ParseOneResult {
-            Shifted,
-            Reduced(Token),
-            Error,
-        }
-    }
-}
-
-fn parse_one_fn() -> Item {
-    parse_quote! {
-        pub fn parse_one(ctx: &mut __CompilerContext, stacks: &mut Stacks, curr: Token) -> ParseOneResult {
-            let current_state = stacks.state_stack.last();
-            let Some(&current_state) = current_state else { return ParseOneResult::Error; };
-            let token_id = curr.id();
-            let action = &ACTION_TABLE[current_state][token_id];
-            let Some(action) = action else { return ParseOneResult::Error; };
-            match action {
-                Action::Shift(state) => {
-                    stacks.state_stack.push(*state);
-                    stacks.symbol_stack.push(Symbol::Token(curr));
-                    ParseOneResult::Shifted
-                }
-                Action::Reduce(prod_name) => {
-                    let head = prod_name.reduce(ctx, stacks);
-                    let current_state = *stacks.state_stack.last().unwrap();
-                    let id = head.id();
-                    let Some(new_state) = &GOTO_TABLE[current_state][id] else { panic!("couldn't parse") };
-                    stacks.state_stack.push(*new_state);
-                    stacks.symbol_stack.push(Symbol::NonTerminal(head));
-                    ParseOneResult::Reduced(curr)
-                }
-                Accept => unreachable!(),
-            }
-        }
-    }
-}
-
-fn parse_one_eof_result() -> Item {
-    parse_quote! {
-        pub enum ParseOneEofResult {
-            Reduced,
-            Accepted,
-            Error,
-        }
-    }
-}
-
-fn parse_one_eof_fn(token_count: usize) -> Item {
-    parse_quote! {
-        pub fn parse_one_eof(ctx: &mut __CompilerContext, stacks: &mut Stacks) -> ParseOneEofResult {
-            let current_state = stacks.state_stack.last();
-            let Some(&current_state) = current_state else { return ParseOneEofResult::Error; };
-            let id = #token_count;
-            let action = &ACTION_TABLE[current_state][id];
-            let Some(action) = action else { return ParseOneEofResult::Error; };
-            match action {
-                Action::Reduce(prod_name) => {
-                    let head = prod_name.reduce(ctx, stacks);
-                    let current_state = *stacks.state_stack.last().unwrap();
-                    let id = head.id();
-                    let Some(new_state) = &GOTO_TABLE[current_state][id] else { return ParseOneEofResult::Error; };
-                    stacks.state_stack.push(*new_state);
-                    stacks.symbol_stack.push(Symbol::NonTerminal(head));
-                    ParseOneEofResult::Reduced
-                }
-                Action::Accept => {
-                    ParseOneEofResult::Accepted
-                }
-                Action::Shift(_) => unreachable!(),
-            }
-        }
-    }
-}
-
-fn parse_fn(start_symbol: &Ident) -> Item {
-    parse_quote! {
-        pub fn parse(mut ctx: __CompilerContext, token_stream: impl IntoIterator<Item = Token>) -> Result<#start_symbol, Stacks> {
-            let mut stacks = Stacks::new();
-            for mut token in token_stream.into_iter() {
-                loop {
-                    let parse_one_result = parse_one(&mut ctx, &mut stacks, token);
-                    match parse_one_result {
-                        ParseOneResult::Reduced(curr) => {
-                            token = curr;
-                        }
-                        ParseOneResult::Error => {
-                            return Err(stacks);
-                        }
-                        ParseOneResult::Shifted => {
-                            break;
-                        }
-                    }
-                }
-            }
-            while let ParseOneEofResult::Reduced = parse_one_eof(&mut ctx, &mut stacks) {}
-            let Some(Symbol::NonTerminal(NonTerminal::#start_symbol (res))) = stacks.symbol_stack.pop() else { panic!() };
-            Ok(res)
-        }
-    }
 }
 
 fn parse_str_fn(start_symbol: &Ident) -> Item {

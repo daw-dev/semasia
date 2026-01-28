@@ -14,14 +14,13 @@ impl SlrItem {
         }
     }
 
-    pub fn pointed_symbol(&self, grammar: &SymbolicGrammar) -> SymbolicSymbol {
+    pub fn pointed_symbol(&self, grammar: &SymbolicGrammar) -> Option<SymbolicSymbol> {
         grammar
             .get_production(self.production_id)
             .expect("production not found")
             .body()
             .get(self.marker_position)
             .cloned()
-            .unwrap_or(SymbolicSymbol::EOF)
     }
 
     pub fn is_final_item(&self, grammar: &SymbolicGrammar) -> bool {

@@ -1,15 +1,20 @@
 use std::marker::PhantomData;
-use symbol::Symbol;
 use crate::results::{ParseOne, ParseOneEof, ParseOneEofError, ParseOneError};
 
 mod results;
-mod symbol;
 
+pub enum Symbol<NonTerminal, Token> {
+    NonTerminal(NonTerminal),
+    Token(Token),
+}
+
+#[derive(Clone)]
 pub enum TokenAction<Prod> {
     Shift(usize),
     Reduce(Prod),
 }
 
+#[derive(Clone)]
 pub enum EofAction<Prod> {
     Reduce(Prod),
     Accept

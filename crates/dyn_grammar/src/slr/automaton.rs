@@ -28,7 +28,7 @@ impl SlrState {
         let mut stack = self.kernel.iter().cloned().collect_vec();
         let mut res = self.kernel.clone();
         while let Some(item) = stack.pop() {
-            let SymbolicSymbol::NonTerminal(non_terminal) = item.pointed_symbol(grammar) else {
+            let Some(SymbolicSymbol::NonTerminal(non_terminal)) = item.pointed_symbol(grammar) else {
                 continue;
             };
 

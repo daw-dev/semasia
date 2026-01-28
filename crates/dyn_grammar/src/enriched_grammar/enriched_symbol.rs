@@ -6,7 +6,6 @@ use crate::{non_terminal::EnrichedNonTerminal, token::EnrichedToken};
 pub enum EnrichedSymbol {
     Token(EnrichedToken),
     NonTerminal(EnrichedNonTerminal),
-    EOF,
 }
 
 impl Display for EnrichedSymbol {
@@ -14,7 +13,6 @@ impl Display for EnrichedSymbol {
         match self {
             Self::Token(tok) => tok.fmt(f),
             Self::NonTerminal(nt) => nt.fmt(f),
-            Self::EOF => write!(f, "$"),
         }
     }
 }

@@ -11,7 +11,6 @@ pub type SymbolicNonTerminal = usize;
 pub enum SymbolicSymbol {
     Token(SymbolicToken),
     NonTerminal(SymbolicNonTerminal),
-    EOF,
 }
 
 impl Display for SymbolicSymbol {
@@ -19,7 +18,6 @@ impl Display for SymbolicSymbol {
         match self {
             SymbolicSymbol::Token(tok) => write!(f, "`{tok}`"),
             SymbolicSymbol::NonTerminal(nt) => write!(f, "{nt}"),
-            SymbolicSymbol::EOF => write!(f, "$"),
         }
     }
 }
@@ -134,7 +132,7 @@ impl<'a> SymbolicGrammar<'a> {
         self.non_terminal_count
     }
 
-    fn find_symbol(enriched_grammar: &EnrichedGrammar, ident: &Ident) -> SymbolicSymbol {
+    fn find_symbol(enriched_grammar: &EnrichedGrammar, ident: &Ident) -> Option<SymbolicSymbol> {
         enriched_grammar
             .token_id(ident)
             .map(SymbolicSymbol::Token)
@@ -143,7 +141,6 @@ impl<'a> SymbolicGrammar<'a> {
                     .non_terminal_id(ident)
                     .map(SymbolicSymbol::NonTerminal)
             })
-            .unwrap_or(SymbolicSymbol::EOF)
     }
 
     fn map_production(
@@ -172,7 +169,6 @@ impl<'a> SymbolicGrammar<'a> {
                                 .unwrap(),
                         )
                     }
-                    crate::enriched_symbol::EnrichedSymbol::EOF => SymbolicSymbol::EOF,
                 })
                 .collect(),
         }
@@ -218,7 +214,6 @@ impl<'a> SymbolicGrammar<'a> {
                         }
                     }
                 }
-                SymbolicSymbol::EOF => unreachable!(),
             }
         }
 

@@ -2,8 +2,8 @@
 
 use crate::{
     parsing::{
-        action::Action,
-        tables::{ActionTable, GoToTable, TransitionTables},
+        action::{EofAction, TokenAction},
+        tables::{EofTable, NonTerminalTable, TokenTable, TransitionTables},
     },
     symbolic_grammar::{SymbolicGrammar, SymbolicSymbol, SymbolicToken},
 };
@@ -14,15 +14,6 @@ use std::{cell::RefCell, collections::HashSet, fmt::Display, hash::Hash, rc::Rc}
 struct LookAhead {
     tokens: HashSet<SymbolicToken>,
     can_eof_follow: bool,
-}
-
-impl LookAhead {
-    pub fn into_iter(self) -> impl Iterator<Item = SymbolicSymbol> {
-        self.tokens
-            .into_iter()
-            .map(SymbolicSymbol::Token)
-            .chain(std::iter::once(SymbolicSymbol::EOF))
-    }
 }
 
 impl Display for LookAhead {
@@ -132,14 +123,13 @@ impl LalrItem {
         }
     }
 
-    pub fn pointed_symbol(&self, grammar: &SymbolicGrammar) -> SymbolicSymbol {
+    pub fn pointed_symbol(&self, grammar: &SymbolicGrammar) -> Option<SymbolicSymbol> {
         grammar
             .get_production(self.production_id)
             .expect("production not found")
             .body()
             .get(self.marker_position)
             .cloned()
-            .unwrap_or(SymbolicSymbol::EOF)
     }
 
     pub fn move_marker(&mut self) {
@@ -181,7 +171,8 @@ impl LalrState {
                 continue;
             }
 
-            let SymbolicSymbol::NonTerminal(non_terminal) = item.pointed_symbol(grammar) else {
+            let Some(SymbolicSymbol::NonTerminal(non_terminal)) = item.pointed_symbol(grammar)
+            else {
                 continue;
             };
 
@@ -264,7 +255,8 @@ impl<'a> LalrAutomaton<'a> {
             let mut non_terminal_transitions =
                 vec![HashSet::new(); self.grammar.non_terminal_count()];
             for (symbol, mut item) in closure.into_iter().filter_map(|item| {
-                (!item.is_reducing(self.grammar)).then(|| (item.pointed_symbol(self.grammar), item))
+                (!item.is_reducing(self.grammar))
+                    .then(|| (item.pointed_symbol(self.grammar).unwrap(), item))
             }) {
                 item.move_marker();
                 match symbol {
@@ -274,7 +266,6 @@ impl<'a> LalrAutomaton<'a> {
                     SymbolicSymbol::NonTerminal(nt) => {
                         non_terminal_transitions[nt].insert(item);
                     }
-                    SymbolicSymbol::EOF => unreachable!(),
                 }
             }
             let token_transitions = token_transitions
@@ -334,14 +325,20 @@ impl<'a> LalrAutomaton<'a> {
         self.states.push(state);
     }
 
-    pub fn generate_tables(&self) -> (ActionTable, GoToTable) {
-        let mut action_table = ActionTable::new(self.grammar.token_count());
-        let mut goto_table = GoToTable::new(self.grammar.non_terminal_count());
+    pub fn states_count(&self) -> usize {
+        self.states.len()
+    }
+
+    pub fn generate_tables(&self) -> (TokenTable, EofTable, NonTerminalTable) {
+        let mut token_table = TokenTable::new(self.grammar.token_count());
+        let mut eof_table = EofTable::new();
+        let mut goto_table = NonTerminalTable::new(self.grammar.non_terminal_count());
 
         for ((state_id, state), (token_transitions, non_terminal_transitions)) in
             self.states.iter().enumerate().zip(self.transitions.iter())
         {
-            action_table.add_state();
+            token_table.add_state();
+            eof_table.add_state();
 
             for reducing_item in state
                 .kernel
@@ -349,13 +346,24 @@ impl<'a> LalrAutomaton<'a> {
                 .filter(|item| item.is_reducing(self.grammar))
                 .chain(state.epsilon_items.iter())
             {
-                for symbol in reducing_item.lookahead_node.compute_lookahead().into_iter() {
+                let lookahead = reducing_item.lookahead_node.compute_lookahead();
+                for token in lookahead.tokens.into_iter() {
+                    let action = TokenAction::Reduce(reducing_item.production_id);
+                    let entry = &mut token_table[(state_id, token)];
+                    if let Some(reduce) = entry.take() {
+                        eprintln!("reduce/reduce conflict");
+                        eprintln!("current reduce: {reduce:?}");
+                        eprintln!("new reduce: {action:?}");
+                    }
+                    *entry = Some(action);
+                }
+                if lookahead.can_eof_follow {
                     let action = if reducing_item.production_id == usize::MAX {
-                        Action::Accept
+                        EofAction::Accept
                     } else {
-                        Action::Reduce(reducing_item.production_id)
+                        EofAction::Reduce(reducing_item.production_id)
                     };
-                    let entry = &mut action_table[(state_id, symbol)];
+                    let entry = &mut eof_table[state_id];
                     if let Some(reduce) = entry.take() {
                         eprintln!("reduce/reduce conflict");
                         eprintln!("current reduce: {reduce:?}");
@@ -369,22 +377,22 @@ impl<'a> LalrAutomaton<'a> {
                 let Some(target) = target else {
                     continue;
                 };
-                let entry = &mut action_table[(state_id, SymbolicSymbol::Token(token))];
+                let entry = &mut token_table[(state_id, token)];
                 if let Some(reduce) = entry.take() {
                     eprintln!("shift/reduce conflict");
-                    eprintln!("shift: {:?}", Action::Shift(*target));
+                    eprintln!("shift: {:?}", TokenAction::Shift(*target));
                     eprintln!("reduce: {reduce:?}");
                 }
-                *entry = Some(Action::Shift(*target));
+                *entry = Some(TokenAction::Shift(*target));
             }
 
             goto_table.add_state();
             for (non_terminal, target) in non_terminal_transitions.iter().enumerate() {
-                goto_table[(state_id, SymbolicSymbol::NonTerminal(non_terminal))] = *target;
+                goto_table[(state_id, non_terminal)] = *target;
             }
         }
 
-        (action_table, goto_table)
+        (token_table, eof_table, goto_table)
     }
 }
 
