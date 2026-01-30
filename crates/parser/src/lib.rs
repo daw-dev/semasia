@@ -1,28 +1,27 @@
+use crate::results::{
+    LexError, LexParseError, ParseEofError, ParseError, ParseOne, ParseOneEof, ParseOneError,
+    ParseTokenError,
+};
+use logos::Logos;
 use std::marker::PhantomData;
-use crate::results::{ParseOne, ParseOneEof, ParseOneEofError, ParseOneError};
 
+mod actions;
 mod results;
+mod traits;
 
+pub use actions::*;
+pub use traits::*;
+
+#[derive(Debug)]
 pub enum Symbol<NonTerminal, Token> {
     NonTerminal(NonTerminal),
     Token(Token),
 }
 
-#[derive(Clone)]
-pub enum TokenAction<Prod> {
-    Shift(usize),
-    Reduce(Prod),
-}
-
-#[derive(Clone)]
-pub enum EofAction<Prod> {
-    Reduce(Prod),
-    Accept
-}
-
+#[derive(Debug)]
 pub struct Stacks<NonTerminal, Token> {
-    state_stack: Vec<usize>,
-    symbol_stack: Vec<Symbol<NonTerminal, Token>>,
+    pub state_stack: Vec<usize>,
+    pub symbol_stack: Vec<Symbol<NonTerminal, Token>>,
 }
 
 impl<NonTerminal, Token> Stacks<NonTerminal, Token> {
@@ -48,37 +47,30 @@ impl<NonTerminal, Token> Stacks<NonTerminal, Token> {
     }
 }
 
-pub trait Tables<NonTerminal, Token, Prod> {
-    fn query_token_table(current_state: usize, current_token: &Token) -> Option<TokenAction<Prod>>;
-    fn query_eof_table(current_state: usize) -> Option<EofAction<Prod>>;
-    fn query_goto_table(current_state: usize, non_terminal: &NonTerminal) -> Option<usize>;
-}
-
-pub trait Reduce<NonTerminal, Token, Ctx> {
-    fn reduce(&self, ctx: &mut Ctx, stacks: &mut Stacks<NonTerminal, Token>) -> NonTerminal;
-}
-
+#[derive(Debug)]
 pub struct Parser<
-    NonTerminal,
+    NonTerminal: Into<StartSymbol>,
     Token,
+    StartSymbol,
     Prod: Reduce<NonTerminal, Token, Ctx>,
     Tab: Tables<NonTerminal, Token, Prod>,
     Ctx,
 > {
     stacks: Stacks<NonTerminal, Token>,
     ctx: Ctx,
-    phantom_data: PhantomData<(Prod, Tab)>,
+    phantom_data: PhantomData<(StartSymbol, Prod, Tab)>,
 }
 
 impl<
-    NonTerminal,
+    NonTerminal: Into<StartSymbol>,
     Token,
+    StartSymbol,
     Prod: Reduce<NonTerminal, Token, Ctx>,
     Tab: Tables<NonTerminal, Token, Prod>,
     Ctx,
-> Parser<NonTerminal, Token, Prod, Tab, Ctx>
+> Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>
 {
-    pub fn new(ctx: Ctx) -> Self {
+    fn new(ctx: Ctx) -> Self {
         Self {
             stacks: Stacks::new(),
             ctx,
@@ -86,7 +78,10 @@ impl<
         }
     }
 
-    pub fn parse_one(&mut self, token: Token) -> Result<ParseOne<Token>, ParseOneError> {
+    fn parse_token(
+        &mut self,
+        token: Token,
+    ) -> Result<ParseOne<Token>, ParseTokenError<NonTerminal, Token>> {
         let current_state = self.stacks.current_state();
         match Tab::query_token_table(current_state, &token) {
             Some(TokenAction::Shift(new_state)) => {
@@ -97,63 +92,179 @@ impl<
                 let head = prod.reduce(&mut self.ctx, &mut self.stacks);
                 let new_current_state = self.stacks.current_state();
                 let Some(next_state) = Tab::query_goto_table(new_current_state, &head) else {
-                    return Err(ParseOneError::GotoNotFound);
+                    return Err(ParseTokenError::GotoNotFound {
+                        leftover_non_terminal: head,
+                    });
                 };
                 self.stacks.goto(next_state, head);
                 Ok(ParseOne::Reduced {
                     leftover_token: token,
                 })
             }
-            None => Err(ParseOneError::ActionNotFound),
+            None => Err(ParseTokenError::ActionNotFound {
+                leftover_token: token,
+            }),
         }
     }
 
-    pub fn parse_one_eof(&mut self) -> Result<ParseOneEof, ParseOneEofError>{
+    fn parse_eof(&mut self) -> Result<ParseOneEof, ParseEofError<NonTerminal>> {
         let current_state = self.stacks.current_state();
         match Tab::query_eof_table(current_state) {
             Some(EofAction::Reduce(prod)) => {
                 let head = prod.reduce(&mut self.ctx, &mut self.stacks);
                 let new_current_state = self.stacks.current_state();
                 let Some(next_state) = Tab::query_goto_table(new_current_state, &head) else {
-                    return Err(ParseOneEofError::GotoNotFound);
+                    return Err(ParseEofError::GotoNotFound {
+                        leftover_non_terminal: head,
+                    });
                 };
                 self.stacks.goto(next_state, head);
                 Ok(ParseOneEof::Reduced)
             }
-            Some(EofAction::Accept) => {
-                Ok(ParseOneEof::Accepted)
-            }
-            None => {
-                Err(ParseOneEofError::ActionNotFound)
-            }
+            Some(EofAction::Accept) => Ok(ParseOneEof::Accepted),
+            None => Err(ParseEofError::ActionNotFound),
         }
     }
 
-    pub fn parse(ctx: Ctx, tokens: impl IntoIterator<Item = Token>) {
+    pub fn parse_with_ctx(
+        ctx: Ctx,
+        tokens: impl IntoIterator<Item = Token>,
+    ) -> Result<StartSymbol, ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>> {
         let mut parser = Self::new(ctx);
         for mut token in tokens.into_iter() {
             loop {
-                match parser.parse_one(token) {
+                match parser.parse_token(token) {
                     Ok(ParseOne::Shifted) => {
                         break;
                     }
                     Ok(ParseOne::Reduced { leftover_token }) => {
                         token = leftover_token;
                     }
-                    Err(_err) => todo!("propagate error"),
+                    Err(err) => {
+                        return Err(ParseError::new(parser, ParseOneError::ParseTokenError(err)));
+                    }
                 }
             }
         }
+
         loop {
-            match parser.parse_one_eof() {
+            match parser.parse_eof() {
                 Ok(ParseOneEof::Accepted) => {
                     break;
-                },
+                }
                 Ok(ParseOneEof::Reduced) => {
                     continue;
                 }
-                Err(_err) => todo!("propagate error"),
+                Err(err) => return Err(ParseError::new(parser, ParseOneError::ParseEofError(err))),
             }
         }
+
+        let Symbol::NonTerminal(non_terminal) = parser.stacks.symbol_stack.pop().unwrap() else {
+            unreachable!()
+        };
+
+        Ok(non_terminal.into())
+    }
+
+    pub fn parse_default_ctx(
+        tokens: impl IntoIterator<Item = Token>,
+    ) -> Result<StartSymbol, ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
+    where
+        Ctx: Default,
+    {
+        Self::parse_with_ctx(Default::default(), tokens)
+    }
+
+    pub fn lex_parse_with_ctx<'source>(
+        ctx: Ctx,
+        source: &'source <Token as Logos<'source>>::Source,
+    ) -> Result<StartSymbol, LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
+    where
+        Token: Logos<'source>,
+        Token::Extras: Default,
+    {
+        let mut parser = Self::new(ctx);
+        for token in Token::lexer(source) {
+            let mut token = match token {
+                Ok(token) => token,
+                Err(err) => return Err(LexParseError::LexError(LexError::new(parser, err))),
+            };
+
+            loop {
+                match parser.parse_token(token) {
+                    Ok(ParseOne::Shifted) => {
+                        break;
+                    }
+                    Ok(ParseOne::Reduced { leftover_token }) => {
+                        token = leftover_token;
+                    }
+                    Err(err) => {
+                        return Err(LexParseError::ParseError(ParseError::new(
+                            parser,
+                            ParseOneError::ParseTokenError(err),
+                        )));
+                    }
+                }
+            }
+        }
+
+        loop {
+            match parser.parse_eof() {
+                Ok(ParseOneEof::Accepted) => {
+                    break;
+                }
+                Ok(ParseOneEof::Reduced) => {
+                    continue;
+                }
+                Err(err) => {
+                    return Err(LexParseError::ParseError(ParseError::new(
+                        parser,
+                        ParseOneError::ParseEofError(err),
+                    )));
+                }
+            }
+        }
+
+        let Symbol::NonTerminal(non_terminal) = parser.stacks.symbol_stack.pop().unwrap() else {
+            unreachable!()
+        };
+
+        Ok(non_terminal.into())
+    }
+
+    pub fn lex_parse_default_ctx<'source>(
+        source: &'source <Token as Logos<'source>>::Source,
+    ) -> Result<StartSymbol, LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
+    where
+        Token: Logos<'source>,
+        <Token as Logos<'source>>::Extras: Default,
+        Ctx: Default,
+    {
+        Self::lex_parse_with_ctx(Default::default(), source)
+    }
+}
+
+impl<
+    NonTerminal: Into<StartSymbol>,
+    Token,
+    StartSymbol,
+    Prod: Reduce<NonTerminal, Token, ()>,
+    Tab: Tables<NonTerminal, Token, Prod>,
+> Parser<NonTerminal, Token, StartSymbol, Prod, Tab, ()>
+{
+    pub fn parse(
+        tokens: impl Iterator<Item = Token>,
+    ) -> Result<StartSymbol, ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, ()>> {
+        Self::parse_with_ctx((), tokens)
+    }
+
+    pub fn lex_parse<'source>(
+        source: &'source <Token as Logos<'source>>::Source,
+    ) -> Result<StartSymbol, LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, ()>>
+    where
+        Token: Logos<'source>,
+        <Token as Logos<'source>>::Extras: Default,
+    {
+        Self::lex_parse_with_ctx((), source)
     }
 }

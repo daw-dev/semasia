@@ -22,9 +22,9 @@ mod addition_grammar {
 use addition_grammar::*;
 
 fn main() {
-    let res = parse((), [Token::Id(1f32), Token::Plus(Plus), Token::Id(6f32)]);
+    let res = Parser::lex_parse("3+2");
     match res {
         Ok(res) => println!("{res}"),
-        Err(stacks) => println!("{stacks}"),
+        Err(err) => println!("error: {err:?}"),
     }
 }

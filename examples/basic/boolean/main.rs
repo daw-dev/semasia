@@ -77,23 +77,9 @@ mod sat {
 use sat::*;
 
 fn main() {
-    let t = parse(
-        (),
-        [
-            Token::Atom("p".to_string()),
-            Token::RightArrow(RightArrow),
-            Token::OpenPar(OpenPar),
-            Token::Not(Not),
-            Token::Atom("q".to_string()),
-            Token::Or(Or),
-            Token::Atom("r".to_string()),
-            Token::ClosePar(ClosePar),
-        ],
-    );
-    match t {
-        Ok(res) => {
-            println!("{res:?}");
-        }
-        Err(stacks) => println!("{stacks}"),
-    }
+    let res = Parser::lex_parse_with_ctx((), "a -> b & c | !d")
+        .ok()
+        .expect("couldn't parse");
+
+    println!("second result is {res:?}");
 }

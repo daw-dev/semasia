@@ -32,10 +32,11 @@ pub fn inject_items(
     let mut items_to_add = Vec::new();
     items_to_add.extend(uses());
     items_to_add.extend(token_enum(enriched_grammar.tokens()));
-    items_to_add.extend(non_terminal_enum(enriched_grammar.non_terminals()));
+    items_to_add.extend(non_terminal_enum(enriched_grammar.non_terminals(), enriched_grammar.start_symbol()));
     items_to_add.extend(production_enum(enriched_grammar.productions()));
     eprintln!("added enums");
     items_to_add.extend(tables_as_consts(&enriched_grammar, states_count, token_table, eof_table, non_terminal_table));
+    items_to_add.push(parser(enriched_grammar.start_symbol()));
 
     for item in items_to_add.iter() {
         println!("------------------------------");
@@ -110,6 +111,14 @@ fn token_enum(tokens: &[EnrichedToken]) -> Vec<Item> {
             }
         }
 
+        impl std::fmt::Debug for Token {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    #(Self::#tokens (_) => write!(f, stringify!(#tokens)),)*
+                }
+            }
+        }
+
         impl Token {
             pub const fn id(&self) -> usize {
                 match self {
@@ -121,7 +130,8 @@ fn token_enum(tokens: &[EnrichedToken]) -> Vec<Item> {
     file.items
 }
 
-fn non_terminal_enum(non_terminals: &[EnrichedNonTerminal]) -> Vec<Item> {
+fn non_terminal_enum(non_terminals: &[EnrichedNonTerminal], start_symbol: &EnrichedNonTerminal) -> Vec<Item> {
+    let start_symbol = start_symbol.ident();
     let non_terminals = non_terminals
         .iter()
         .map(|non_terminal| non_terminal.ident()).collect_vec();
@@ -139,10 +149,27 @@ fn non_terminal_enum(non_terminals: &[EnrichedNonTerminal]) -> Vec<Item> {
             }
         }
 
+        impl std::fmt::Debug for NonTerminal {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    #(Self::#non_terminals (_) => write!(f, stringify!(#non_terminals)),)*
+                }
+            }
+        }
+
         impl NonTerminal {
             pub const fn id(&self) -> usize {
                 match self {
                     #(Self::#non_terminals (_) => #counter,)*
+                }
+            }
+        }
+
+        impl Into<#start_symbol> for NonTerminal {
+            fn into(self) -> #start_symbol {
+                match self {
+                    Self::#start_symbol(val) => val,
+                    _ => panic!(),
                 }
             }
         }
@@ -203,7 +230,7 @@ fn production_enum(productions: &[EnrichedProduction]) -> Vec<Item> {
         }
 
         impl parser::Reduce<NonTerminal, Token, __CompilerContext> for ProductionName {
-            fn reduce(&self, ctx: &mut __CompilerContext, stacks: &mut Stacks<NonTerminal, Token>) -> NonTerminal {
+            fn reduce(&self, ctx: &mut __CompilerContext, stacks: &mut parser::Stacks<NonTerminal, Token>) -> NonTerminal {
                 match self {
                     #(Self::#idents => #reductions,)*
                 }
@@ -278,9 +305,10 @@ fn tables_as_consts(
     });
 
     let file: syn::File = parse_quote! {
-        pub struct ConstTables;
+        #[derive(Debug)]
+        pub struct Tables;
 
-        impl ConstTables {
+        impl Tables {
             pub const TOKEN_TABLE: [[Option<parser::TokenAction<ProductionName>>; #token_count]; #state_count] = [
                 #(#token_actions,)*
             ];
@@ -294,19 +322,24 @@ fn tables_as_consts(
             ];
         }
 
-        impl parser::Tables<NonTerminal, Token, ProductionName> for ConstTables {
+        impl parser::Tables<NonTerminal, Token, ProductionName> for Tables {
             fn query_token_table(current_state: usize, current_token: &Token) -> Option<parser::TokenAction<ProductionName>> {
-                ConstTables::TOKEN_TABLE[current_state][current_token.id()].clone()
+                Tables::TOKEN_TABLE[current_state][current_token.id()].clone()
             }
             fn query_eof_table(current_state: usize) -> Option<parser::EofAction<ProductionName>> {
-                ConstTables::EOF_TABLE[current_state].clone()
+                Tables::EOF_TABLE[current_state].clone()
             }
             fn query_goto_table(current_state: usize, non_terminal: &NonTerminal) -> Option<usize> {
-                ConstTables::NON_TERMINAL_TABLE[current_state][non_terminal.id()].clone()
+                Tables::NON_TERMINAL_TABLE[current_state][non_terminal.id()].clone()
             }
         }
     };
     file.items
+}
+
+fn parser(start_symbol: &EnrichedNonTerminal) -> Item {
+    let start_symbol = start_symbol.ident();
+    parse_quote!(pub type Parser = parser::Parser<NonTerminal, Token, #start_symbol, ProductionName, Tables, __CompilerContext>;)
 }
 
 fn parse_str_fn(start_symbol: &Ident) -> Item {

@@ -1,4 +1,3 @@
-use logos::Logos;
 use static_sdd::*;
 
 #[grammar]
@@ -37,28 +36,10 @@ mod expressions {
     production!(Parenthesis, Factor -> (OpenPar, Expression, ClosedPar), |(_, e, _)| e);
     production!(ActualNumber, Factor -> Number);
 }
+use expressions::*;
 
 fn main() {
-    use expressions::*;
-
-    let res = parse(
-        (),
-        [
-            Token::Number(5),
-            Token::Plus(Plus),
-            Token::Number(2),
-            Token::Times(Times),
-            Token::OpenPar(OpenPar),
-            Token::Number(3),
-            Token::Plus(Plus),
-            Token::Number(1),
-            Token::ClosedPar(ClosedPar),
-        ],
-    ).ok().expect("couldn't parse");
-
-    println!("result is {res}");
-
-    let res = parse_str((), "1 + 2 + 3 + 4").ok().expect("couldn't parse");
+    let res = Parser::lex_parse_with_ctx((), "(1 + 2) * 3 + 4").ok().expect("couldn't parse");
 
     println!("second result is {res}");
 }
