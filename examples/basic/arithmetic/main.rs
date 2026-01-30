@@ -39,7 +39,7 @@ mod expressions {
 use expressions::*;
 
 fn main() {
-    let res = Parser::lex_parse_with_ctx((), "(1 + 2) * 3 + 4").ok().expect("couldn't parse");
+    let res = Parser::lex_parse_with_ctx((), "(1 + 2) * 3 + 4").expect("couldn't parse");
 
-    println!("second result is {res}");
+    println!("result is {res}");
 }

@@ -1,5 +1,5 @@
 use crate::results::{
-    LexError, LexParseError, ParseEofError, ParseError, ParseOne, ParseOneEof, ParseOneError,
+    LexError, LexParseError, ParseEof, ParseEofError, ParseError, ParseOneError, ParseToken,
     ParseTokenError,
 };
 use logos::Logos;
@@ -81,12 +81,12 @@ impl<
     fn parse_token(
         &mut self,
         token: Token,
-    ) -> Result<ParseOne<Token>, ParseTokenError<NonTerminal, Token>> {
+    ) -> Result<ParseToken<Token>, ParseTokenError<NonTerminal, Token>> {
         let current_state = self.stacks.current_state();
         match Tab::query_token_table(current_state, &token) {
             Some(TokenAction::Shift(new_state)) => {
                 self.stacks.shift(new_state, token);
-                Ok(ParseOne::Shifted)
+                Ok(ParseToken::Shifted)
             }
             Some(TokenAction::Reduce(prod)) => {
                 let head = prod.reduce(&mut self.ctx, &mut self.stacks);
@@ -97,7 +97,7 @@ impl<
                     });
                 };
                 self.stacks.goto(next_state, head);
-                Ok(ParseOne::Reduced {
+                Ok(ParseToken::Reduced {
                     leftover_token: token,
                 })
             }
@@ -107,7 +107,7 @@ impl<
         }
     }
 
-    fn parse_eof(&mut self) -> Result<ParseOneEof, ParseEofError<NonTerminal>> {
+    fn parse_eof(&mut self) -> Result<ParseEof, ParseEofError<NonTerminal>> {
         let current_state = self.stacks.current_state();
         match Tab::query_eof_table(current_state) {
             Some(EofAction::Reduce(prod)) => {
@@ -119,9 +119,9 @@ impl<
                     });
                 };
                 self.stacks.goto(next_state, head);
-                Ok(ParseOneEof::Reduced)
+                Ok(ParseEof::Reduced)
             }
-            Some(EofAction::Accept) => Ok(ParseOneEof::Accepted),
+            Some(EofAction::Accept) => Ok(ParseEof::Accepted),
             None => Err(ParseEofError::ActionNotFound),
         }
     }
@@ -134,10 +134,10 @@ impl<
         for mut token in tokens.into_iter() {
             loop {
                 match parser.parse_token(token) {
-                    Ok(ParseOne::Shifted) => {
+                    Ok(ParseToken::Shifted) => {
                         break;
                     }
-                    Ok(ParseOne::Reduced { leftover_token }) => {
+                    Ok(ParseToken::Reduced { leftover_token }) => {
                         token = leftover_token;
                     }
                     Err(err) => {
@@ -149,10 +149,10 @@ impl<
 
         loop {
             match parser.parse_eof() {
-                Ok(ParseOneEof::Accepted) => {
+                Ok(ParseEof::Accepted) => {
                     break;
                 }
-                Ok(ParseOneEof::Reduced) => {
+                Ok(ParseEof::Reduced) => {
                     continue;
                 }
                 Err(err) => return Err(ParseError::new(parser, ParseOneError::ParseEofError(err))),
@@ -192,10 +192,10 @@ impl<
 
             loop {
                 match parser.parse_token(token) {
-                    Ok(ParseOne::Shifted) => {
+                    Ok(ParseToken::Shifted) => {
                         break;
                     }
-                    Ok(ParseOne::Reduced { leftover_token }) => {
+                    Ok(ParseToken::Reduced { leftover_token }) => {
                         token = leftover_token;
                     }
                     Err(err) => {
@@ -210,10 +210,10 @@ impl<
 
         loop {
             match parser.parse_eof() {
-                Ok(ParseOneEof::Accepted) => {
+                Ok(ParseEof::Accepted) => {
                     break;
                 }
-                Ok(ParseOneEof::Reduced) => {
+                Ok(ParseEof::Reduced) => {
                     continue;
                 }
                 Err(err) => {
@@ -263,7 +263,7 @@ impl<
     ) -> Result<StartSymbol, LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, ()>>
     where
         Token: Logos<'source>,
-        <Token as Logos<'source>>::Extras: Default,
+        Token::Extras: Default,
     {
         Self::lex_parse_with_ctx((), source)
     }

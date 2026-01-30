@@ -1,5 +1,4 @@
 use std::fmt::Display;
-
 use syn::Ident;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

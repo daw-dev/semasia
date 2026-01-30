@@ -3,13 +3,13 @@ use logos::Logos;
 use crate::{Parser, Reduce, Tables};
 
 #[derive(Debug)]
-pub enum ParseOne<Token> {
+pub enum ParseToken<Token> {
     Shifted,
     Reduced { leftover_token: Token },
 }
 
 #[derive(Debug)]
-pub enum ParseOneEof {
+pub enum ParseEof {
     Reduced,
     Accepted,
 }

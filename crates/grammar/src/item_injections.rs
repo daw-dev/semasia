@@ -34,8 +34,7 @@ pub fn inject_items(
     items_to_add.extend(token_enum(enriched_grammar.tokens()));
     items_to_add.extend(non_terminal_enum(enriched_grammar.non_terminals(), enriched_grammar.start_symbol()));
     items_to_add.extend(production_enum(enriched_grammar.productions()));
-    eprintln!("added enums");
-    items_to_add.extend(const_tables(&enriched_grammar, states_count, token_table, eof_table, non_terminal_table));
+    items_to_add.extend(match_tables(&enriched_grammar, token_table, eof_table, non_terminal_table));
     items_to_add.push(parser(enriched_grammar.start_symbol()));
 
     for item in items_to_add.iter() {
@@ -87,7 +86,7 @@ fn token_enum(tokens: &[EnrichedToken]) -> Vec<Item> {
                 #ident(#ident)
             },
             dyn_grammar::token::Match::Regex(regex) => quote! {
-                #[regex(#regex, |lex| lex.slice().parse().ok())]
+                #[regex(#regex, parse)]
                 #ident(#ident)
             }
         }
@@ -95,6 +94,10 @@ fn token_enum(tokens: &[EnrichedToken]) -> Vec<Item> {
     let tokens: Vec<_> = tokens.iter().map(|token| token.ident()).collect();
     let counter = 0usize..;
     let file: syn::File = parse_quote! {
+        fn parse<T: std::str::FromStr>(lex: &mut logos::Lexer<Token>) -> Option<T> {
+            lex.slice().parse().ok()
+        }
+
         #[derive(Logos)]
         #[logos(skip r"[ \t\n\f]+")]
         pub enum Token {
@@ -335,26 +338,69 @@ fn const_tables(
     file.items
 }
 
-fn match_table(
+fn match_tables(
     enriched_grammar: &EnrichedGrammar,
-    state_count: usize,
     token_table: TokenTable,
     eof_table: EofTable,
     non_terminal_table: NonTerminalTable,
 ) -> Vec<Item> {
+    let token_table_patts = token_table.table.into_iter().enumerate()
+        .map(|(state, row)| row.into_iter().enumerate()
+            .map(move |(token_id, opt_action)| opt_action.map(move |action| (state, token_id, action)))
+        ).flatten().flatten()
+        .map(|(state, token_id, action)| {
+            let action = match action {
+                dyn_grammar::parsing::action::TokenAction::Shift(state) => quote!(parser::TokenAction::Shift(#state)),
+                dyn_grammar::parsing::action::TokenAction::Reduce(production) => {
+                    let production = enriched_grammar.productions().get(production).expect("production not found").ident();
+                    quote!(parser::TokenAction::Reduce(ProductionName::#production))
+                }
+            };
+            quote!((#state, #token_id) => Some(#action))
+        });
+    
+    let eof_table_patts = eof_table.table.into_iter().enumerate()
+        .map(|(state, opt_action)| opt_action.map(move |action| {
+            let action = match action {
+                dyn_grammar::parsing::action::EofAction::Reduce(production) => {
+                    let production = enriched_grammar.productions().get(production).expect("production not found").ident();
+                    quote!(parser::EofAction::Reduce(ProductionName::#production))
+                },
+                dyn_grammar::parsing::action::EofAction::Accept => quote!(parser::EofAction::Accept),
+            };
+            quote!(#state => Some(#action))
+        })).flatten();
+
+    let non_terminal_patts = non_terminal_table.table.into_iter().enumerate()
+        .map(|(state, row)| row.into_iter().enumerate()
+            .map(move |(token_id, opt_action)| opt_action.map(move |action| (state, token_id, action)))
+        ).flatten().flatten()
+        .map(|(state, token_id, target)| {
+            quote!((#state, #token_id) => Some(#target))
+        });
+
     let file: syn::File = parse_quote!{
         #[derive(Debug)]
         pub struct Tables;
 
         impl parser::Tables<NonTerminal, Token, ProductionName> for Tables {
             fn query_token_table(current_state: usize, current_token: &Token) -> Option<parser::TokenAction<ProductionName>> {
-                Tables::TOKEN_TABLE[current_state][current_token.id()].clone()
+                match (current_state, current_token.id()) {
+                    #(#token_table_patts,)*
+                    _ => None,
+                }
             }
             fn query_eof_table(current_state: usize) -> Option<parser::EofAction<ProductionName>> {
-                Tables::EOF_TABLE[current_state].clone()
+                match current_state {
+                    #(#eof_table_patts,)*
+                    _ => None,
+                }
             }
             fn query_goto_table(current_state: usize, non_terminal: &NonTerminal) -> Option<usize> {
-                Tables::NON_TERMINAL_TABLE[current_state][non_terminal.id()].clone()
+                match (current_state, non_terminal.id()) {
+                    #(#non_terminal_patts,)*
+                    _ => None,
+                }
             }
         }
     };

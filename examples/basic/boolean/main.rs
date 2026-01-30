@@ -1,4 +1,4 @@
-use static_sdd::*;
+use semasia::*;
 
 #[grammar]
 mod sat {
@@ -34,7 +34,7 @@ mod sat {
     #[non_terminal]
     pub type N = Formula;
 
-    #[token(regex = r"\w+")]
+    #[token(regex = r"[a-zA-Z]+")]
     pub type Atom = String;
 
     #[token("->")]
@@ -77,9 +77,10 @@ mod sat {
 use sat::*;
 
 fn main() {
-    let res = Parser::lex_parse_with_ctx((), "a -> b & c | !d")
-        .ok()
-        .expect("couldn't parse");
+    let res = Parser::lex_parse_with_ctx((), "a -> b & c | !d");
 
-    println!("second result is {res:?}");
+    match res {
+        Ok(res) => println!("second result is {res:?}"),
+        Err(err) => println!("{err:?}"),
+    }
 }
