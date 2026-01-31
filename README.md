@@ -48,11 +48,11 @@ fn main() {
 
 Like every other parser generators, this tool implements:
 
-[x] LALR(1) parsing table generation
-[x] Lexing for parsing of strings using Logos
-[ ] Conflict warnings and resolution (precedence, associativity)
-[x] Synthesization of attributes bottom-up during parsing
-[x] Everything done at compilation time
+- [x] LALR(1) parsing table generation
+- [x] Lexing for parsing of strings using Logos
+- [ ] Conflict warnings and resolution (precedence, associativity)
+- [x] Synthesization of attributes bottom-up during parsing
+- [x] Everything done at compilation time
 
 ### Code as grammar philosophy
 
