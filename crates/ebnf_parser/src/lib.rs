@@ -38,21 +38,24 @@ impl EbnfAlternativeVariant {
     fn compile_helper(
         self,
         enum_ident: Ident,
-        res: &mut Vec<EbnfCompiledProduction>,
+        productions: &mut Vec<EbnfCompiledProduction>,
+        types: &mut Vec<EbnfCompiledType>,
         id_stack: &mut Vec<String>,
-    ) {
+    ) -> Vec<Ident> {
         id_stack.push(self.ident.to_string());
 
-        let compiled_body = self.v_type.compile_helper(res, id_stack);
+        let compiled_body = self.v_type.compile_helper(productions, types, id_stack);
 
-        res.push(EbnfCompiledProduction {
+        productions.push(EbnfCompiledProduction {
             ident: EbnfBodyItem::compose_name(id_stack, Span::call_site()),
             head: enum_ident,
-            body: compiled_body,
+            body: compiled_body.clone(),
             sem_action: CompiledSemAction::Alternative,
         });
 
         id_stack.pop();
+
+        compiled_body
     }
 }
 
@@ -70,7 +73,8 @@ pub enum EbnfBodyItem {
 impl EbnfBodyItem {
     fn compile_helper(
         self,
-        res: &mut Vec<EbnfCompiledProduction>,
+        productions: &mut Vec<EbnfCompiledProduction>,
+        types: &mut Vec<EbnfCompiledType>,
         id_stack: &mut Vec<String>,
         span: Span,
     ) -> Ident {
@@ -81,17 +85,41 @@ impl EbnfBodyItem {
             } => {
                 id_stack.push(enum_ident.to_string());
 
-                for variant in variants_types.into_iter() {
-                    variant.compile_helper(enum_ident.clone(), res, id_stack);
-                }
+                let variants = variants_types
+                    .into_iter()
+                    .map(|variant| {
+                        (
+                            variant.ident.clone(),
+                            variant.compile_helper(
+                                enum_ident.clone(),
+                                productions,
+                                types,
+                                id_stack,
+                            ),
+                        )
+                    })
+                    .collect_vec();
+
+                types.push(EbnfCompiledType::Enum {
+                    enum_ident: enum_ident.clone(),
+                    enum_variants: variants,
+                });
+
+                id_stack.pop();
+
                 enum_ident
             }
             EbnfBodyItem::Repetition(body) => {
                 let rep_ident = Self::repetition_alias(id_stack, span);
 
-                let compiled_body = body.compile_helper(res, id_stack);
+                let compiled_body = body.compile_helper(productions, types, id_stack);
 
-                res.push(EbnfCompiledProduction::new(
+                types.push(EbnfCompiledType::Repetition {
+                    alias_ident: rep_ident.clone(),
+                    alias_vec_types: compiled_body.clone(),
+                });
+
+                productions.push(EbnfCompiledProduction::new(
                     Self::repetition_more_ident(id_stack, span),
                     rep_ident.clone(),
                     std::iter::once(rep_ident.clone())
@@ -100,7 +128,7 @@ impl EbnfBodyItem {
                     CompiledSemAction::RepetitionMore,
                 ));
 
-                res.push(EbnfCompiledProduction::new(
+                productions.push(EbnfCompiledProduction::new(
                     Self::repetition_done_ident(id_stack, span),
                     rep_ident.clone(),
                     Vec::with_capacity(0),
@@ -110,18 +138,23 @@ impl EbnfBodyItem {
                 rep_ident
             }
             EbnfBodyItem::Optional(body) => {
-                let opt_ident = Self::repetition_alias(id_stack, span);
+                let opt_ident = Self::optional_alias(id_stack, span);
 
-                let compiled_body = body.compile_helper(res, id_stack);
+                let compiled_body = body.compile_helper(productions, types, id_stack);
 
-                res.push(EbnfCompiledProduction::new(
+                types.push(EbnfCompiledType::Optional {
+                    alias_ident: opt_ident.clone(),
+                    alias_opt_types: compiled_body.clone(),
+                });
+
+                productions.push(EbnfCompiledProduction::new(
                     Self::optional_some_ident(id_stack, span),
                     opt_ident.clone(),
                     compiled_body,
                     CompiledSemAction::OptionalSome,
                 ));
 
-                res.push(EbnfCompiledProduction::new(
+                productions.push(EbnfCompiledProduction::new(
                     Self::optional_none_ident(id_stack, span),
                     opt_ident.clone(),
                     Vec::with_capacity(0),
@@ -138,42 +171,42 @@ impl EbnfBodyItem {
         Ident::new(&id_stack.iter().format("_").to_string(), span)
     }
 
-    pub fn repetition_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
+    fn repetition_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
         id_stack.push("Rep".to_string());
         let res = Self::compose_name(id_stack, span);
         id_stack.pop();
         res
     }
 
-    pub fn repetition_more_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+    fn repetition_more_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
         id_stack.push("More".to_string());
         let res = Self::compose_name(id_stack, span);
         id_stack.pop();
         res
     }
 
-    pub fn repetition_done_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+    fn repetition_done_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
         id_stack.push("Done".to_string());
         let res = Self::compose_name(id_stack, span);
         id_stack.pop();
         res
     }
 
-    pub fn optional_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
+    fn optional_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
         id_stack.push("Opt".to_string());
         let res = Self::compose_name(id_stack, span);
         id_stack.pop();
         res
     }
 
-    pub fn optional_some_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+    fn optional_some_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
         id_stack.push("Some".to_string());
         let res = Self::compose_name(id_stack, span);
         id_stack.pop();
         res
     }
 
-    pub fn optional_none_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+    fn optional_none_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
         id_stack.push("None".to_string());
         let res = Self::compose_name(id_stack, span);
         id_stack.pop();
@@ -262,7 +295,8 @@ pub struct EbnfBody {
 impl EbnfBody {
     fn compile_helper(
         self,
-        res: &mut Vec<EbnfCompiledProduction>,
+        productions: &mut Vec<EbnfCompiledProduction>,
+        types: &mut Vec<EbnfCompiledType>,
         id_stack: &mut Vec<String>,
     ) -> Vec<Ident> {
         let body = self
@@ -271,7 +305,7 @@ impl EbnfBody {
             .enumerate()
             .map(|(item_index, item)| {
                 id_stack.push(item_index.to_string());
-                let ident = item.compile_helper(res, id_stack, Span::call_site());
+                let ident = item.compile_helper(productions, types, id_stack, Span::call_site());
                 id_stack.pop();
                 ident
             })
@@ -305,6 +339,21 @@ impl Display for EbnfBody {
     }
 }
 
+pub enum EbnfCompiledType {
+    Enum {
+        enum_ident: Ident,
+        enum_variants: Vec<(Ident, Vec<Ident>)>,
+    },
+    Repetition {
+        alias_ident: Ident,
+        alias_vec_types: Vec<Ident>,
+    },
+    Optional {
+        alias_ident: Ident,
+        alias_opt_types: Vec<Ident>,
+    },
+}
+
 #[derive(Debug)]
 pub enum CompiledSemAction {
     Alternative,
@@ -312,7 +361,7 @@ pub enum CompiledSemAction {
     RepetitionDone,
     OptionalSome,
     OptionalNone,
-    Compiled,
+    Compiled(Option<ExprClosure>),
 }
 
 #[derive(Debug)]
@@ -358,23 +407,26 @@ impl EbnfProduction {
         }
     }
 
-    pub fn compile(self) -> Vec<EbnfCompiledProduction> {
+    pub fn compile(self) -> (Vec<EbnfCompiledProduction>, Vec<EbnfCompiledType>) {
         let ident = self.ident;
-        let mut res = Vec::with_capacity(self.body.items.len());
+        let mut productions = Vec::with_capacity(self.body.items.len());
+        let mut types = Vec::with_capacity(self.body.items.len());
         let head = self.head;
 
-        let compiled_body = self
-            .body
-            .compile_helper(&mut res, &mut vec!["_".to_string(), ident.to_string()]);
+        let compiled_body = self.body.compile_helper(
+            &mut productions,
+            &mut types,
+            &mut vec!["_".to_string(), ident.to_string()],
+        );
 
-        res.push(EbnfCompiledProduction {
+        productions.push(EbnfCompiledProduction {
             ident,
             head,
             body: compiled_body,
-            sem_action: CompiledSemAction::Compiled,
+            sem_action: CompiledSemAction::Compiled(self.sem_action),
         });
 
-        res
+        (productions, types)
     }
 }
 

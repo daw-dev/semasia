@@ -1,4 +1,4 @@
-use static_sdd::*;
+use semasia::*;
 
 #[grammar]
 mod scream {
@@ -15,7 +15,9 @@ mod scream {
     ebnf!(LongScream, Scream -> A*);
 }
 
+use scream::Parser;
+
 fn main() {
-    let scream = scream::parse_str((), "aaaaaaaaaaaaaaaaa").expect("couldn't parse");
+    let scream = Parser::lex_parse("aaaaaaaaaaaaaaaaa").expect("couldn't parse");
     println!("{scream:?}");
 }

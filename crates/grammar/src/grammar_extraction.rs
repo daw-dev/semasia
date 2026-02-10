@@ -48,7 +48,7 @@ pub fn extract_grammar(items: &mut [Item]) -> EnrichedGrammar {
         } else if let Some(production) = extract_production(item) {
             productions.push(production);
         } else if let Some(ebnf) = extract_ebnf_production(item) {
-            let extra_prods = ebnf.into_extra_productions();
+            let extra_prods = ebnf.compile().0.into_iter().map(Into::into).collect_vec();
             let extra_nts = extra_prods
                 .iter()
                 .map(EnrichedBaseProduction::head)
