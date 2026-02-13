@@ -66,3 +66,7 @@ path = "./examples/ebnf/scream/main.rs"
 [[example]]
 name = "abcs"
 path = "./examples/ebnf/abcs/main.rs"
+
+[[example]]
+name = "test"
+path = "./examples/test/main.rs"

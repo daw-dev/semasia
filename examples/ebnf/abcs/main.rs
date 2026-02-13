@@ -1,7 +1,5 @@
 use semasia::*;
 
-use crate::abcs::Parser;
-
 #[grammar]
 mod abcs {
     use semasia::*;
@@ -31,6 +29,8 @@ mod abcs {
         S(a, None, match c_or_d { CorD::C(_) => 0, CorD::D(_) => 1})
     });
 }
+
+use abcs::Parser;
 
 fn main() {
     let res = Parser::lex_parse("aaaaad");
