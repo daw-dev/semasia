@@ -14,6 +14,7 @@ impl Constructor {
     pub fn inject_items(&self, items: &mut Vec<Item>) {
         let (token_table, eof_table, non_terminal_table) = self.automaton.generate_tables();
         eprintln!("{token_table}");
+        eprintln!("{eof_table}");
         eprintln!("{non_terminal_table}");
 
         let mut items_to_add = Vec::new();
@@ -31,8 +32,8 @@ impl Constructor {
         items_to_add.push(self.parser());
 
         for item in items_to_add.iter() {
-            println!("------------------------------");
-            println!("{}", quote!(#item));
+            eprintln!("------------------------------");
+            eprintln!("{}", quote!(#item));
         }
 
         match self.internal_mod_name.as_ref() {

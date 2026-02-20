@@ -1,4 +1,5 @@
 use crate::{EnrichedGrammar, production::EnrichedProduction};
+use crate::non_terminal::EnrichedNonTerminal;
 use itertools::Itertools;
 use std::{collections::HashSet, fmt::Display, rc::Rc};
 use syn::Ident;
@@ -110,6 +111,10 @@ impl Display for SymbolicGrammar {
 }
 
 impl SymbolicGrammar {
+    pub fn enriched_grammar(&self) -> &EnrichedGrammar {
+        &self.enriched_grammar
+    }
+
     pub fn get_production(&self, id: usize) -> Option<&SymbolicProduction> {
         if id == usize::MAX {
             return Some(&self.special_production);
@@ -179,6 +184,7 @@ impl SymbolicGrammar {
         beta: &[SymbolicSymbol],
         visited: &mut HashSet<usize>,
     ) -> SymbolicFirstSet {
+        eprintln!("finding firsts for ({})", beta.iter().format(", "));
         if beta.is_empty() {
             return SymbolicFirstSet {
                 tokens: HashSet::new(),
@@ -194,16 +200,16 @@ impl SymbolicGrammar {
         for symbol in beta.iter() {
             match symbol {
                 SymbolicSymbol::Token(token) => {
+                    eprintln!("inserted {token}");
                     res.tokens.insert(*token);
                     return res;
                 }
                 SymbolicSymbol::NonTerminal(non_terminal) => {
                     let productions = self.get_productions_with_head(*non_terminal);
                     for prod in productions.into_iter() {
-                        if visited.contains(&prod.id()) {
+                        if !visited.insert(prod.id()) {
                             continue;
                         }
-                        visited.insert(prod.id());
                         let body = prod.body();
                         let firsts = self.first_set_helper(body, visited);
                         res.tokens.extend(firsts.tokens);
@@ -245,3 +251,4 @@ impl From<Rc<EnrichedGrammar>> for SymbolicGrammar {
         }
     }
 }
+

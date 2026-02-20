@@ -4,7 +4,9 @@ use std::{
 };
 
 use crate::{
-    non_terminal, parsing::action::{EofAction, TokenAction}, symbolic_grammar::{SymbolicNonTerminal, SymbolicSymbol, SymbolicToken}
+    non_terminal,
+    parsing::action::{EofAction, TokenAction},
+    symbolic_grammar::{SymbolicNonTerminal, SymbolicSymbol, SymbolicToken},
 };
 
 #[derive(Debug)]
@@ -83,9 +85,7 @@ pub struct EofTable {
 
 impl EofTable {
     pub fn new() -> Self {
-        Self {
-            table: Vec::new(),
-        }
+        Self { table: Vec::new() }
     }
 
     pub fn add_state(&mut self) -> usize {
@@ -106,6 +106,29 @@ impl Index<usize> for EofTable {
 impl IndexMut<usize> for EofTable {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.table[index]
+    }
+}
+
+impl Display for EofTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", " ".repeat(5))?;
+        writeln!(f, "  $  ")?;
+        for (state, action) in self.table.iter().enumerate() {
+            write!(f, "{:^5}", state)?;
+            match action {
+                Some(action) => write!(
+                    f,
+                    "{:^5}",
+                    match action {
+                        EofAction::Reduce(id) => format!("R{id}"),
+                        EofAction::Accept => "Acc".to_string(),
+                    }
+                ),
+                None => write!(f, "{}", " ".repeat(5)),
+            }?;
+            writeln!(f)?;
+        }
+        Ok(())
     }
 }
 
@@ -143,7 +166,10 @@ impl Index<(usize, SymbolicNonTerminal)> for NonTerminalTable {
 }
 
 impl IndexMut<(usize, SymbolicNonTerminal)> for NonTerminalTable {
-    fn index_mut(&mut self, (state, non_terminal): (usize, SymbolicNonTerminal)) -> &mut Self::Output {
+    fn index_mut(
+        &mut self,
+        (state, non_terminal): (usize, SymbolicNonTerminal),
+    ) -> &mut Self::Output {
         &mut self.table[state][non_terminal]
     }
 }

@@ -1,14 +1,18 @@
 #![allow(clippy::mutable_key_type)]
 
 use crate::{
+    enriched_symbol::EnrichedSymbol,
+    non_terminal::EnrichedNonTerminal,
     parsing::{
         action::{EofAction, TokenAction},
         tables::{EofTable, NonTerminalTable, TokenTable, TransitionTables},
     },
+    production::EnrichedProduction,
     symbolic_grammar::{SymbolicGrammar, SymbolicSymbol, SymbolicToken},
 };
 use itertools::Itertools;
 use std::{cell::RefCell, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
+use syn::Ident;
 
 #[derive(Clone)]
 struct LookAhead {
@@ -231,6 +235,47 @@ impl LalrAutomaton {
         automaton
     }
 
+    fn eprint_items<'a>(grammar: &SymbolicGrammar, items: impl Iterator<Item = &'a LalrItem>) {
+        eprint!(
+            "{{{}}}",
+            items
+                .map(|item| {
+                    let production = if item.production_id == usize::MAX {
+                        let start_symbol = grammar.enriched_grammar().start_symbol();
+                        &EnrichedProduction::new(
+                            Ident::new("__SpecialProduction", start_symbol.ident().span()),
+                            Ident::new("__Start", start_symbol.ident().span()),
+                            vec![EnrichedSymbol::NonTerminal(EnrichedNonTerminal::new(
+                                start_symbol.ident().clone(),
+                            ))],
+                        )
+                    } else {
+                        grammar
+                            .enriched_grammar()
+                            .productions()
+                            .get(item.production_id)
+                            .unwrap()
+                    };
+                    let (before_marker, after_marker) =
+                        production.body().split_at(item.marker_position);
+                    format!(
+                        "{} -> {} · {}, {}",
+                        production.head(),
+                        before_marker.iter().format(" "),
+                        after_marker.iter().format(" "),
+                        item.lookahead_node.compute_lookahead(),
+                    )
+                })
+                .format(", ")
+        )
+    }
+
+    fn eprintln_state(grammar: &SymbolicGrammar, state: &LalrState) {
+        eprint!("LalrState {{ kernel: ");
+        Self::eprint_items(grammar, state.kernel.iter());
+        eprintln!("}}");
+    }
+
     pub fn populate(&mut self) {
         let mut counter = 0;
         let first_state = LalrState::new(HashSet::from_iter([LalrItem::new(
@@ -241,7 +286,10 @@ impl LalrAutomaton {
 
         while let Some(state) = self.states.iter_mut().find(|state| !state.marked) {
             state.marked = true;
+            Self::eprintln_state(&self.grammar, state);
             let closure = state.closure(&mut counter, &self.grammar);
+            Self::eprint_items(&self.grammar, closure.iter());
+            eprintln!();
             for eps_item in closure.iter().filter(|item| {
                 self.grammar
                     .get_production(item.production_id)
@@ -414,11 +462,26 @@ impl Display for LalrAutomaton {
                     .kernel
                     .iter()
                     .map(|item| {
-                        let production = self.grammar.get_production(item.production_id).unwrap();
+                        let production = if item.production_id == usize::MAX {
+                            let start_symbol = self.grammar.enriched_grammar().start_symbol();
+                            &EnrichedProduction::new(
+                                Ident::new("__SpecialProduction", start_symbol.ident().span()),
+                                Ident::new("__Start", start_symbol.ident().span()),
+                                vec![EnrichedSymbol::NonTerminal(EnrichedNonTerminal::new(
+                                    start_symbol.ident().clone(),
+                                ))],
+                            )
+                        } else {
+                            self.grammar
+                                .enriched_grammar()
+                                .productions()
+                                .get(item.production_id)
+                                .unwrap()
+                        };
                         let (before_marker, after_marker) =
                             production.body().split_at(item.marker_position);
                         format!(
-                            "{} -> {}·{}, {}",
+                            "{} -> {} · {}, {}",
                             production.head(),
                             before_marker.iter().format(" "),
                             after_marker.iter().format(" "),

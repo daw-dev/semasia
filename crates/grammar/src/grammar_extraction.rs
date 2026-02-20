@@ -92,7 +92,7 @@ impl Constructor {
 
         let sym_grammar = SymbolicGrammar::from(enriched_grammar.clone());
 
-        eprintln!("{enriched_grammar}");
+        eprintln!("{sym_grammar}");
 
         let automaton = LalrAutomaton::compute(sym_grammar);
 
