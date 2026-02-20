@@ -88,9 +88,15 @@ impl Constructor {
             productions,
         ));
 
+        eprintln!("{enriched_grammar}");
+
         let sym_grammar = SymbolicGrammar::from(enriched_grammar.clone());
 
+        eprintln!("{enriched_grammar}");
+
         let automaton = LalrAutomaton::compute(sym_grammar);
+
+        eprintln!("{automaton}");
 
         Self {
             enriched_grammar,
