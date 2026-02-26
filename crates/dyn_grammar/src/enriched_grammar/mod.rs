@@ -44,8 +44,8 @@ impl EnrichedGrammar {
 
     pub fn get(&self, sym: &SymbolicSymbol) -> EnrichedSymbol {
         match sym {
-            SymbolicSymbol::Token(tok) => EnrichedSymbol::Token(self.tokens[*tok].clone()),
-            SymbolicSymbol::NonTerminal(nt) => EnrichedSymbol::NonTerminal(self.non_terminals[*nt].clone()),
+            SymbolicSymbol::Token(tok) => EnrichedSymbol::Token(self.tokens[tok.0].clone()),
+            SymbolicSymbol::NonTerminal(nt) => EnrichedSymbol::NonTerminal(self.non_terminals[nt.0].clone()),
         }
     }
 

@@ -4,9 +4,8 @@ use std::{
 };
 
 use crate::{
-    non_terminal,
     parsing::action::{EofAction, TokenAction},
-    symbolic_grammar::{SymbolicNonTerminal, SymbolicSymbol, SymbolicToken},
+    symbolic_grammar::{SymbolicNonTerminal, SymbolicToken},
 };
 
 #[derive(Debug)]
@@ -38,13 +37,13 @@ impl Index<(usize, SymbolicToken)> for TokenTable {
     type Output = Option<TokenAction>;
 
     fn index(&self, (state, token): (usize, SymbolicToken)) -> &Self::Output {
-        &self.table[state][token]
+        &self.table[state][token.0]
     }
 }
 
 impl IndexMut<(usize, SymbolicToken)> for TokenTable {
     fn index_mut(&mut self, (state, token): (usize, SymbolicToken)) -> &mut Self::Output {
-        &mut self.table[state][token]
+        &mut self.table[state][token.0]
     }
 }
 
@@ -161,7 +160,7 @@ impl Index<(usize, SymbolicNonTerminal)> for NonTerminalTable {
     type Output = Option<usize>;
 
     fn index(&self, (state, non_terminal): (usize, SymbolicNonTerminal)) -> &Self::Output {
-        &self.table[state][non_terminal]
+        &self.table[state][non_terminal.0]
     }
 }
 
@@ -170,7 +169,7 @@ impl IndexMut<(usize, SymbolicNonTerminal)> for NonTerminalTable {
         &mut self,
         (state, non_terminal): (usize, SymbolicNonTerminal),
     ) -> &mut Self::Output {
-        &mut self.table[state][non_terminal]
+        &mut self.table[state][non_terminal.0]
     }
 }
 
@@ -221,7 +220,7 @@ impl TransitionTables {
     pub fn token_transition(&self, starting_state: usize, token: SymbolicToken) -> Option<usize> {
         self.token_table
             .get(starting_state)?
-            .get(token)
+            .get(token.0)
             .cloned()
             .flatten()
     }

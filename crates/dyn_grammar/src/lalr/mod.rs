@@ -8,7 +8,7 @@ use crate::{
         tables::{EofTable, NonTerminalTable, TokenTable, TransitionTables},
     },
     production::EnrichedProduction,
-    symbolic_grammar::{SymbolicGrammar, SymbolicSymbol, SymbolicToken},
+    symbolic_grammar::{SymbolicGrammar, SymbolicNonTerminal, SymbolicSymbol, SymbolicToken},
 };
 use itertools::Itertools;
 use std::{cell::RefCell, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
@@ -29,7 +29,7 @@ impl Display for LookAhead {
             "{{{}}}",
             tokens
                 .into_iter()
-                .map(|tok| format!("`{tok}`"))
+                .map(|tok| format!("{tok}"))
                 .chain(self.can_eof_follow.then_some("$".to_string()))
                 .format(", ")
         )
@@ -309,10 +309,10 @@ impl LalrAutomaton {
                 item.move_marker();
                 match symbol {
                     SymbolicSymbol::Token(tok) => {
-                        token_transitions[tok].insert(item);
+                        token_transitions[tok.0].insert(item);
                     }
                     SymbolicSymbol::NonTerminal(nt) => {
-                        non_terminal_transitions[nt].insert(item);
+                        non_terminal_transitions[nt.0].insert(item);
                     }
                 }
             }
@@ -425,7 +425,7 @@ impl LalrAutomaton {
                 let Some(target) = target else {
                     continue;
                 };
-                let entry = &mut token_table[(state_id, token)];
+                let entry = &mut token_table[(state_id, SymbolicToken(token))];
                 if let Some(reduce) = entry.take() {
                     eprintln!("shift/reduce conflict");
                     eprintln!("shift: {:?}", TokenAction::Shift(*target));
@@ -436,7 +436,7 @@ impl LalrAutomaton {
 
             goto_table.add_state();
             for (non_terminal, target) in non_terminal_transitions.iter().enumerate() {
-                goto_table[(state_id, non_terminal)] = *target;
+                goto_table[(state_id, SymbolicNonTerminal(non_terminal))] = *target;
             }
         }
 

@@ -1,12 +1,46 @@
-use crate::{EnrichedGrammar, production::EnrichedProduction};
 use crate::non_terminal::EnrichedNonTerminal;
+use crate::{EnrichedGrammar, production::EnrichedProduction};
 use itertools::Itertools;
 use std::{collections::HashSet, fmt::Display, rc::Rc};
 use syn::Ident;
 
-pub type SymbolicToken = usize;
+#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct SymbolicToken(pub usize);
 
-pub type SymbolicNonTerminal = usize;
+impl Display for SymbolicToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut id = self.0 as u32;
+
+        if id == 0 {
+            write!(f, "a")?;
+        }
+
+        while id > 0 {
+            write!(f, "{}", char::from_u32('a' as u32 + id % 26).unwrap())?;
+            id /= 26;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct SymbolicNonTerminal(pub usize);
+
+impl Display for SymbolicNonTerminal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut id = self.0 as u32;
+
+        if id == 0 {
+            write!(f, "A")?;
+        }
+
+        while id > 0 {
+            write!(f, "{}", char::from_u32('A' as u32 + id % 26).unwrap())?;
+            id /= 26;
+        }
+        Ok(())
+    }
+}
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum SymbolicSymbol {
@@ -17,7 +51,7 @@ pub enum SymbolicSymbol {
 impl Display for SymbolicSymbol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SymbolicSymbol::Token(tok) => write!(f, "`{tok}`"),
+            SymbolicSymbol::Token(tok) => write!(f, "{tok}"),
             SymbolicSymbol::NonTerminal(nt) => write!(f, "{nt}"),
         }
     }
@@ -36,7 +70,7 @@ impl Display for SymbolicProduction {
             f,
             "{}: {} -> ({})",
             self.production_id,
-            self.head,
+            self.head(),
             self.body().iter().format(", ")
         )
     }
@@ -62,7 +96,7 @@ impl SymbolicProduction {
     pub fn special_production(start_symbol: SymbolicNonTerminal) -> Self {
         Self {
             production_id: usize::MAX,
-            head: usize::MAX,
+            head: SymbolicNonTerminal(usize::MAX),
             body: vec![SymbolicSymbol::NonTerminal(start_symbol)],
         }
     }
@@ -80,7 +114,7 @@ pub struct SymbolicFollowSet {
 
 #[derive(Debug)]
 pub struct SymbolicGrammar {
-    enriched_grammar: Rc<EnrichedGrammar>,
+    enriched_grammar: Option<Rc<EnrichedGrammar>>,
     token_count: usize,
     non_terminal_count: usize,
     start_symbol: SymbolicNonTerminal,
@@ -94,14 +128,10 @@ impl Display for SymbolicGrammar {
         write!(
             f,
             "non_terminals: [{}], ",
-            (0..self.non_terminal_count).format(", ")
+            (0..self.non_terminal_count).map(SymbolicNonTerminal).format(", ")
         )?;
-        write!(
-            f,
-            "tokens: [{}], ",
-            (0..self.token_count).map(|i| format!("`{i}`")).format(", ")
-        )?;
-        write!(f, "start_symbol: {}, ", self.start_symbol)?;
+        write!(f, "tokens: [{}], ", (0..self.token_count).map(SymbolicToken).format(", "))?;
+        write!(f, "start_symbol: {}, ", self.start_symbol,)?;
         write!(
             f,
             "productions: [{}] }}",
@@ -112,7 +142,7 @@ impl Display for SymbolicGrammar {
 
 impl SymbolicGrammar {
     pub fn enriched_grammar(&self) -> &EnrichedGrammar {
-        &self.enriched_grammar
+        &self.enriched_grammar.as_ref().unwrap()
     }
 
     pub fn get_production(&self, id: usize) -> Option<&SymbolicProduction> {
@@ -140,10 +170,12 @@ impl SymbolicGrammar {
     fn find_symbol(enriched_grammar: &EnrichedGrammar, ident: &Ident) -> Option<SymbolicSymbol> {
         enriched_grammar
             .token_id(ident)
+            .map(SymbolicToken)
             .map(SymbolicSymbol::Token)
             .or_else(|| {
                 enriched_grammar
                     .non_terminal_id(ident)
+                    .map(SymbolicNonTerminal)
                     .map(SymbolicSymbol::NonTerminal)
             })
     }
@@ -155,24 +187,26 @@ impl SymbolicGrammar {
     ) -> SymbolicProduction {
         SymbolicProduction {
             production_id: id,
-            head: enriched_grammar
-                .non_terminal_id(enriched_production.head())
-                .unwrap(),
+            head: SymbolicNonTerminal(
+                enriched_grammar
+                    .non_terminal_id(enriched_production.head())
+                    .unwrap(),
+            ),
             body: enriched_production
                 .body()
                 .iter()
                 .map(|sym| match sym {
                     crate::enriched_symbol::EnrichedSymbol::Token(enriched_token) => {
-                        SymbolicSymbol::Token(
+                        SymbolicSymbol::Token(SymbolicToken(
                             enriched_grammar.token_id(enriched_token.ident()).unwrap(),
-                        )
+                        ))
                     }
                     crate::enriched_symbol::EnrichedSymbol::NonTerminal(enriched_non_terminal) => {
-                        SymbolicSymbol::NonTerminal(
+                        SymbolicSymbol::NonTerminal(SymbolicNonTerminal(
                             enriched_grammar
                                 .non_terminal_id(enriched_non_terminal.ident())
                                 .unwrap(),
-                        )
+                        ))
                     }
                 })
                 .collect(),
@@ -234,7 +268,8 @@ impl From<Rc<EnrichedGrammar>> for SymbolicGrammar {
     fn from(value: Rc<EnrichedGrammar>) -> Self {
         let token_count = value.tokens().len();
         let non_terminal_count = value.non_terminals().len();
-        let start_symbol = value.non_terminal_id(value.start_symbol().ident()).unwrap();
+        let start_symbol =
+            SymbolicNonTerminal(value.non_terminal_id(value.start_symbol().ident()).unwrap());
         let productions = value
             .productions()
             .iter()
@@ -242,7 +277,7 @@ impl From<Rc<EnrichedGrammar>> for SymbolicGrammar {
             .map(|(id, prod)| SymbolicGrammar::map_production(&value, id, prod))
             .collect();
         Self {
-            enriched_grammar: value,
+            enriched_grammar: Some(value),
             token_count,
             non_terminal_count,
             start_symbol,
@@ -252,3 +287,66 @@ impl From<Rc<EnrichedGrammar>> for SymbolicGrammar {
     }
 }
 
+#[test]
+fn firsts_test() {
+    let grammar = SymbolicGrammar {
+        enriched_grammar: None,
+        token_count: 4,
+        non_terminal_count: 4,
+        start_symbol: SymbolicNonTerminal(0),
+        special_production: SymbolicProduction::special_production(SymbolicNonTerminal(0)),
+        productions: vec![
+            SymbolicProduction {
+                production_id: 0,
+                head: SymbolicNonTerminal(0),
+                body: [1, 2, 3]
+                    .into_iter()
+                    .map(SymbolicNonTerminal)
+                    .map(SymbolicSymbol::NonTerminal)
+                    .collect(),
+            },
+            SymbolicProduction {
+                production_id: 1,
+                head: SymbolicNonTerminal(1),
+                body: vec![
+                    SymbolicSymbol::NonTerminal(SymbolicNonTerminal(1)),
+                    SymbolicSymbol::Token(SymbolicToken(0)),
+                ],
+            },
+            SymbolicProduction {
+                production_id: 2,
+                head: SymbolicNonTerminal(1),
+                body: Vec::new(),
+            },
+            SymbolicProduction {
+                production_id: 3,
+                head: SymbolicNonTerminal(2),
+                body: vec![SymbolicSymbol::Token(SymbolicToken(1))],
+            },
+            SymbolicProduction {
+                production_id: 4,
+                head: SymbolicNonTerminal(2),
+                body: Vec::new(),
+            },
+            SymbolicProduction {
+                production_id: 5,
+                head: SymbolicNonTerminal(3),
+                body: vec![SymbolicSymbol::Token(SymbolicToken(2))],
+            },
+            SymbolicProduction {
+                production_id: 6,
+                head: SymbolicNonTerminal(3),
+                body: vec![SymbolicSymbol::Token(SymbolicToken(3))],
+            },
+        ],
+    };
+    println!("{grammar}");
+
+    let firsts = grammar.first_set(
+        &[2, 3]
+            .map(SymbolicNonTerminal)
+            .map(SymbolicSymbol::NonTerminal),
+    );
+    println!("{:?}", firsts.tokens);
+    println!("{}", firsts.nullable);
+}
