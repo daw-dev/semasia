@@ -9,4 +9,3 @@ pub enum EofAction<Prod> {
     Reduce(Prod),
     Accept,
 }
-

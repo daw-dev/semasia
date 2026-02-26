@@ -62,13 +62,18 @@ mod ambiguous {
 use ambiguous::*;
 
 fn main() {
-    let res = parse((), [
-        Token::Id(5),
-        Token::Power(Power),
-        Token::Id(2),
-        Token::Minus(Minus),
-        Token::Id(1),
-    ]).ok().expect("couldn't parse");
+    let res = parse(
+        (),
+        [
+            Token::Id(5),
+            Token::Power(Power),
+            Token::Id(2),
+            Token::Minus(Minus),
+            Token::Id(1),
+        ],
+    )
+    .ok()
+    .expect("couldn't parse");
 
     println!("{res}");
 }

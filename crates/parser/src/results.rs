@@ -82,7 +82,9 @@ impl<
             f,
             "ParseError: after [{}] expected any of [{}]",
             self.parser.stacks.symbol_stack.iter().format(", "),
-            Tab::tokens_in_state(self.parser.stacks.current_state()).iter().format(", ")
+            Tab::tokens_in_state(self.parser.stacks.current_state())
+                .iter()
+                .format(", ")
         )
     }
 }
@@ -144,7 +146,8 @@ impl<
     Prod: Reduce<NonTerminal, Token, Ctx>,
     Tab: Tables<NonTerminal, Token, Prod>,
     Ctx,
-> Display for LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx> {
+> Display for LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LexParseError::LexError(lex_error) => lex_error.fmt(f),

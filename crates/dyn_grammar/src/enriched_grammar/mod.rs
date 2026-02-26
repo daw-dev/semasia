@@ -9,7 +9,11 @@ use itertools::Itertools;
 use syn::Ident;
 
 use crate::{
-    enriched_symbol::EnrichedSymbol, non_terminal::EnrichedNonTerminal, production::{EnrichedBaseProduction, EnrichedProduction}, symbolic_grammar::SymbolicSymbol, token::EnrichedToken
+    enriched_symbol::EnrichedSymbol,
+    non_terminal::EnrichedNonTerminal,
+    production::{EnrichedBaseProduction, EnrichedProduction},
+    symbolic_grammar::SymbolicSymbol,
+    token::EnrichedToken,
 };
 
 #[derive(Debug)]
@@ -45,7 +49,9 @@ impl EnrichedGrammar {
     pub fn get(&self, sym: &SymbolicSymbol) -> EnrichedSymbol {
         match sym {
             SymbolicSymbol::Token(tok) => EnrichedSymbol::Token(self.tokens[tok.0].clone()),
-            SymbolicSymbol::NonTerminal(nt) => EnrichedSymbol::NonTerminal(self.non_terminals[nt.0].clone()),
+            SymbolicSymbol::NonTerminal(nt) => {
+                EnrichedSymbol::NonTerminal(self.non_terminals[nt.0].clone())
+            }
         }
     }
 

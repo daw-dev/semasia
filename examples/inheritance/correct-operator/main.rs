@@ -21,7 +21,7 @@ mod division {
         fn assert_integer(self) -> Self {
             match self {
                 Number::Decimal(_) => panic!(),
-                int => int
+                int => int,
             }
         }
 

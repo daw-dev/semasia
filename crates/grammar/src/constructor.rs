@@ -1,6 +1,6 @@
 use dyn_grammar::{EnrichedGrammar, lalr::LalrAutomaton};
-use syn::Ident;
 use std::rc::Rc;
+use syn::Ident;
 
 pub struct Constructor {
     pub enriched_grammar: Rc<EnrichedGrammar>,

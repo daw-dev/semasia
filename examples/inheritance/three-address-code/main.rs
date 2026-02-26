@@ -2,8 +2,8 @@ use static_sdd::*;
 
 #[grammar]
 mod compiler {
-    use std::ops::Shl;
     use super::*;
+    use std::ops::Shl;
 
     pub enum Statement {
         Label(String),

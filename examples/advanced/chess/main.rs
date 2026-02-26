@@ -1,7 +1,7 @@
 mod board;
 mod chess_move;
+mod grammar;
 mod piece;
 mod tile;
-mod grammar;
 
 fn main() {}

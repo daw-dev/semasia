@@ -1,11 +1,9 @@
+use crate::{
+    enriched_symbol::EnrichedSymbol, non_terminal::EnrichedNonTerminal, token::EnrichedToken,
+};
 use itertools::Itertools;
 use std::fmt::Display;
 use syn::Ident;
-use crate::{
-    enriched_symbol::EnrichedSymbol,
-    non_terminal::EnrichedNonTerminal,
-    token::EnrichedToken,
-};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EnrichedBaseProduction {

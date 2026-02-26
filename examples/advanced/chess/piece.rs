@@ -37,9 +37,6 @@ pub struct Piece {
 
 impl Piece {
     pub fn new(color: Color, piece_type: PieceType) -> Self {
-        Self {
-            color,
-            piece_type,
-        }
+        Self { color, piece_type }
     }
 }

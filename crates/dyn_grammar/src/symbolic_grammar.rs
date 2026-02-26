@@ -128,9 +128,15 @@ impl Display for SymbolicGrammar {
         write!(
             f,
             "non_terminals: [{}], ",
-            (0..self.non_terminal_count).map(SymbolicNonTerminal).format(", ")
+            (0..self.non_terminal_count)
+                .map(SymbolicNonTerminal)
+                .format(", ")
         )?;
-        write!(f, "tokens: [{}], ", (0..self.token_count).map(SymbolicToken).format(", "))?;
+        write!(
+            f,
+            "tokens: [{}], ",
+            (0..self.token_count).map(SymbolicToken).format(", ")
+        )?;
         write!(f, "start_symbol: {}, ", self.start_symbol,)?;
         write!(
             f,

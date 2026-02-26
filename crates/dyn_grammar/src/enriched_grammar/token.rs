@@ -24,7 +24,10 @@ pub struct EnrichedToken {
 
 impl EnrichedToken {
     pub fn new(ident: Ident, match_string: Match) -> Self {
-        Self { ident, match_string }
+        Self {
+            ident,
+            match_string,
+        }
     }
 
     pub fn ident(&self) -> &Ident {

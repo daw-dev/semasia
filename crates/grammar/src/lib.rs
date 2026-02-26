@@ -1,4 +1,4 @@
-use crate::{constructor::Constructor};
+use crate::constructor::Constructor;
 use proc_macro::TokenStream;
 use proc_macro_error::{emit_call_site_error, proc_macro_error};
 use quote::quote;
