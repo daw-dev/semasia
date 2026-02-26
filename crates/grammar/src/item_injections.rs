@@ -241,6 +241,7 @@ impl Constructor {
             })
     }
 
+    #[allow(unused)]
     fn const_tables(
         enriched_grammar: &EnrichedGrammar,
         state_count: usize,
@@ -351,8 +352,8 @@ impl Constructor {
             .table
             .iter()
             .enumerate()
-            .map(|(state, row)| {
-                row.into_iter()
+            .flat_map(|(state, row)| {
+                row.iter()
                     .enumerate()
                     .map(move |(token_id, opt_action)| {
                         opt_action
@@ -360,7 +361,6 @@ impl Constructor {
                             .map(move |action| (state, token_id, action))
                     })
             })
-            .flatten()
             .flatten()
             .map(|(state, token_id, action)| {
                 let action = match action {
@@ -386,9 +386,9 @@ impl Constructor {
             .map(|(state, row)| {
                 (
                     state,
-                    row.into_iter()
+                    row.iter()
                         .enumerate()
-                        .map(move |(token_id, opt_action)| {
+                        .flat_map(move |(token_id, opt_action)| {
                             opt_action.as_ref().map(|_| {
                                 enriched_grammar
                                     .tokens()
@@ -398,7 +398,6 @@ impl Constructor {
                                     .to_string()
                             })
                         })
-                        .flatten()
                         .collect_vec(),
                 )
             })
@@ -408,7 +407,7 @@ impl Constructor {
             .table
             .into_iter()
             .enumerate()
-            .map(|(state, opt_action)| {
+            .flat_map(|(state, opt_action)| {
                 opt_action.map(move |action| {
                     let action = match action {
                         dyn_grammar::parsing::action::EofAction::Reduce(production) => {
@@ -425,21 +424,19 @@ impl Constructor {
                     };
                     quote!(#state => Some(#action))
                 })
-            })
-            .flatten();
+            });
 
         let non_terminal_patts = non_terminal_table
             .table
             .into_iter()
             .enumerate()
-            .map(|(state, row)| {
+            .flat_map(|(state, row)| {
                 row.into_iter()
                     .enumerate()
                     .map(move |(token_id, opt_action)| {
                         opt_action.map(move |action| (state, token_id, action))
                     })
             })
-            .flatten()
             .flatten()
             .map(|(state, token_id, target)| quote!((#state, #token_id) => Some(#target)));
 

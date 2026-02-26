@@ -44,8 +44,8 @@ pub struct ParseError<
     Tab: Tables<NonTerminal, Token, Prod>,
     Ctx,
 > {
-    parser: Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>,
-    parse_one_error: ParseOneError<NonTerminal, Token>,
+    pub parser: Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>,
+    pub parse_one_error: ParseOneError<NonTerminal, Token>,
 }
 
 impl<
@@ -99,8 +99,8 @@ pub struct LexError<
     Tab: Tables<NonTerminal, Token, Prod>,
     Ctx,
 > {
-    parser: Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>,
-    lexer_error: Token::Error,
+    pub parser: Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>,
+    pub lexer_error: Token::Error,
 }
 
 impl<

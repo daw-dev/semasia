@@ -5,7 +5,7 @@ use dyn_grammar::{
     lalr::LalrAutomaton,
     non_terminal::EnrichedNonTerminal,
     production::EnrichedBaseProduction,
-    symbolic_grammar::{self, SymbolicGrammar},
+    symbolic_grammar::{SymbolicGrammar},
     token::{EnrichedToken, Match},
 };
 use ebnf_parser::EbnfProduction;
@@ -172,7 +172,7 @@ impl Constructor {
             }
             true
         });
-        res.map(|match_string| EnrichedToken::new(ident, match_string.into()))
+        res.map(|match_string| EnrichedToken::new(ident, match_string))
     }
 
     fn extract_non_terminal(item: &mut Item) -> Option<(EnrichedNonTerminal, bool)> {

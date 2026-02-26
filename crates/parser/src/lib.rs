@@ -56,6 +56,15 @@ impl<NonTerminal, Token> Stacks<NonTerminal, Token> {
     }
 }
 
+impl<NonTerminal, Terminal> Default for Stacks<NonTerminal, Terminal> {
+    fn default() -> Self {
+        Self {
+            state_stack: Default::default(),
+            symbol_stack: Default::default(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Parser<
     NonTerminal: Into<StartSymbol>,

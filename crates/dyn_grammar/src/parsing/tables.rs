@@ -77,7 +77,7 @@ impl Display for TokenTable {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EofTable {
     pub table: Vec<Option<EofAction>>,
 }

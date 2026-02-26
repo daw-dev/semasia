@@ -1,8 +1,6 @@
-use crate::non_terminal::EnrichedNonTerminal;
 use crate::{EnrichedGrammar, production::EnrichedProduction};
 use itertools::Itertools;
 use std::{collections::HashSet, fmt::Display, rc::Rc};
-use syn::Ident;
 
 #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SymbolicToken(pub usize);
@@ -148,7 +146,7 @@ impl Display for SymbolicGrammar {
 
 impl SymbolicGrammar {
     pub fn enriched_grammar(&self) -> &EnrichedGrammar {
-        &self.enriched_grammar.as_ref().unwrap()
+        self.enriched_grammar.as_ref().unwrap()
     }
 
     pub fn get_production(&self, id: usize) -> Option<&SymbolicProduction> {
@@ -171,19 +169,6 @@ impl SymbolicGrammar {
 
     pub fn non_terminal_count(&self) -> usize {
         self.non_terminal_count
-    }
-
-    fn find_symbol(enriched_grammar: &EnrichedGrammar, ident: &Ident) -> Option<SymbolicSymbol> {
-        enriched_grammar
-            .token_id(ident)
-            .map(SymbolicToken)
-            .map(SymbolicSymbol::Token)
-            .or_else(|| {
-                enriched_grammar
-                    .non_terminal_id(ident)
-                    .map(SymbolicNonTerminal)
-                    .map(SymbolicSymbol::NonTerminal)
-            })
     }
 
     fn map_production(

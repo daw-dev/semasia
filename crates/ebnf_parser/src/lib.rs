@@ -2,7 +2,7 @@ use dyn_grammar::production::EnrichedBaseProduction;
 use itertools::Itertools;
 use proc_macro2::{self, Span};
 use std::fmt::Display;
-use syn::{ExprClosure, Ident, Token, braced, parenthesized, parse::Parse, parse_quote, spanned};
+use syn::{ExprClosure, Ident, Token, braced, parenthesized, parse::Parse};
 
 #[derive(Debug)]
 pub struct EbnfAlternativeVariant {
@@ -123,7 +123,7 @@ impl EbnfBodyItem {
                     Self::repetition_more_ident(id_stack, span),
                     rep_ident.clone(),
                     std::iter::once(rep_ident.clone())
-                        .chain(compiled_body.into_iter())
+                        .chain(compiled_body)
                         .collect(),
                     CompiledSemAction::RepetitionMore,
                 ));
@@ -299,8 +299,7 @@ impl EbnfBody {
         types: &mut Vec<EbnfCompiledType>,
         id_stack: &mut Vec<String>,
     ) -> Vec<Ident> {
-        let body = self
-            .items
+        self.items
             .into_iter()
             .enumerate()
             .map(|(item_index, item)| {
@@ -309,9 +308,7 @@ impl EbnfBody {
                 id_stack.pop();
                 ident
             })
-            .collect();
-
-        body
+            .collect()
     }
 }
 
@@ -383,9 +380,9 @@ impl EbnfCompiledProduction {
     }
 }
 
-impl Into<EnrichedBaseProduction> for EbnfCompiledProduction {
-    fn into(self) -> EnrichedBaseProduction {
-        EnrichedBaseProduction::new(self.ident, self.head, self.body)
+impl From<EbnfCompiledProduction> for EnrichedBaseProduction {
+    fn from(val: EbnfCompiledProduction) -> EnrichedBaseProduction {
+        EnrichedBaseProduction::new(val.ident, val.head, val.body)
     }
 }
 
@@ -457,6 +454,8 @@ impl Display for EbnfProduction {
 
 #[test]
 fn ebnf_test() {
+    use syn::parse_quote;
+
     let ebnf: EbnfProduction =
         parse_quote!(Test, A -> ((A, B)?, (CDorEStarOrF { CD(C, D), EStar(E*), F })?));
     println!("debug print:");
