@@ -231,16 +231,19 @@ impl SymbolicGrammar {
                 }
                 SymbolicSymbol::NonTerminal(non_terminal) => {
                     let productions = self.get_productions_with_head(*non_terminal);
+                    let mut some_nullable = false;
                     for prod in productions.into_iter() {
+                        eprintln!("checking {prod}");
                         if !visited.insert(prod.id()) {
                             continue;
                         }
                         let body = prod.body();
                         let firsts = self.first_set_helper(body, visited);
                         res.tokens.extend(firsts.tokens);
-                        if !firsts.nullable {
-                            return res;
-                        }
+                        some_nullable |= firsts.nullable;
+                    }
+                    if !some_nullable {
+                        return res;
                     }
                 }
             }
@@ -338,6 +341,6 @@ fn firsts_test() {
             .map(SymbolicNonTerminal)
             .map(SymbolicSymbol::NonTerminal),
     );
-    println!("{:?}", firsts.tokens);
+    println!("{{{}}}", firsts.tokens.iter().format(", "));
     println!("{}", firsts.nullable);
 }
