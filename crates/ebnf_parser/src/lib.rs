@@ -68,6 +68,8 @@ pub enum EbnfBodyItem {
     },
     Repetition(EbnfBody),
     Optional(EbnfBody),
+    // TODO: add "constant" repetition
+    // like ebnf!(..., -> (..., [Token; 5], ...));
 }
 
 impl EbnfBodyItem {
