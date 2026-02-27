@@ -56,16 +56,20 @@ name = "three-address-code"
 path = "./examples/inheritance/three-address-code/main.rs"
 
 [[example]]
-name = "chess"
-path = "./examples/advanced/chess/main.rs"
-
-[[example]]
 name = "scream"
 path = "./examples/ebnf/scream/main.rs"
 
 [[example]]
 name = "abcs"
 path = "./examples/ebnf/abcs/main.rs"
+
+[[example]]
+name = "chess"
+path = "./examples/advanced/chess/main.rs"
+
+[[example]]
+name = "calculus"
+path = "./examples/advanced/calculus/main.rs"
 
 [[example]]
 name = "test"

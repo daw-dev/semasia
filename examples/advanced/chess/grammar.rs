@@ -1,5 +1,7 @@
 #![semasia::grammar]
 
+use std::str::FromStr;
+
 use semasia::*;
 
 #[context]
@@ -105,10 +107,12 @@ ebnf!(
         Rank?,
         Takes?,
         Tile,
-        Promotes?,
-        PieceType?,
-        CheckType { Check | CheckMate }
-    ), |(ty, file, rank, takes, tile, promotes, piece_type, check)| todo!());
+        (
+            Promotes,
+            PieceType
+        )?,
+        CheckType { Check, CheckMate }
+    ), |string| todo!());
 
 // PIECE TYPES
 production!(P0, PieceType -> KingPiece, |_| PieceType::King);
