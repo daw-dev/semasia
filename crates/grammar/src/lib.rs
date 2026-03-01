@@ -1,6 +1,6 @@
 use crate::constructor::Constructor;
 use proc_macro::TokenStream;
-use proc_macro_error::{emit_call_site_error, proc_macro_error};
+use proc_macro_error::{emit_call_site_error, proc_macro_error, set_dummy};
 use quote::quote;
 use syn::{File, Ident, ItemMod};
 
@@ -13,6 +13,12 @@ mod item_injections;
 pub fn grammar(attr: TokenStream, item: TokenStream) -> TokenStream {
     let internal_mod_name = syn::parse::<Ident>(attr).ok();
     if let Ok(mut module) = syn::parse::<ItemMod>(item.clone()) {
+        let ident = &module.ident;
+        set_dummy(quote! {
+            mod #ident {
+                pub type Parser = parser::dummy::DummyParser;
+            }
+        });
         let (_, items) = module
             .content
             .as_mut()

@@ -29,10 +29,7 @@ impl Constructor {
         for item in items.iter_mut() {
             if let Some(ctx) = Self::extract_context(item) {
                 if compiler_ctx.is_some() {
-                    abort!(
-                        ctx,
-                        "Compiler context defined for the second time here"
-                    );
+                    abort!(ctx, "Compiler context defined for the second time here");
                 }
                 compiler_ctx = Some(ctx);
             } else if let Some(token) = Self::extract_token(item) {
@@ -72,7 +69,10 @@ impl Constructor {
         }
 
         let start_symbol = start_symbol.unwrap_or_else(|| {
-            emit_call_site_warning!("no start symbol was declared, using {}", non_terminals[0]);
+            emit_call_site_warning!(
+                "no start symbol was declared, using {}", non_terminals[0];
+                help = non_terminals[0].ident().span() => "add #[start_symbol] here"
+            );
             non_terminals[0].clone()
         });
 
