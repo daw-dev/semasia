@@ -30,7 +30,7 @@ impl Constructor {
             if let Some(ctx) = Self::extract_context(item) {
                 if compiler_ctx.is_some() {
                     abort!(
-                        ctx.span(),
+                        ctx,
                         "Compiler context defined for the second time here"
                     );
                 }
