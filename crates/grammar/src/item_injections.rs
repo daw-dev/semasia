@@ -353,13 +353,11 @@ impl Constructor {
             .iter()
             .enumerate()
             .flat_map(|(state, row)| {
-                row.iter()
-                    .enumerate()
-                    .map(move |(token_id, opt_action)| {
-                        opt_action
-                            .as_ref()
-                            .map(move |action| (state, token_id, action))
-                    })
+                row.iter().enumerate().map(move |(token_id, opt_action)| {
+                    opt_action
+                        .as_ref()
+                        .map(move |action| (state, token_id, action))
+                })
             })
             .flatten()
             .map(|(state, token_id, action)| {
@@ -403,28 +401,29 @@ impl Constructor {
             })
             .map(|(state, tokens)| quote!(#state => &[#(#tokens),*]));
 
-        let eof_table_patts = eof_table
-            .table
-            .into_iter()
-            .enumerate()
-            .flat_map(|(state, opt_action)| {
-                opt_action.map(move |action| {
-                    let action = match action {
-                        dyn_grammar::parsing::action::EofAction::Reduce(production) => {
-                            let production = enriched_grammar
-                                .productions()
-                                .get(production)
-                                .expect("production not found")
-                                .ident();
-                            quote!(parser::EofAction::Reduce(ProductionName::#production))
-                        }
-                        dyn_grammar::parsing::action::EofAction::Accept => {
-                            quote!(parser::EofAction::Accept)
-                        }
-                    };
-                    quote!(#state => Some(#action))
-                })
-            });
+        let eof_table_patts =
+            eof_table
+                .table
+                .into_iter()
+                .enumerate()
+                .flat_map(|(state, opt_action)| {
+                    opt_action.map(move |action| {
+                        let action = match action {
+                            dyn_grammar::parsing::action::EofAction::Reduce(production) => {
+                                let production = enriched_grammar
+                                    .productions()
+                                    .get(production)
+                                    .expect("production not found")
+                                    .ident();
+                                quote!(parser::EofAction::Reduce(ProductionName::#production))
+                            }
+                            dyn_grammar::parsing::action::EofAction::Accept => {
+                                quote!(parser::EofAction::Accept)
+                            }
+                        };
+                        quote!(#state => Some(#action))
+                    })
+                });
 
         let non_terminal_patts = non_terminal_table
             .table

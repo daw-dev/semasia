@@ -1,16 +1,15 @@
-use std::{collections::HashSet, rc::Rc};
-
 use dyn_grammar::{
     EnrichedGrammar,
     lalr::LalrAutomaton,
     non_terminal::EnrichedNonTerminal,
     production::EnrichedBaseProduction,
-    symbolic_grammar::{SymbolicGrammar},
+    symbolic_grammar::SymbolicGrammar,
     token::{EnrichedToken, Match},
 };
 use ebnf_parser::EbnfProduction;
 use itertools::Itertools;
-use proc_macro_error::{emit_call_site_error, emit_call_site_warning, emit_error};
+use proc_macro_error::{abort, abort_call_site, emit_call_site_warning};
+use std::{collections::HashSet, rc::Rc};
 use syn::{
     Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitStr, Meta, Type, UseGroup,
     UseTree,
@@ -30,11 +29,10 @@ impl Constructor {
         for item in items.iter_mut() {
             if let Some(ctx) = Self::extract_context(item) {
                 if compiler_ctx.is_some() {
-                    emit_error!(
+                    abort!(
                         ctx.span(),
                         "Compiler context defined for the second time here"
                     );
-                    panic!();
                 }
                 compiler_ctx = Some(ctx);
             } else if let Some(token) = Self::extract_token(item) {
@@ -65,7 +63,7 @@ impl Constructor {
         }
 
         if non_terminals.is_empty() || tokens.is_empty() || productions.is_empty() {
-            emit_call_site_error!(
+            abort_call_site!(
                 "every grammar has to have some non-terminals, tokens and productions. Found non-terminals: [{}], tokens: [{}], productions: [{}]",
                 non_terminals.iter().format(","),
                 tokens.iter().format(","),
