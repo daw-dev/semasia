@@ -23,7 +23,7 @@ impl Constructor {
         let mut non_terminals = Vec::new();
         let mut ebnf_extra_non_terminals = HashSet::new();
         let mut productions = Vec::new();
-        let mut start_symbol = None;
+        let mut start_symbol: Option<EnrichedNonTerminal> = None;
         let mut compiler_ctx = None;
 
         for item in items.iter_mut() {
@@ -37,9 +37,10 @@ impl Constructor {
             } else if let Some((non_terminal, is_start)) = Self::extract_non_terminal(item) {
                 if is_start {
                     if let Some(cur_start) = start_symbol {
-                        panic!(
-                            "you can only declare one start symbol, found both {} and {}",
-                            cur_start, non_terminal
+                        abort!(
+                            cur_start.ident(),
+                            "you can only declare one start symbol";
+                            note = non_terminal.ident().span() => "second start symbol defined here"
                         );
                     }
                     start_symbol = Some(non_terminal.clone());
