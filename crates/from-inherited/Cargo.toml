@@ -1,5 +1,5 @@
 [package]
-name = "from_inherited"
+name = "from-inherited"
 version = "0.1.0"
 edition = "2024"
 

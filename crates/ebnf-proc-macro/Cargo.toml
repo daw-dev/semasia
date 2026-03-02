@@ -1,5 +1,5 @@
 [package]
-name = "ebnf_proc_macro"
+name = "ebnf-proc-macro"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,6 +7,6 @@ edition = "2024"
 proc-macro = true
 
 [dependencies]
-ebnf_parser = { path = "../ebnf_parser" }
+ebnf-parser = { path = "../ebnf-parser" }
 quote = "1.0.43"
 syn = "2.0.114"

@@ -10,8 +10,8 @@ members = ["crates/*"]
 [dependencies]
 grammar = { path = "crates/grammar" }
 production = { path = "crates/production" }
-from_inherited = { path = "crates/from_inherited" }
-ebnf_proc_macro = { path = "crates/ebnf_proc_macro" }
+from-inherited = { path = "crates/from-inherited" }
+ebnf-proc-macro = { path = "crates/ebnf-proc-macro" }
 parser = { path = "crates/parser" }
 logos = "0.16.0"
 
