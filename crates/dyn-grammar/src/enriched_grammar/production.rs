@@ -1,5 +1,6 @@
 use crate::{
-    conflicts::Precedence, enriched_symbol::EnrichedSymbol, non_terminal::EnrichedNonTerminal, token::EnrichedToken
+    conflicts::Precedence, enriched_symbol::EnrichedSymbol, non_terminal::EnrichedNonTerminal,
+    token::EnrichedToken,
 };
 use itertools::Itertools;
 use std::fmt::Display;
@@ -44,26 +45,45 @@ impl EnrichedBaseProduction {
         tokens: &[EnrichedToken],
         non_terminals: &[EnrichedNonTerminal],
     ) -> EnrichedProduction {
-        EnrichedProduction::new(
-            self.ident,
-            self.head,
-            self.body
-                .into_iter()
-                .map(|ident| {
-                    tokens
-                        .iter()
-                        .position(|tok| tok.ident() == &ident)
-                        .map(|id| EnrichedSymbol::Token(tokens[id].clone()))
-                        .or_else(|| {
-                            non_terminals
-                                .iter()
-                                .position(|nt| nt.ident() == &ident)
-                                .map(|id| EnrichedSymbol::NonTerminal(non_terminals[id].clone()))
-                        })
-                        .expect("ident is neither a non terminal nor a token")
-                })
-                .collect(),
-        )
+        let body = self
+            .body
+            .into_iter()
+            .map(|ident| {
+                tokens
+                    .iter()
+                    .position(|tok| tok.ident() == &ident)
+                    .map(|id| EnrichedSymbol::Token(tokens[id].clone()))
+                    .or_else(|| {
+                        non_terminals
+                            .iter()
+                            .position(|nt| nt.ident() == &ident)
+                            .map(|id| EnrichedSymbol::NonTerminal(non_terminals[id].clone()))
+                    })
+                    .expect("ident is neither a non terminal nor a token")
+            })
+            .collect_vec();
+        let precedence = self
+            .precedence
+            .map(Precedence::Explicit)
+            .unwrap_or_else(|| {
+                let mut precedences = body
+                    .iter()
+                    .rev()
+                    .filter_map(|sym| match sym {
+                        EnrichedSymbol::Token(enriched_token) => Some(enriched_token),
+                        EnrichedSymbol::NonTerminal(_) => None,
+                    })
+                    .map(EnrichedToken::precedence);
+                precedences
+                    .clone()
+                    .filter(|prec| matches!(prec, Precedence::Explicit(_)))
+                    .next()
+                    .cloned()
+                    .or(precedences.next().cloned())
+                    .unwrap_or(Precedence::Implicit(0))
+            });
+
+        EnrichedProduction::new(self.ident, self.head, body, precedence)
     }
 }
 
@@ -100,8 +120,18 @@ impl Display for EnrichedProduction {
 }
 
 impl EnrichedProduction {
-    pub fn new(ident: Ident, head: Ident, body: Vec<EnrichedSymbol>, precedence: Precedence) -> Self {
-        Self { ident, head, body, precedence }
+    pub fn new(
+        ident: Ident,
+        head: Ident,
+        body: Vec<EnrichedSymbol>,
+        precedence: Precedence,
+    ) -> Self {
+        Self {
+            ident,
+            head,
+            body,
+            precedence,
+        }
     }
 
     pub fn ident(&self) -> &Ident {

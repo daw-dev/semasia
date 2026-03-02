@@ -1,6 +1,7 @@
 #![allow(clippy::mutable_key_type)]
 
 use crate::{
+    conflicts::{Associativity, Precedence},
     enriched_symbol::EnrichedSymbol,
     non_terminal::EnrichedNonTerminal,
     parsing::{
@@ -248,6 +249,7 @@ impl LalrAutomaton {
                             vec![EnrichedSymbol::NonTerminal(EnrichedNonTerminal::new(
                                 start_symbol.ident().clone(),
                             ))],
+                            Precedence::Implicit(0),
                         )
                     } else {
                         grammar
@@ -425,7 +427,10 @@ impl LalrAutomaton {
                 let Some(target) = target else {
                     continue;
                 };
-                let entry = &mut token_table[(state_id, SymbolicToken(token))];
+                let entry = &mut token_table[(
+                    state_id,
+                    SymbolicToken(token, Precedence::Implicit(0), Associativity::Unspecified),
+                )];
                 if let Some(reduce) = entry.take() {
                     eprintln!("shift/reduce conflict");
                     eprintln!("shift: {:?}", TokenAction::Shift(*target));
@@ -470,6 +475,7 @@ impl Display for LalrAutomaton {
                                 vec![EnrichedSymbol::NonTerminal(EnrichedNonTerminal::new(
                                     start_symbol.ident().clone(),
                                 ))],
+                                Precedence::Implicit(0),
                             )
                         } else {
                             self.grammar

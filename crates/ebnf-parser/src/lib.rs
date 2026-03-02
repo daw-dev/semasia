@@ -384,7 +384,7 @@ impl EbnfCompiledProduction {
 
 impl From<EbnfCompiledProduction> for EnrichedBaseProduction {
     fn from(val: EbnfCompiledProduction) -> EnrichedBaseProduction {
-        EnrichedBaseProduction::new(val.ident, val.head, val.body)
+        EnrichedBaseProduction::new(val.ident, val.head, val.body, None)
     }
 }
 
@@ -468,6 +468,7 @@ fn ebnf_test() {
     println!(
         "{}",
         ebnf.compile()
+            .0
             .into_iter()
             .map(|prod| Into::<EnrichedBaseProduction>::into(prod))
             .format("\n")

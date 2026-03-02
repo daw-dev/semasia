@@ -170,7 +170,14 @@ impl Constructor {
             }
             true
         });
-        res.map(|match_string| EnrichedToken::new(ident, match_string))
+        res.map(|match_string| {
+            EnrichedToken::new(
+                ident,
+                match_string,
+                todo!("check for precedence attribute"),
+                todo!("check for associativity attribute"),
+            )
+        })
     }
 
     fn extract_non_terminal(item: &mut Item) -> Option<(EnrichedNonTerminal, bool)> {
@@ -233,7 +240,12 @@ impl Constructor {
                             .collect(),
                         _ => panic!("type must be a unit, a single type or a tuple"),
                     };
-                    let res = Ok(EnrichedBaseProduction::new(name, head, body));
+                    let res = Ok(EnrichedBaseProduction::new(
+                        name,
+                        head,
+                        body,
+                        todo!("check for precedence attribute"),
+                    ));
                     if input.is_empty() {
                         return res;
                     }

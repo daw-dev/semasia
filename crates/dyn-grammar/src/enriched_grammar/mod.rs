@@ -1,13 +1,6 @@
-pub mod enriched_symbol;
-pub mod non_terminal;
-pub mod production;
-pub mod token;
-
 use std::fmt::Display;
-
 use itertools::Itertools;
 use syn::Ident;
-
 use crate::{
     enriched_symbol::EnrichedSymbol,
     non_terminal::EnrichedNonTerminal,
@@ -15,6 +8,11 @@ use crate::{
     symbolic_grammar::SymbolicSymbol,
     token::EnrichedToken,
 };
+
+pub mod enriched_symbol;
+pub mod non_terminal;
+pub mod production;
+pub mod token;
 
 #[derive(Debug)]
 pub struct EnrichedGrammar {
