@@ -1,6 +1,6 @@
 use crate::constructor::Constructor;
 use proc_macro::TokenStream;
-use proc_macro_error::{emit_call_site_error, proc_macro_error, set_dummy};
+use proc_macro_error::{abort_call_site, abort, proc_macro_error, set_dummy};
 use quote::quote;
 use syn::{File, Ident, ItemMod};
 
@@ -8,8 +8,8 @@ mod constructor;
 mod grammar_extraction;
 mod item_injections;
 
-#[proc_macro_attribute]
 #[proc_macro_error]
+#[proc_macro_attribute]
 pub fn grammar(attr: TokenStream, item: TokenStream) -> TokenStream {
     let internal_mod_name = syn::parse::<Ident>(attr).ok();
     if let Ok(mut module) = syn::parse::<ItemMod>(item.clone()) {
@@ -34,17 +34,17 @@ pub fn grammar(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         quote! { #(#items)* }.into()
     } else {
-        emit_call_site_error!("a grammar is either an inline module or a file");
-        panic!()
+        abort_call_site!("a grammar is either an inline module or a file");
     }
 }
 
 macro_rules! dummy_attribute {
     ($attr:ident, $pos:expr) => {
-        #[proc_macro_attribute]
         #[proc_macro_error]
-        pub fn $attr(_attr: TokenStream, _item: TokenStream) -> TokenStream {
-            panic!("this attribute has to be put on top of {}", $pos)
+        #[proc_macro_attribute]
+        pub fn $attr(_attr: TokenStream, item: TokenStream) -> TokenStream {
+            set_dummy(item.clone().into());
+            abort_call_site!("this attribute has to be put on top of {}", $pos)
         }
     };
 }
@@ -58,9 +58,9 @@ dummy_attribute!(
     non_terminal,
     "type aliases, structs, enums or use directives"
 );
-dummy_attribute!(left_associative, "production macros");
-dummy_attribute!(right_associative, "production macros");
-dummy_attribute!(precedence, "production marcos");
+dummy_attribute!(left_associative, "tokens");
+dummy_attribute!(right_associative, "tokens");
+dummy_attribute!(precedence, "tokens or productions");
 dummy_attribute!(
     context,
     "ONLY ONE type alias, struct, enum or use directive"
