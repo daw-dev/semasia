@@ -1,5 +1,5 @@
 use crate::{
-    enriched_symbol::EnrichedSymbol, non_terminal::EnrichedNonTerminal, token::EnrichedToken,
+    conflicts::Precedence, enriched_symbol::EnrichedSymbol, non_terminal::EnrichedNonTerminal, token::EnrichedToken
 };
 use itertools::Itertools;
 use std::fmt::Display;
@@ -10,11 +10,17 @@ pub struct EnrichedBaseProduction {
     ident: Ident,
     head: Ident,
     body: Vec<Ident>,
+    precedence: Option<usize>,
 }
 
 impl EnrichedBaseProduction {
-    pub fn new(ident: Ident, head: Ident, body: Vec<Ident>) -> Self {
-        Self { ident, head, body }
+    pub fn new(ident: Ident, head: Ident, body: Vec<Ident>, precedence: Option<usize>) -> Self {
+        Self {
+            ident,
+            head,
+            body,
+            precedence,
+        }
     }
 
     pub fn ident(&self) -> &Ident {
@@ -78,6 +84,7 @@ pub struct EnrichedProduction {
     ident: Ident,
     head: Ident,
     body: Vec<EnrichedSymbol>,
+    precedence: Precedence,
 }
 
 impl Display for EnrichedProduction {
@@ -93,8 +100,8 @@ impl Display for EnrichedProduction {
 }
 
 impl EnrichedProduction {
-    pub fn new(ident: Ident, head: Ident, body: Vec<EnrichedSymbol>) -> Self {
-        Self { ident, head, body }
+    pub fn new(ident: Ident, head: Ident, body: Vec<EnrichedSymbol>, precedence: Precedence) -> Self {
+        Self { ident, head, body, precedence }
     }
 
     pub fn ident(&self) -> &Ident {
@@ -111,5 +118,9 @@ impl EnrichedProduction {
 
     pub fn body(&self) -> &Vec<EnrichedSymbol> {
         &self.body
+    }
+
+    pub fn precedence(&self) -> &Precedence {
+        &self.precedence
     }
 }

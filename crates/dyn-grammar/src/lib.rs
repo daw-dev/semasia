@@ -2,5 +2,5 @@ pub mod enriched_grammar;
 pub mod lalr;
 pub mod parsing;
 pub mod symbolic_grammar;
-
+pub mod conflicts;
 pub use enriched_grammar::*;

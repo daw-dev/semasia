@@ -1,6 +1,8 @@
 use std::fmt::Display;
 use syn::Ident;
 
+use crate::conflicts::{Associativity, Precedence};
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Match {
     Literal(String),
@@ -20,13 +22,17 @@ impl Display for Match {
 pub struct EnrichedToken {
     ident: Ident,
     match_string: Match,
+    precedence: Precedence,
+    associativity: Associativity,
 }
 
 impl EnrichedToken {
-    pub fn new(ident: Ident, match_string: Match) -> Self {
+    pub fn new(ident: Ident, match_string: Match, precedence: Precedence, associativity: Associativity) -> Self {
         Self {
             ident,
             match_string,
+            precedence,
+            associativity,
         }
     }
 
@@ -36,6 +42,14 @@ impl EnrichedToken {
 
     pub fn match_string(&self) -> &Match {
         &self.match_string
+    }
+
+    pub fn precedence(&self) -> &Precedence {
+        &self.precedence
+    }
+
+    pub fn associativity(&self) -> &Associativity {
+        &self.associativity
     }
 }
 
