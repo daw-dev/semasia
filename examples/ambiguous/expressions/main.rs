@@ -6,10 +6,10 @@ mod ambiguous {
 
     #[non_terminal]
     #[start_symbol]
-    pub type E = usize;
+    pub type Expression = usize;
 
     #[token(regex = r"\d+")]
-    pub type Id = usize;
+    pub type Number = usize;
 
     #[token("+")]
     #[left_associative]
@@ -42,19 +42,19 @@ mod ambiguous {
     #[token(")")]
     pub struct ClosePar;
 
-    production!(P1, E -> (E, Plus, E), |(e1, _, e2)| e1 + e2);
+    production!(P1, Expression -> (Expression, Plus, Expression), |(e1, _, e2)| e1 + e2);
 
-    production!(P2, E -> (E, Minus, E), |(e1, _, e2)| e1 - e2);
+    production!(P2, Expression -> (Expression, Minus, Expression), |(e1, _, e2)| e1 - e2);
 
-    production!(P3, E -> (E, Times, E), |(e1, _, e2)| e1 * e2);
+    production!(P3, Expression -> (Expression, Times, Expression), |(e1, _, e2)| e1 * e2);
 
-    production!(P4, E -> (E, Division, E), |(e1, _, e2)| e1 * e2);
+    production!(P4, Expression -> (Expression, Division, Expression), |(e1, _, e2)| e1 * e2);
 
-    production!(P5, E -> (E, Power, E), |(e1, _, e2)| e1.pow(e2 as u32));
+    production!(P5, Expression -> (Expression, Power, Expression), |(e1, _, e2)| e1.pow(e2 as u32));
 
-    production!(P6, E -> (OpenPar, E, ClosePar), |(_, e, _)| e);
+    production!(P6, Expression -> (OpenPar, Expression, ClosePar), |(_, e, _)| e);
 
-    production!(P7, E -> Id);
+    production!(P7, Expression -> Number);
 }
 
 use ambiguous::*;
