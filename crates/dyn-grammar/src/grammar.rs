@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::{
     collections::HashSet,
     fmt::Display,
@@ -6,10 +7,7 @@ use std::{
     slice::SliceIndex,
 };
 
-use itertools::Itertools;
-use syn::Ident;
-
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Token<TokenId, Extras = ()> {
     id: TokenId,
     extras: Extras,
@@ -23,25 +21,21 @@ impl<TokenId: PartialEq, Extras> PartialEq for Token<TokenId, Extras> {
 
 impl<TokenId: Eq, Extras> Eq for Token<TokenId, Extras> {}
 
-impl<Extras> Display for Token<usize, Extras> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut id = self.id as u32;
-
-        if id == 0 {
-            return write!(f, "a");
-        }
-
-        while id > 0 {
-            write!(f, "{}", char::from_u32('a' as u32 + id % 26).unwrap())?;
-            id /= 26;
-        }
-        Ok(())
+impl<TokenId: Hash, Extras> Hash for Token<TokenId, Extras> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
     }
 }
 
-impl<Extras> Display for Token<Ident, Extras> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.id.fmt(f)
+impl<TokenId: PartialOrd, Extras> PartialOrd for Token<TokenId, Extras> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.id.partial_cmp(&other.id)
+    }
+}
+
+impl<TokenId: Ord, Extras> Ord for Token<TokenId, Extras> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.id.cmp(&other.id)
     }
 }
 
@@ -76,7 +70,7 @@ impl<TokenId> Token<TokenId> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct NonTerminal<NonTerminalId, Extras = ()> {
     id: NonTerminalId,
     extras: Extras,
@@ -90,25 +84,9 @@ impl<NonTerminalId: PartialEq, Extras> PartialEq for NonTerminal<NonTerminalId, 
 
 impl<NonTerminalId: Eq, Extras> Eq for NonTerminal<NonTerminalId, Extras> {}
 
-impl<Extras> Display for NonTerminal<usize, Extras> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut id = self.id as u32;
-
-        if id == 0 {
-            return write!(f, "A");
-        }
-
-        while id > 0 {
-            write!(f, "{}", char::from_u32('A' as u32 + id % 26).unwrap())?;
-            id /= 26;
-        }
-        Ok(())
-    }
-}
-
-impl<Extras> Display for NonTerminal<Ident, Extras> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.id.fmt(f)
+impl<NonTerminalId: Hash, Extras> Hash for NonTerminal<NonTerminalId, Extras> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
     }
 }
 
@@ -166,22 +144,22 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Body<TokenType, NonTerminalType> {
-    body: Vec<Symbol<TokenType, NonTerminalType>>,
+pub struct Body<SymbolType> {
+    body: Vec<SymbolType>,
 }
 
-impl<TokenType, NonTerminalType, Idx> IndexMut<Idx> for Body<TokenType, NonTerminalType>
+impl<SymbolType, Idx> IndexMut<Idx> for Body<SymbolType>
 where
-    Idx: SliceIndex<[Symbol<TokenType, NonTerminalType>]>,
+    Idx: SliceIndex<[SymbolType]>,
 {
     fn index_mut(&mut self, index: Idx) -> &mut Self::Output {
         self.body.index_mut(index)
     }
 }
 
-impl<TokenType, NonTerminalType, Idx> Index<Idx> for Body<TokenType, NonTerminalType>
+impl<SymbolType, Idx> Index<Idx> for Body<SymbolType>
 where
-    Idx: SliceIndex<[Symbol<TokenType, NonTerminalType>]>,
+    Idx: SliceIndex<[SymbolType]>,
 {
     type Output = Idx::Output;
 
@@ -190,24 +168,23 @@ where
     }
 }
 
-impl<TokenType, NonTerminalType> DerefMut for Body<TokenType, NonTerminalType> {
+impl<SymbolType> DerefMut for Body<SymbolType> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.body.deref_mut()
     }
 }
 
-impl<TokenType, NonTerminalType> Deref for Body<TokenType, NonTerminalType> {
-    type Target = [Symbol<TokenType, NonTerminalType>];
+impl<SymbolType> Deref for Body<SymbolType> {
+    type Target = [SymbolType];
 
     fn deref(&self) -> &Self::Target {
         self.body.deref()
     }
 }
 
-impl<TokenType, NonTerminalType> Display for Body<TokenType, NonTerminalType>
+impl<SymbolType> Display for Body<SymbolType>
 where
-    TokenType: Display,
-    NonTerminalType: Display,
+    SymbolType: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "({})", self.body.iter().format(", "))
@@ -217,7 +194,7 @@ where
 pub struct Production<ProductionId, TokenType, NonTerminalType> {
     id: ProductionId,
     head: NonTerminalType,
-    body: Body<TokenType, NonTerminalType>,
+    body: Body<Symbol<TokenType, NonTerminalType>>,
 }
 
 impl<ProductionId, TokenType, NonTerminalType> Display
@@ -251,22 +228,21 @@ impl<ProductionId, TokenType, NonTerminalType>
         &self.head
     }
 
-    pub fn body(&self) -> &Body<TokenType, NonTerminalType> {
+    pub fn body(&self) -> &Body<Symbol<TokenType, NonTerminalType>> {
         &self.body
+    }
+
+    pub fn arity(&self) -> usize {
+        self.body().len()
     }
 }
 
-pub struct Grammar<TokenType, NonTerminalType, ProductionType, Extras> {
+pub struct Grammar<TokenType, NonTerminalType, ProductionType, Extras = ()> {
     tokens: Vec<TokenType>,
     non_terminals: Vec<NonTerminalType>,
-    start_symbol: NonTerminalType,
+    start_symbol: usize,
     productions: Vec<ProductionType>,
     extras: Extras,
-}
-
-pub struct FirstSet<TokenId> {
-    pub tokens: HashSet<TokenId>,
-    pub nullable: bool,
 }
 
 impl<TokenType, NonTerminalType, ProductionType, Extras>
@@ -276,12 +252,20 @@ impl<TokenType, NonTerminalType, ProductionType, Extras>
         &self.tokens
     }
 
+    pub fn token_count(&self) -> usize {
+        self.tokens().len()
+    }
+
     pub fn non_terminals(&self) -> &Vec<NonTerminalType> {
         &self.non_terminals
     }
 
+    pub fn non_terminal_count(&self) -> usize {
+        self.non_terminals().len()
+    }
+
     pub fn start_symbol(&self) -> &NonTerminalType {
-        &self.start_symbol
+        self.non_terminals().get(self.start_symbol).unwrap()
     }
 
     pub fn productions(&self) -> &Vec<ProductionType> {
@@ -291,6 +275,11 @@ impl<TokenType, NonTerminalType, ProductionType, Extras>
     pub fn extras(&self) -> &Extras {
         &self.extras
     }
+}
+
+pub struct FirstSet<TokenId> {
+    pub tokens: HashSet<TokenId>,
+    pub nullable: bool,
 }
 
 impl<TokenId, TokenExtras, NonTerminalId, NonTerminalExtras, ProductionId, Extras>

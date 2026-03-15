@@ -129,7 +129,8 @@ impl LalrItem {
 
     pub fn pointed_symbol(&self, grammar: &SymbolicGrammar) -> Option<SymbolicSymbol> {
         grammar
-            .get_production(self.production_id)
+            .productions()
+            .get(self.production_id)
             .expect("production not found")
             .body()
             .get(self.marker_position)
@@ -199,9 +200,10 @@ impl LalrState {
             let lookahead_node = LookAheadNodeRef::new(counter, natural_lookahead, dependencies);
 
             for new_item in grammar
-                .get_productions_with_head(non_terminal)
-                .into_iter()
-                .map(|prod| LalrItem::new(prod.id(), lookahead_node.clone()))
+                .productions()
+                .iter()
+                .filter(|prod| prod.head() == &non_terminal)
+                .map(|prod| LalrItem::new(*prod.id(), lookahead_node.clone()))
             {
                 match res.get(&new_item) {
                     Some(item) => {
@@ -309,10 +311,10 @@ impl LalrAutomaton {
                 item.move_marker();
                 match symbol {
                     SymbolicSymbol::Token(tok) => {
-                        token_transitions[tok.0].insert(item);
+                        token_transitions[*tok.id()].insert(item);
                     }
                     SymbolicSymbol::NonTerminal(nt) => {
-                        non_terminal_transitions[nt.0].insert(item);
+                        non_terminal_transitions[*nt.id()].insert(item);
                     }
                 }
             }
@@ -425,7 +427,7 @@ impl LalrAutomaton {
                 let Some(target) = target else {
                     continue;
                 };
-                let entry = &mut token_table[(state_id, SymbolicToken(token))];
+                let entry = &mut token_table[(state_id, SymbolicToken::with_id(token))];
                 if let Some(reduce) = entry.take() {
                     eprintln!("shift/reduce conflict");
                     eprintln!("shift: {:?}", TokenAction::Shift(*target));
@@ -436,7 +438,7 @@ impl LalrAutomaton {
 
             goto_table.add_state();
             for (non_terminal, target) in non_terminal_transitions.iter().enumerate() {
-                goto_table[(state_id, SymbolicNonTerminal(non_terminal))] = *target;
+                goto_table[(state_id, SymbolicNonTerminal::with_id(non_terminal))] = *target;
             }
         }
 

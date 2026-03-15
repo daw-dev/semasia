@@ -1,14 +1,13 @@
-use crate::{EnrichedGrammar, grammar::{NonTerminal, Production, Symbol, Token}, production::EnrichedProduction};
-use itertools::Itertools;
-use std::{collections::HashSet, rc::Rc};
+use crate::{EnrichedGrammar, grammar::{Grammar, NonTerminal, Production, Symbol, Token}};
+use std::collections::HashSet;
 
-type SymbolicToken = Token<usize>;
+pub type SymbolicToken = Token<usize>;
 
-type SymbolicNonTerminal = NonTerminal<usize>;
+pub type SymbolicNonTerminal = NonTerminal<usize>;
 
-type SymbolicSymbol = Symbol<SymbolicToken, SymbolicNonTerminal>;
+pub type SymbolicSymbol = Symbol<SymbolicToken, SymbolicNonTerminal>;
 
-type SymbolicProduction = Production<usize, usize, usize>;
+pub type SymbolicProduction = Production<usize, SymbolicToken, SymbolicNonTerminal>;
 
 // impl SymbolicProduction {
 //     pub fn special_production(start_symbol: SymbolicNonTerminal) -> Self {
@@ -31,7 +30,7 @@ pub struct SymbolicFollowSet {
     pub eof_follows: bool,
 }
 
-type SymbolicGrammar = Grammar<SymbolicToken, SymbolicNonTerminal, SymbolicProduction>;
+pub type SymbolicGrammar = Grammar<SymbolicToken, SymbolicNonTerminal, SymbolicProduction>;
 
 // #[derive(Debug)]
 // pub struct SymbolicGrammar {
@@ -44,69 +43,53 @@ type SymbolicGrammar = Grammar<SymbolicToken, SymbolicNonTerminal, SymbolicProdu
 // }
 
 impl SymbolicGrammar {
-    pub fn enriched_grammar(&self) -> &EnrichedGrammar {
-        self.enriched_grammar.as_ref().unwrap()
-    }
+    // pub fn enriched_grammar(&self) -> &EnrichedGrammar {
+    //     self.extras()
+    // }
 
     pub fn get_production(&self, id: usize) -> Option<&SymbolicProduction> {
         if id == usize::MAX {
             return Some(&self.special_production);
         }
-        self.productions.get(id)
+        self.productions().get(id)
     }
 
-    pub fn get_productions_with_head(&self, head: SymbolicNonTerminal) -> Vec<&SymbolicProduction> {
-        self.productions
-            .iter()
-            .filter(|prod| prod.head == head)
-            .collect()
-    }
-
-    pub fn token_count(&self) -> usize {
-        self.token_count
-    }
-
-    pub fn non_terminal_count(&self) -> usize {
-        self.non_terminal_count
-    }
-
-    fn map_production(
-        enriched_grammar: &EnrichedGrammar,
-        id: usize,
-        enriched_production: &EnrichedProduction,
-    ) -> SymbolicProduction {
-        SymbolicProduction {
-            production_id: id,
-            head: SymbolicNonTerminal(
-                enriched_grammar
-                    .non_terminal_id(enriched_production.head())
-                    .unwrap(),
-            ),
-            body: enriched_production
-                .body()
-                .iter()
-                .map(|sym| match sym {
-                    crate::enriched_symbol::EnrichedSymbol::Token(enriched_token) => {
-                        SymbolicSymbol::Token(SymbolicToken(
-                            enriched_grammar.token_id(enriched_token.ident()).unwrap(),
-                        ))
-                    }
-                    crate::enriched_symbol::EnrichedSymbol::NonTerminal(enriched_non_terminal) => {
-                        SymbolicSymbol::NonTerminal(SymbolicNonTerminal(
-                            enriched_grammar
-                                .non_terminal_id(enriched_non_terminal.ident())
-                                .unwrap(),
-                        ))
-                    }
-                })
-                .collect(),
-        }
-    }
-
+    // fn map_production(
+    //     enriched_grammar: &EnrichedGrammar,
+    //     id: usize,
+    //     enriched_production: &EnrichedProduction,
+    // ) -> SymbolicProduction {
+    //     SymbolicProduction {
+    //         production_id: id,
+    //         head: SymbolicNonTerminal(
+    //             enriched_grammar
+    //                 .non_terminal_id(enriched_production.head())
+    //                 .unwrap(),
+    //         ),
+    //         body: enriched_production
+    //             .body()
+    //             .iter()
+    //             .map(|sym| match sym {
+    //                 crate::enriched_symbol::EnrichedSymbol::Token(enriched_token) => {
+    //                     SymbolicSymbol::Token(SymbolicToken(
+    //                         enriched_grammar.token_id(enriched_token.ident()).unwrap(),
+    //                     ))
+    //                 }
+    //                 crate::enriched_symbol::EnrichedSymbol::NonTerminal(enriched_non_terminal) => {
+    //                     SymbolicSymbol::NonTerminal(SymbolicNonTerminal(
+    //                         enriched_grammar
+    //                             .non_terminal_id(enriched_non_terminal.ident())
+    //                             .unwrap(),
+    //                     ))
+    //                 }
+    //             })
+    //             .collect(),
+    //     }
+    // }
 }
 
-impl From<Rc<EnrichedGrammar>> for SymbolicGrammar {
-    fn from(value: Rc<EnrichedGrammar>) -> Self {
+impl From<EnrichedGrammar> for SymbolicGrammar {
+    fn from(value: EnrichedGrammar) -> Self {
         let token_count = value.tokens().len();
         let non_terminal_count = value.non_terminals().len();
         let start_symbol =
@@ -118,9 +101,6 @@ impl From<Rc<EnrichedGrammar>> for SymbolicGrammar {
             .map(|(id, prod)| SymbolicGrammar::map_production(&value, id, prod))
             .collect();
         Self {
-            enriched_grammar: Some(value),
-            token_count,
-            non_terminal_count,
             start_symbol,
             special_production: SymbolicProduction::special_production(start_symbol),
             productions,
