@@ -1,108 +1,42 @@
-pub mod enriched_symbol;
-pub mod non_terminal;
 pub mod production;
-pub mod token;
-
-use std::fmt::Display;
-
-use itertools::Itertools;
-use syn::Ident;
 
 use crate::{
-    non_terminal::EnrichedNonTerminal,
-    production::{EnrichedBaseProduction, EnrichedProduction},
-    token::EnrichedToken,
+    grammar::{Grammar, NonTerminal, Symbol, Token},
+    production::EnrichedProduction,
 };
+use std::fmt::Display;
+use syn::Ident;
 
-#[derive(Debug)]
-pub struct EnrichedGrammar {
-    context: Option<Ident>,
-    non_terminals: Vec<EnrichedNonTerminal>,
-    tokens: Vec<EnrichedToken>,
-    start_symbol: EnrichedNonTerminal,
-    productions: Vec<EnrichedProduction>,
+// #[derive(Debug)]
+// pub struct EnrichedGrammar {
+//     context: Option<Ident>,
+//     non_terminals: Vec<EnrichedNonTerminal>,
+//     tokens: Vec<EnrichedToken>,
+//     start_symbol: EnrichedNonTerminal,
+//     productions: Vec<EnrichedProduction>,
+// }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Match {
+    Literal(String),
+    Regex(String),
 }
 
-impl EnrichedGrammar {
-    pub fn new(
-        context: Option<Ident>,
-        non_terminals: Vec<EnrichedNonTerminal>,
-        tokens: Vec<EnrichedToken>,
-        start_symbol: EnrichedNonTerminal,
-        productions: Vec<EnrichedBaseProduction>,
-    ) -> Self {
-        let productions = productions
-            .into_iter()
-            .map(|prod| prod.into_production(&tokens, &non_terminals))
-            .collect();
-        Self {
-            context,
-            non_terminals,
-            tokens,
-            start_symbol,
-            productions,
-        }
-    }
-
-    // pub fn get(&self, sym: &SymbolicSymbol) -> EnrichedSymbol {
-    //     match sym {
-    //         SymbolicSymbol::Token(tok) => EnrichedSymbol::Token(self.tokens[tok.0].clone()),
-    //         SymbolicSymbol::NonTerminal(nt) => {
-    //             EnrichedSymbol::NonTerminal(self.non_terminals[nt.0].clone())
-    //         }
-    //     }
-    // }
-
-    pub fn context(&self) -> Option<&Ident> {
-        self.context.as_ref()
-    }
-
-    pub fn tokens(&self) -> &Vec<EnrichedToken> {
-        &self.tokens
-    }
-
-    pub fn non_terminals(&self) -> &Vec<EnrichedNonTerminal> {
-        &self.non_terminals
-    }
-
-    pub fn start_symbol(&self) -> &EnrichedNonTerminal {
-        &self.start_symbol
-    }
-
-    pub fn productions(&self) -> &Vec<EnrichedProduction> {
-        &self.productions
-    }
-
-    pub fn token_id(&self, token: &Ident) -> Option<usize> {
-        self.tokens().iter().position(|val| val.ident() == token)
-    }
-
-    pub fn non_terminal_id(&self, non_terminal: &Ident) -> Option<usize> {
-        self.non_terminals()
-            .iter()
-            .position(|val| val.ident() == non_terminal)
-    }
-}
-
-impl Display for EnrichedGrammar {
+impl Display for Match {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "EnrichedGrammar {{ ")?;
-        write!(f, "context: ")?;
-        match self.context.as_ref() {
-            Some(ctx) => write!(f, "Some({}), ", ctx)?,
-            None => write!(f, "None, ")?,
+        match self {
+            Self::Literal(lit) => write!(f, "\"{lit}\""),
+            Self::Regex(reg) => write!(f, "/{reg}/"),
         }
-        write!(
-            f,
-            "non_terminals: [{}], tokens: [{}], ",
-            self.non_terminals.iter().format(", "),
-            self.tokens.iter().format(", ")
-        )?;
-        write!(f, "start_symbol: {}, ", self.start_symbol.ident())?;
-        write!(
-            f,
-            "productions: [{}] }}",
-            self.productions.iter().format(", ")
-        )
     }
 }
+
+pub type EnrichedToken = Token<Ident, Match>;
+
+pub type EnrichedNonTerminal = NonTerminal<Ident>;
+
+pub type EnrichedSymbol = Symbol<EnrichedToken, EnrichedNonTerminal>;
+
+pub struct Context(Option<Ident>);
+
+pub type EnrichedGrammar = Grammar<EnrichedToken, EnrichedNonTerminal, EnrichedProduction, Context>;

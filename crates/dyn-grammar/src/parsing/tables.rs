@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     parsing::action::{EofAction, TokenAction},
-    symbolic_grammar::{SymbolicNonTerminal, SymbolicToken},
+    symbolic_grammar::SymbolicToken,
 };
 
 #[derive(Debug)]
@@ -33,17 +33,17 @@ impl TokenTable {
     }
 }
 
-impl Index<(usize, SymbolicToken)> for TokenTable {
+impl Index<(usize, usize)> for TokenTable {
     type Output = Option<TokenAction>;
 
-    fn index(&self, (state, token): (usize, SymbolicToken)) -> &Self::Output {
-        &self.table[state][*token.id()]
+    fn index(&self, (state, token): (usize, usize)) -> &Self::Output {
+        &self.table[state][token]
     }
 }
 
-impl IndexMut<(usize, SymbolicToken)> for TokenTable {
-    fn index_mut(&mut self, (state, token): (usize, SymbolicToken)) -> &mut Self::Output {
-        &mut self.table[state][*token.id()]
+impl IndexMut<(usize, usize)> for TokenTable {
+    fn index_mut(&mut self, (state, token): (usize, usize)) -> &mut Self::Output {
+        &mut self.table[state][token]
     }
 }
 
@@ -156,20 +156,17 @@ impl NonTerminalTable {
     }
 }
 
-impl Index<(usize, SymbolicNonTerminal)> for NonTerminalTable {
+impl Index<(usize, usize)> for NonTerminalTable {
     type Output = Option<usize>;
 
-    fn index(&self, (state, non_terminal): (usize, SymbolicNonTerminal)) -> &Self::Output {
-        &self.table[state][*non_terminal.id()]
+    fn index(&self, (state, non_terminal): (usize, usize)) -> &Self::Output {
+        &self.table[state][non_terminal]
     }
 }
 
-impl IndexMut<(usize, SymbolicNonTerminal)> for NonTerminalTable {
-    fn index_mut(
-        &mut self,
-        (state, non_terminal): (usize, SymbolicNonTerminal),
-    ) -> &mut Self::Output {
-        &mut self.table[state][*non_terminal.id()]
+impl IndexMut<(usize, usize)> for NonTerminalTable {
+    fn index_mut(&mut self, (state, non_terminal): (usize, usize)) -> &mut Self::Output {
+        &mut self.table[state][non_terminal]
     }
 }
 
@@ -217,10 +214,10 @@ impl TransitionTables {
         self.non_terminal_table.push(non_terminal_transitions);
     }
 
-    pub fn token_transition(&self, starting_state: usize, token: SymbolicToken) -> Option<usize> {
+    pub fn token_transition(&self, starting_state: usize, token: usize) -> Option<usize> {
         self.token_table
             .get(starting_state)?
-            .get(*token.id())
+            .get(token)
             .cloned()
             .flatten()
     }

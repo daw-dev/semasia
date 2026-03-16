@@ -1,26 +1,26 @@
 #![allow(clippy::mutable_key_type)]
 
 use crate::{
-    enriched_symbol::EnrichedSymbol,
-    non_terminal::EnrichedNonTerminal,
     parsing::{
         action::{EofAction, TokenAction},
         tables::{EofTable, NonTerminalTable, TokenTable, TransitionTables},
     },
     production::EnrichedProduction,
-    symbolic_grammar::{SymbolicGrammar, SymbolicNonTerminal, SymbolicSymbol, SymbolicToken},
+    symbolic_grammar::{
+        SymbolicGrammar, SymbolicNonTerminal, SymbolicProduction, SymbolicSymbol, SymbolicToken,
+    },
 };
 use itertools::Itertools;
 use std::{cell::RefCell, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
 use syn::Ident;
 
 #[derive(Clone)]
-struct LookAhead {
-    tokens: HashSet<SymbolicToken>,
+struct LookAhead<'a> {
+    tokens: HashSet<&'a SymbolicToken>,
     can_eof_follow: bool,
 }
 
-impl Display for LookAhead {
+impl Display for LookAhead<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut tokens = self.tokens.iter().collect_vec();
         tokens.sort();
@@ -37,10 +37,10 @@ impl Display for LookAhead {
 }
 
 #[derive(Clone)]
-struct LookAheadNodeRef(Rc<RefCell<LookAheadNode>>);
+struct LookAheadNodeRef<'a>(Rc<RefCell<LookAheadNode<'a>>>);
 
-impl LookAheadNodeRef {
-    pub fn initial_lookahead_node(counter: &mut usize) -> LookAheadNodeRef {
+impl<'a> LookAheadNodeRef<'a> {
+    pub fn initial_lookahead_node(counter: &mut usize) -> LookAheadNodeRef<'a> {
         Self::new(
             counter,
             LookAhead {
@@ -53,8 +53,8 @@ impl LookAheadNodeRef {
 
     pub fn new(
         counter: &mut usize,
-        natural_lookahead: LookAhead,
-        dependencies: Vec<LookAheadNodeRef>,
+        natural_lookahead: LookAhead<'a>,
+        dependencies: Vec<LookAheadNodeRef<'a>>,
     ) -> Self {
         let node_id = *counter;
         *counter += 1;
@@ -65,7 +65,7 @@ impl LookAheadNodeRef {
         })))
     }
 
-    fn compute_lookahead_helper(&self, visited: &mut HashSet<usize>) -> LookAhead {
+    fn compute_lookahead_helper(&self, visited: &mut HashSet<usize>) -> LookAhead<'a> {
         // TODO: not so simple, graph could have cycles
         let borrow = self.0.borrow();
         let mut res = borrow.natural_lookahead.clone();
@@ -81,60 +81,74 @@ impl LookAheadNodeRef {
         res
     }
 
-    pub fn compute_lookahead(&self) -> LookAhead {
+    pub fn compute_lookahead(&self) -> LookAhead<'a> {
         self.compute_lookahead_helper(&mut HashSet::new())
     }
 
-    pub fn add_dependency(&self, dependency: LookAheadNodeRef) {
+    pub fn add_dependency(&self, dependency: LookAheadNodeRef<'a>) {
         self.0.borrow_mut().dependencies.push(dependency);
     }
 }
 
-struct LookAheadNode {
+struct LookAheadNode<'a> {
     node_id: usize,
-    natural_lookahead: LookAhead,
-    dependencies: Vec<LookAheadNodeRef>,
+    natural_lookahead: LookAhead<'a>,
+    dependencies: Vec<LookAheadNodeRef<'a>>,
 }
 
 #[derive(Clone)]
-struct LalrItem {
-    production_id: usize,
+struct LalrItem<'a> {
+    production: &'a SymbolicProduction,
     marker_position: usize,
-    lookahead_node: LookAheadNodeRef,
+    lookahead_node: LookAheadNodeRef<'a>,
 }
 
-impl Hash for LalrItem {
+impl Hash for LalrItem<'_> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.production_id.hash(state);
+        self.production.hash(state);
         self.marker_position.hash(state);
     }
 }
 
-impl PartialEq for LalrItem {
+impl PartialEq for LalrItem<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.production_id == other.production_id && self.marker_position == other.marker_position
+        self.production.id() == other.production.id()
+            && self.marker_position == other.marker_position
     }
 }
 
-impl Eq for LalrItem {}
+impl Eq for LalrItem<'_> {}
 
-impl LalrItem {
-    pub fn new(production_id: usize, lookahead_node: LookAheadNodeRef) -> Self {
+impl Display for LalrItem<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (before_marker, after_marker) = self.production.body().split_at(self.marker_position);
+        write!(
+            f,
+            "{}: {} -> ({}·{})",
+            self.production.extras(),
+            self.production.head(),
+            before_marker.iter().format(", "),
+            after_marker.iter().format(", ")
+        )
+    }
+}
+
+impl<'a> LalrItem<'a> {
+    pub fn new(production: &'a SymbolicProduction, lookahead_node: LookAheadNodeRef<'a>) -> Self {
         Self {
-            production_id,
+            production,
             marker_position: 0,
             lookahead_node,
         }
     }
 
-    pub fn pointed_symbol(&self, grammar: &SymbolicGrammar) -> Option<SymbolicSymbol> {
+    pub fn pointed_symbol(&self, grammar: &'a SymbolicGrammar) -> Option<&'a SymbolicSymbol> {
         grammar
             .productions()
-            .get(self.production_id)
+            .get(*self.production.id())
             .expect("production not found")
             .body()
             .get(self.marker_position)
-            .cloned()
     }
 
     pub fn move_marker(&mut self) {
@@ -142,24 +156,44 @@ impl LalrItem {
     }
 
     fn is_reducing(&self, grammar: &SymbolicGrammar) -> bool {
-        self.marker_position == grammar.get_production(self.production_id).unwrap().arity()
+        self.marker_position
+            == grammar
+                .productions()
+                .get(*self.production.id())
+                .unwrap()
+                .arity()
+    }
+
+    fn is_accepting(&self) -> bool {
+        todo!()
     }
 }
 
-struct LalrState {
-    kernel: HashSet<LalrItem>,
+struct LalrState<'a> {
+    kernel: HashSet<LalrItem<'a>>,
     marked: bool,
-    epsilon_items: HashSet<LalrItem>,
+    epsilon_items: HashSet<LalrItem<'a>>,
 }
 
-impl PartialEq for LalrState {
+impl PartialEq for LalrState<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.kernel == other.kernel
     }
 }
 
-impl LalrState {
-    fn new(kernel: HashSet<LalrItem>) -> Self {
+impl Display for LalrState<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LalrState")
+            .field(
+                "kernel",
+                &format!("{{{}}}", self.kernel.iter().format(", ")),
+            )
+            .finish_non_exhaustive()
+    }
+}
+
+impl<'a> LalrState<'a> {
+    fn new(kernel: HashSet<LalrItem<'a>>) -> Self {
         Self {
             kernel,
             marked: false,
@@ -167,7 +201,7 @@ impl LalrState {
         }
     }
 
-    fn closure(&self, counter: &mut usize, grammar: &SymbolicGrammar) -> HashSet<LalrItem> {
+    fn closure(&self, counter: &mut usize, grammar: &'a SymbolicGrammar) -> HashSet<LalrItem<'a>> {
         let mut stack = self.kernel.clone().into_iter().collect_vec();
         let mut res = self.kernel.clone();
 
@@ -182,7 +216,7 @@ impl LalrState {
             };
 
             let item_production = grammar
-                .get_production(item.production_id)
+                .get_production(*item.production.id())
                 .expect("production not found!");
 
             let beta = &item_production.body()[item.marker_position + 1..];
@@ -202,8 +236,8 @@ impl LalrState {
             for new_item in grammar
                 .productions()
                 .iter()
-                .filter(|prod| prod.head() == &non_terminal)
-                .map(|prod| LalrItem::new(*prod.id(), lookahead_node.clone()))
+                .filter(|prod| prod.head() == non_terminal)
+                .map(|prod| LalrItem::new(prod, lookahead_node.clone()))
             {
                 match res.get(&new_item) {
                     Some(item) => {
@@ -220,13 +254,13 @@ impl LalrState {
     }
 }
 
-pub struct LalrAutomaton {
+pub struct LalrAutomaton<'a> {
     grammar: SymbolicGrammar,
-    states: Vec<LalrState>,
+    states: Vec<LalrState<'a>>,
     transitions: TransitionTables,
 }
 
-impl LalrAutomaton {
+impl<'a> LalrAutomaton<'a> {
     pub fn compute(grammar: SymbolicGrammar) -> Self {
         let mut automaton = Self {
             grammar,
@@ -237,64 +271,21 @@ impl LalrAutomaton {
         automaton
     }
 
-    fn eprint_items<'a>(grammar: &SymbolicGrammar, items: impl Iterator<Item = &'a LalrItem>) {
-        eprint!(
-            "{{{}}}",
-            items
-                .map(|item| {
-                    let production = if item.production_id == usize::MAX {
-                        let start_symbol = grammar.enriched_grammar().start_symbol();
-                        &EnrichedProduction::new(
-                            Ident::new("__SpecialProduction", start_symbol.ident().span()),
-                            Ident::new("__Start", start_symbol.ident().span()),
-                            vec![EnrichedSymbol::NonTerminal(EnrichedNonTerminal::new(
-                                start_symbol.ident().clone(),
-                            ))],
-                        )
-                    } else {
-                        grammar
-                            .enriched_grammar()
-                            .productions()
-                            .get(item.production_id)
-                            .unwrap()
-                    };
-                    let (before_marker, after_marker) =
-                        production.body().split_at(item.marker_position);
-                    format!(
-                        "{} -> {} · {}, {}",
-                        production.head(),
-                        before_marker.iter().format(" "),
-                        after_marker.iter().format(" "),
-                        item.lookahead_node.compute_lookahead(),
-                    )
-                })
-                .format(", ")
-        )
-    }
-
-    fn eprintln_state(grammar: &SymbolicGrammar, state: &LalrState) {
-        eprint!("LalrState {{ kernel: ");
-        Self::eprint_items(grammar, state.kernel.iter());
-        eprintln!("}}");
-    }
-
     pub fn populate(&mut self) {
         let mut counter = 0;
         let first_state = LalrState::new(HashSet::from_iter([LalrItem::new(
-            usize::MAX,
+            self.grammar.productions().first().unwrap(),
             LookAheadNodeRef::initial_lookahead_node(&mut counter),
         )]));
         self.add_state(first_state);
 
         while let Some(state) = self.states.iter_mut().find(|state| !state.marked) {
             state.marked = true;
-            Self::eprintln_state(&self.grammar, state);
             let closure = state.closure(&mut counter, &self.grammar);
-            Self::eprint_items(&self.grammar, closure.iter());
-            eprintln!();
             for eps_item in closure.iter().filter(|item| {
                 self.grammar
-                    .get_production(item.production_id)
+                    .productions()
+                    .get(*item.production.id())
                     .unwrap()
                     .arity()
                     == 0
@@ -371,7 +362,7 @@ impl LalrAutomaton {
         }
     }
 
-    fn add_state(&mut self, state: LalrState) {
+    fn add_state(&mut self, state: LalrState<'a>) {
         self.states.push(state);
     }
 
@@ -398,8 +389,8 @@ impl LalrAutomaton {
             {
                 let lookahead = reducing_item.lookahead_node.compute_lookahead();
                 for token in lookahead.tokens.into_iter() {
-                    let action = TokenAction::Reduce(reducing_item.production_id);
-                    let entry = &mut token_table[(state_id, token)];
+                    let action = TokenAction::Reduce(*reducing_item.production.id());
+                    let entry = &mut token_table[(state_id, *token.id())];
                     if let Some(reduce) = entry.take() {
                         eprintln!("reduce/reduce conflict");
                         eprintln!("current reduce: {reduce:?}");
@@ -408,10 +399,10 @@ impl LalrAutomaton {
                     *entry = Some(action);
                 }
                 if lookahead.can_eof_follow {
-                    let action = if reducing_item.production_id == usize::MAX {
+                    let action = if reducing_item.is_accepting() {
                         EofAction::Accept
                     } else {
-                        EofAction::Reduce(reducing_item.production_id)
+                        EofAction::Reduce(*reducing_item.production.id())
                     };
                     let entry = &mut eof_table[state_id];
                     if let Some(reduce) = entry.take() {
@@ -446,53 +437,27 @@ impl LalrAutomaton {
     }
 }
 
-impl From<SymbolicGrammar> for LalrAutomaton {
+impl From<SymbolicGrammar> for LalrAutomaton<'_> {
     fn from(value: SymbolicGrammar) -> Self {
         Self::compute(value)
     }
 }
 
-impl Display for LalrAutomaton {
+impl Display for LalrAutomaton<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "SlrAutomaton:")?;
-        writeln!(f, "States:")?;
-        for (state_id, state) in self.states.iter().enumerate() {
-            writeln!(
-                f,
-                "{state_id}: {{{}}}",
-                state
-                    .kernel
-                    .iter()
-                    .map(|item| {
-                        let production = if item.production_id == usize::MAX {
-                            let start_symbol = self.grammar.enriched_grammar().start_symbol();
-                            &EnrichedProduction::new(
-                                Ident::new("__SpecialProduction", start_symbol.ident().span()),
-                                Ident::new("__Start", start_symbol.ident().span()),
-                                vec![EnrichedSymbol::NonTerminal(EnrichedNonTerminal::new(
-                                    start_symbol.ident().clone(),
-                                ))],
-                            )
-                        } else {
-                            self.grammar
-                                .enriched_grammar()
-                                .productions()
-                                .get(item.production_id)
-                                .unwrap()
-                        };
-                        let (before_marker, after_marker) =
-                            production.body().split_at(item.marker_position);
-                        format!(
-                            "{} -> {} · {}, {}",
-                            production.head(),
-                            before_marker.iter().format(" "),
-                            after_marker.iter().format(" "),
-                            item.lookahead_node.compute_lookahead(),
-                        )
-                    })
-                    .format(", ")
-            )?;
-        }
-        write!(f, "{}", self.transitions)
+        f.debug_struct("LalrAutomaton")
+            .field(
+                "states",
+                &format!(
+                    "[{}]",
+                    self.states
+                        .iter()
+                        .enumerate()
+                        .map(|(id, state)| { format!("{}: {}", id, state) })
+                        .format(", ")
+                ),
+            )
+            .field("transitions", &self.transitions)
+            .finish()
     }
 }

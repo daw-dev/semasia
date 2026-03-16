@@ -1,10 +1,15 @@
 use itertools::Itertools;
 use std::{
-    collections::HashSet,
     fmt::Display,
     hash::Hash,
     ops::{Deref, DerefMut, Index, IndexMut},
     slice::SliceIndex,
+};
+
+use crate::{
+    EnrichedGrammar, EnrichedNonTerminal, EnrichedSymbol, EnrichedToken, production::{EnrichedBaseProduction, EnrichedProduction}, symbolic_grammar::{
+        SymbolicGrammar, SymbolicNonTerminal, SymbolicProduction, SymbolicSymbol, SymbolicToken,
+    }
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -191,49 +196,105 @@ where
     }
 }
 
-pub struct Production<ProductionId, TokenType, NonTerminalType> {
-    id: ProductionId,
-    head: NonTerminalType,
-    body: Body<Symbol<TokenType, NonTerminalType>>,
-}
+impl<SymbolType> Body<SymbolType> {
+    pub fn new(body: Vec<SymbolType>) -> Self {
+        Self { body }
+    }
 
-impl<ProductionId, TokenType, NonTerminalType> Display
-    for Production<ProductionId, TokenType, NonTerminalType>
-where
-    ProductionId: Display,
-    TokenType: Display,
-    NonTerminalType: Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {} -> {}", self.id, self.head, self.body)
+    pub fn iter(&self) -> std::slice::Iter<SymbolType> {
+        self.body.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<SymbolType> {
+        self.body.iter_mut()
+    }
+
+    pub fn into_iter(self) -> std::vec::IntoIter<SymbolType> {
+        self.body.into_iter()
     }
 }
 
-impl<ProductionId: PartialEq, TokenType, NonTerminalType> PartialEq
-    for Production<ProductionId, TokenType, NonTerminalType>
+pub struct Production<ProductionId, HeadType, BodySymbol, Extras = ()> {
+    id: ProductionId,
+    head: HeadType,
+    body: Body<BodySymbol>,
+    extras: Extras,
+}
+
+impl<ProductionId: PartialEq, HeadType, BodySymbol, Extras> PartialEq
+    for Production<ProductionId, HeadType, BodySymbol, Extras>
 {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl<ProductionId, TokenType, NonTerminalType>
-    Production<ProductionId, TokenType, NonTerminalType>
+impl<ProductionId: Hash, HeadType, BodySymbol, Extras> Hash for Production<ProductionId, HeadType, BodySymbol, Extras> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl<ProductionId, HeadType, BodySymbol, Extras>
+    Production<ProductionId, HeadType, BodySymbol, Extras>
 {
+    pub fn new(id: ProductionId, head: HeadType, body: Body<BodySymbol>, extras: Extras) -> Self {
+        Self {
+            id,
+            head,
+            body,
+            extras,
+        }
+    }
+
     pub fn id(&self) -> &ProductionId {
         &self.id
     }
 
-    pub fn head(&self) -> &NonTerminalType {
+    pub fn head(&self) -> &HeadType {
         &self.head
     }
 
-    pub fn body(&self) -> &Body<Symbol<TokenType, NonTerminalType>> {
+    pub fn body(&self) -> &Body<BodySymbol> {
         &self.body
     }
 
     pub fn arity(&self) -> usize {
         self.body().len()
+    }
+
+    pub fn extras(&self) -> &Extras {
+        &self.extras
+    }
+}
+
+impl EnrichedBaseProduction {
+    pub fn into_production(
+        self,
+        tokens: &[EnrichedToken],
+        non_terminals: &[EnrichedNonTerminal],
+    ) -> EnrichedProduction {
+        EnrichedProduction::new(
+            self.id,
+            self.head,
+            self.body
+                .into_iter()
+                .map(|ident| {
+                    tokens
+                        .iter()
+                        .position(|tok| tok.ident() == &ident)
+                        .map(|id| EnrichedSymbol::Token(tokens[id].clone()))
+                        .or_else(|| {
+                            non_terminals
+                                .iter()
+                                .position(|nt| nt.ident() == &ident)
+                                .map(|id| EnrichedSymbol::NonTerminal(non_terminals[id].clone()))
+                        })
+                        .expect("ident is neither a non terminal nor a token")
+                })
+                .collect(),
+            self.id()
+        )
     }
 }
 
@@ -248,6 +309,22 @@ pub struct Grammar<TokenType, NonTerminalType, ProductionType, Extras = ()> {
 impl<TokenType, NonTerminalType, ProductionType, Extras>
     Grammar<TokenType, NonTerminalType, ProductionType, Extras>
 {
+    pub fn new(
+        tokens: Vec<TokenType>,
+        non_terminals: Vec<NonTerminalType>,
+        start_symbol: usize,
+        productions: Vec<ProductionType>,
+        extras: Extras,
+    ) -> Self {
+        Self {
+            tokens,
+            non_terminals,
+            start_symbol,
+            productions,
+            extras,
+        }
+    }
+
     pub fn tokens(&self) -> &Vec<TokenType> {
         &self.tokens
     }
@@ -277,79 +354,63 @@ impl<TokenType, NonTerminalType, ProductionType, Extras>
     }
 }
 
-pub struct FirstSet<TokenId> {
-    pub tokens: HashSet<TokenId>,
-    pub nullable: bool,
-}
-
-impl<TokenId, TokenExtras, NonTerminalId, NonTerminalExtras, ProductionId, Extras>
-    Grammar<
-        Token<TokenId, TokenExtras>,
-        NonTerminal<NonTerminalId, NonTerminalExtras>,
-        Production<ProductionId, TokenId, NonTerminalId>,
-        Extras,
-    >
-where
-    TokenId: Hash + Eq,
-    NonTerminalId: Hash + Eq,
-    ProductionId: Hash + Eq + Clone,
-{
-    fn first_set_helper<'a>(
-        &'a self,
-        beta: &'a [Symbol<TokenId, NonTerminalId>],
-        visited: &mut HashSet<&'a ProductionId>,
-    ) -> FirstSet<&'a TokenId> {
-        // eprintln!("finding firsts for ({})", beta.iter().format(", "));
-        if beta.is_empty() {
-            return FirstSet {
-                tokens: HashSet::new(),
-                nullable: true,
-            };
-        }
-
-        let mut res = FirstSet {
-            tokens: HashSet::new(),
-            nullable: false,
-        };
-
-        for symbol in beta.iter() {
-            match symbol {
-                Symbol::Token(token) => {
-                    // eprintln!("inserted {}", token.id());
-                    res.tokens.insert(token);
-                    return res;
-                }
-                Symbol::NonTerminal(non_terminal) => {
-                    let productions = self
-                        .productions()
-                        .iter()
-                        .filter(|prod| prod.head() == non_terminal);
-                    let mut some_nullable = false;
-                    for prod in productions.into_iter() {
-                        // eprintln!("checking {prod}");
-                        if !visited.insert(prod.id()) {
-                            continue;
+impl From<EnrichedGrammar> for SymbolicGrammar {
+    fn from(value: EnrichedGrammar) -> Self {
+        let tokens = value
+            .tokens
+            .into_iter()
+            .enumerate()
+            .map(|(id, enr)| SymbolicToken::new(id, enr))
+            .collect_vec();
+        let non_terminals = value
+            .non_terminals
+            .into_iter()
+            .enumerate()
+            .map(|(id, enr)| SymbolicNonTerminal::new(id, enr))
+            .collect_vec();
+        let productions = value
+            .productions
+            .into_iter()
+            .enumerate()
+            .map(|(id, enr)| {
+                let head_id = *non_terminals
+                    .iter()
+                    .find(|nt| nt.extras().id() == enr.head().id())
+                    .unwrap()
+                    .id();
+                let body = enr
+                    .body
+                    .into_iter()
+                    .map(|sym| match sym {
+                        EnrichedSymbol::Token(tok) => SymbolicSymbol::Token(SymbolicToken::new(
+                            *tokens
+                                .iter()
+                                .find(|tok2| tok2.extras().id() == tok.id())
+                                .unwrap()
+                                .id(),
+                            tok,
+                        )),
+                        Symbol::NonTerminal(nt) => {
+                            SymbolicSymbol::NonTerminal(SymbolicNonTerminal::new(
+                                *non_terminals
+                                    .iter()
+                                    .find(|nt2| nt2.extras().id() == nt.id())
+                                    .unwrap()
+                                    .id(),
+                                nt,
+                            ))
                         }
-                        let body = prod.body();
-                        let firsts = self.first_set_helper(body, visited);
-                        res.tokens.extend(firsts.tokens);
-                        some_nullable |= firsts.nullable;
-                    }
-                    if !some_nullable {
-                        return res;
-                    }
-                }
-            }
-        }
+                    })
+                    .collect_vec();
 
-        res.nullable = true;
-        res
-    }
-
-    pub fn first_set<'a>(
-        &'a self,
-        beta: &'a [Symbol<TokenId, NonTerminalId>],
-    ) -> FirstSet<&'a TokenId> {
-        self.first_set_helper(beta, &mut HashSet::new())
+                SymbolicProduction::new(
+                    id,
+                    SymbolicNonTerminal::new(head_id, enr.head),
+                    Body::new(body),
+                    enr.id,
+                )
+            })
+            .collect_vec();
+        SymbolicGrammar::new(tokens, non_terminals, value.start_symbol, productions, ())
     }
 }
