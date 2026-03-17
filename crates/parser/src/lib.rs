@@ -148,7 +148,7 @@ impl<
     pub fn parse_with_ctx(
         ctx: Ctx,
         tokens: impl IntoIterator<Item = Token>,
-    ) -> Result<StartSymbol, ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>> {
+    ) -> Result<(StartSymbol, Ctx), ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>> {
         let mut parser = Self::new(ctx);
         for mut token in tokens.into_iter() {
             loop {
@@ -182,12 +182,12 @@ impl<
             unreachable!()
         };
 
-        Ok(non_terminal.into())
+        Ok((non_terminal.into(), parser.ctx))
     }
 
     pub fn parse_default_ctx(
         tokens: impl IntoIterator<Item = Token>,
-    ) -> Result<StartSymbol, ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
+    ) -> Result<(StartSymbol, Ctx), ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
     where
         Ctx: Default,
     {
@@ -197,7 +197,7 @@ impl<
     pub fn lex_parse_with_ctx<'source>(
         ctx: Ctx,
         source: &'source Token::Source,
-    ) -> Result<StartSymbol, LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
+    ) -> Result<(StartSymbol, Ctx), LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
     where
         Token: Logos<'source>,
         Token::Extras: Default,
@@ -248,12 +248,12 @@ impl<
             unreachable!()
         };
 
-        Ok(non_terminal.into())
+        Ok((non_terminal.into(), parser.ctx))
     }
 
     pub fn lex_parse_default_ctx<'source>(
         source: &'source Token::Source,
-    ) -> Result<StartSymbol, LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
+    ) -> Result<(StartSymbol, Ctx), LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
     where
         Token: Logos<'source>,
         Token::Extras: Default,
@@ -274,7 +274,7 @@ impl<
     pub fn parse(
         tokens: impl Iterator<Item = Token>,
     ) -> Result<StartSymbol, ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, ()>> {
-        Self::parse_with_ctx((), tokens)
+        Self::parse_with_ctx((), tokens).map(|ok| ok.0)
     }
 
     pub fn lex_parse<'source>(
@@ -284,6 +284,6 @@ impl<
         Token: Logos<'source>,
         Token::Extras: Default,
     {
-        Self::lex_parse_with_ctx((), source)
+        Self::lex_parse_with_ctx((), source).map(|ok| ok.0)
     }
 }
