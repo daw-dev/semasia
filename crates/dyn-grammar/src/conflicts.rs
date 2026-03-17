@@ -1,19 +1,26 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Precedence {
-    Implicit(usize),
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub enum ProductionPriority {
+    #[default]
+    None,
+    Inherited(usize),
     Explicit(usize),
 }
 
 #[test]
 fn precedence_ordering_test() {
-    assert!(Precedence::Explicit(10) > Precedence::Explicit(5));
-    assert!(Precedence::Implicit(10) > Precedence::Implicit(5));
-    assert!(Precedence::Explicit(10) > Precedence::Implicit(5));
-    assert!(Precedence::Explicit(5) > Precedence::Implicit(10));
+    assert!(ProductionPriority::Explicit(10) > ProductionPriority::Explicit(5));
+    assert!(ProductionPriority::Inherited(10) > ProductionPriority::Inherited(5));
+    assert!(ProductionPriority::Explicit(10) > ProductionPriority::Inherited(5));
+    assert!(ProductionPriority::Explicit(5) > ProductionPriority::Inherited(10));
+    assert!(ProductionPriority::Explicit(10) > ProductionPriority::None);
+    assert!(ProductionPriority::Inherited(10) > ProductionPriority::None);
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub type TokenPriority = Option<usize>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Associativity {
+    #[default]
     Unspecified,
     Left,
     Right,

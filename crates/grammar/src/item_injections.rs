@@ -1,7 +1,6 @@
 use dyn_grammar::{
     Context, EnrichedGrammar,
     parsing::tables::{EofTable, NonTerminalTable, TokenTable},
-    symbolic_grammar::SymbolicProduction,
     symbolic_grammar::SymbolicSymbol,
 };
 use itertools::Itertools;
@@ -22,10 +21,10 @@ impl<'a> Analyzed<'a> {
         items_to_add.extend(self.match_tables());
         items_to_add.push(self.parser());
 
-        for item in items_to_add.iter() {
-            eprintln!("------------------------------");
-            eprintln!("{}", quote!(#item));
-        }
+        // for item in items_to_add.iter() {
+        //     eprintln!("------------------------------");
+        //     eprintln!("{}", quote!(#item));
+        // }
 
         match internal_mod_name.as_ref() {
             Some(name) => items.push(parse_quote! {
@@ -160,11 +159,11 @@ impl<'a> Analyzed<'a> {
         let productions = &self.automaton.grammar().productions();
         let idents = productions
             .iter()
-            .map(SymbolicProduction::extras)
+            .map(|prod| &prod.extras().0)
             .filter(|ident| ident != &"__SemasiaParse")
             .collect_vec();
         let reductions = productions.iter().map(|prod| {
-            let prod_name = prod.extras();
+            let prod_name = &prod.extras().0;
             let head_type = prod.head().extras().id();
             let exprs = prod.body().iter().enumerate().map(|(i, sym)| {
                 let var_name = Ident::new(&format!("t{i}"), Span::call_site().into());
@@ -355,13 +354,13 @@ impl<'a> Analyzed<'a> {
                         quote!(parser::TokenAction::Shift(#state))
                     }
                     dyn_grammar::parsing::action::TokenAction::Reduce(production) => {
-                        let production = self
+                        let production = &self
                             .automaton
                             .grammar()
                             .productions()
                             .get(*production)
                             .expect("production not found")
-                            .extras();
+                            .extras().0;
                         quote!(parser::TokenAction::Reduce(ProductionName::#production))
                     }
                 };
@@ -404,13 +403,13 @@ impl<'a> Analyzed<'a> {
                     opt_action.as_ref().map(move |action| {
                         let action = match action {
                             dyn_grammar::parsing::action::EofAction::Reduce(production) => {
-                                let production = self
+                                let production = &self
                                     .automaton
                                     .grammar()
                                     .productions()
                                     .get(*production)
                                     .expect("production not found")
-                                    .extras();
+                                    .extras().0;
                                 quote!(parser::EofAction::Reduce(ProductionName::#production))
                             }
                             dyn_grammar::parsing::action::EofAction::Accept => {

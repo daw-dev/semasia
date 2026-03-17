@@ -1,14 +1,17 @@
 use dyn_grammar::{
     EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedToken, Match,
-    grammar::Body, lalr::LalrAutomaton, symbolic_grammar::SymbolicGrammar,
+    conflicts::Associativity,
+    grammar::Body,
+    lalr::LalrAutomaton,
+    symbolic_grammar::SymbolicGrammar,
 };
 use ebnf_parser::EbnfProduction;
 use itertools::Itertools;
 use proc_macro_error::{abort, abort_call_site, emit_call_site_warning};
 use std::collections::HashSet;
 use syn::{
-    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitStr, Meta, Type, UseGroup,
-    UseTree,
+    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitInt, LitStr, Meta, Type,
+    UseGroup, UseTree,
 };
 
 use crate::constructor::*;
@@ -135,7 +138,7 @@ impl Constructor {
 
     fn extract_token(item: &mut Item) -> Option<EnrichedToken> {
         let (attrs, ident) = Self::extract_info(item)?;
-        let mut res = None;
+        let mut res_match = None;
         attrs.retain(|attr| {
             if !attr.path().is_ident("token") {
                 return true;
@@ -157,19 +160,62 @@ impl Constructor {
                 }
             });
             if let Ok(match_string) = match_string {
-                res = Some(match_string);
+                if res_match.is_some() {
+                    abort!(attr, "duplicated token attribute!");
+                }
+                res_match = Some(match_string);
                 return false;
             }
             true
         });
-        res.map(|match_string| {
+        let mut res_precedence = None;
+        attrs.retain(|attr| {
+            if !attr.path().is_ident("precedence") {
+                return true;
+            }
+            let precedence: Result<usize, _> =
+                attr.parse_args_with(|input: syn::parse::ParseStream| {
+                    let lit_int: LitInt = input.parse()?;
+                    lit_int.base10_parse()
+                });
+            if let Ok(precedence) = precedence {
+                if res_precedence.is_some() {
+                    abort!(attr, "duplicated precedence attribute!");
+                }
+                res_precedence = Some(precedence);
+                return false;
+            }
+            true
+        });
+        let mut res_assoc = None;
+        attrs.retain(|attr| {
+            if !attr.path().is_ident("associativity") {
+                return true;
+            }
+            let associativity: Result<Associativity, _> =
+                attr.parse_args_with(|input: syn::parse::ParseStream| {
+                    let ident: Ident = input.parse()?;
+                    if ident == "Left" {
+                        Ok(Associativity::Left)
+                    } else if ident == "Right" {
+                        Ok(Associativity::Right)
+                    } else {
+                        abort!(ident, "only Left and Right are permitted associativity")
+                    }
+                });
+            if let Ok(associativity) = associativity {
+                if res_assoc.is_some() {
+                    abort!(attr, "duplicated precedence attribute!");
+                }
+                res_assoc = Some(associativity);
+                return false;
+            }
+            true
+        });
+        res_match.map(|match_string| {
             EnrichedToken::new(
                 ident,
-                (
-                    match_string,
-                    todo!("check for precedence attribute"),
-                    todo!("check for associativity attribute"),
-                ),
+                (match_string, res_precedence, res_assoc.unwrap_or_default()),
             )
         })
     }
@@ -202,52 +248,74 @@ impl Constructor {
 
     fn extract_production(item: &mut Item) -> Option<EnrichedBaseProduction> {
         match item {
-            Item::Macro(mac) if mac.mac.path.is_ident("production") => mac
-                .mac
-                .parse_body_with(|input: syn::parse::ParseStream| {
-                    let name = input.parse()?;
-                    input.parse::<syn::Token![,]>()?;
-                    let head = input.parse()?;
-                    input.parse::<syn::Token![->]>()?;
-                    let body = input.parse()?;
-                    let body = match body {
-                        Type::Path(type_path) => vec![
-                            type_path
-                                .path
-                                .get_ident()
-                                .expect("use only one type")
-                                .clone(),
-                        ],
-                        Type::Tuple(type_tuple) => type_tuple
-                            .elems
-                            .iter()
-                            .map(|t| {
-                                let Type::Path(type_path) = t else {
-                                    panic!("body of production has to be a tuple of named types")
-                                };
+            Item::Macro(mac) if mac.mac.path.is_ident("production") => {
+                let mut res_precedence = None;
+                mac.attrs.retain(|attr| {
+                    if !attr.path().is_ident("precedence") {
+                        return true;
+                    }
+                    let precedence: Result<usize, _> =
+                        attr.parse_args_with(|input: syn::parse::ParseStream| {
+                            let lit_int: LitInt = input.parse()?;
+                            lit_int.base10_parse()
+                        });
+                    if let Ok(precedence) = precedence {
+                        if res_precedence.is_some() {
+                            abort!(attr, "duplicated precedence attribute!");
+                        }
+                        res_precedence = Some(precedence);
+                        return false;
+                    }
+                    true
+                });
+                mac.mac
+                    .parse_body_with(|input: syn::parse::ParseStream| {
+                        let name = input.parse()?;
+                        input.parse::<syn::Token![,]>()?;
+                        let head = input.parse()?;
+                        input.parse::<syn::Token![->]>()?;
+                        let body = input.parse()?;
+                        let body = match body {
+                            Type::Path(type_path) => vec![
                                 type_path
                                     .path
                                     .get_ident()
-                                    .expect("tuple of named types")
-                                    .clone()
-                            })
-                            .collect(),
-                        _ => panic!("type must be a unit, a single type or a tuple"),
-                    };
-                    let res = Ok(EnrichedBaseProduction::new(
-                        name,
-                        head,
-                        Body::new(body),
-                        todo!("check precedence"),
-                    ));
-                    if input.is_empty() {
-                        return res;
-                    }
-                    input.parse::<syn::Token![,]>()?;
-                    input.parse::<syn::Expr>()?;
-                    res
-                })
-                .ok(),
+                                    .expect("use only one type")
+                                    .clone(),
+                            ],
+                            Type::Tuple(type_tuple) => type_tuple
+                                .elems
+                                .iter()
+                                .map(|t| {
+                                    let Type::Path(type_path) = t else {
+                                        panic!(
+                                            "body of production has to be a tuple of named types"
+                                        )
+                                    };
+                                    type_path
+                                        .path
+                                        .get_ident()
+                                        .expect("tuple of named types")
+                                        .clone()
+                                })
+                                .collect(),
+                            _ => panic!("type must be a unit, a single type or a tuple"),
+                        };
+                        let res = Ok(EnrichedBaseProduction::new(
+                            name,
+                            head,
+                            Body::new(body),
+                            res_precedence,
+                        ));
+                        if input.is_empty() {
+                            return res;
+                        }
+                        input.parse::<syn::Token![,]>()?;
+                        input.parse::<syn::Expr>()?;
+                        res
+                    })
+                    .ok()
+            }
             _ => None,
         }
     }
@@ -272,14 +340,13 @@ impl Extracted {
 
 impl Simplified {
     pub fn analyze(&self) -> Analyzed<'_> {
-        eprintln!("computing automaton");
         let automaton = LalrAutomaton::compute(&self.grammar);
-        eprintln!("automaton: {automaton}");
+        // eprintln!("automaton: {automaton}");
         let (token_table, eof_table, non_terminal_table) = automaton.generate_tables();
-        eprintln!("tables:");
-        eprintln!("{token_table}");
-        eprintln!("{eof_table}");
-        eprintln!("{non_terminal_table}");
+        // eprintln!("tables:");
+        // eprintln!("{token_table}");
+        // eprintln!("{eof_table}");
+        // eprintln!("{non_terminal_table}");
         Analyzed {
             automaton,
             token_table,

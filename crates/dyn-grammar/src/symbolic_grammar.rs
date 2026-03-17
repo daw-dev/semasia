@@ -2,6 +2,7 @@ use syn::Ident;
 
 use crate::{
     Context, EnrichedNonTerminal, EnrichedToken,
+    conflicts::ProductionPriority,
     grammar::{Grammar, NonTerminal, Production, Symbol, Token},
 };
 use std::collections::HashSet;
@@ -12,7 +13,8 @@ pub type SymbolicNonTerminal = NonTerminal<usize, EnrichedNonTerminal>;
 
 pub type SymbolicSymbol = Symbol<SymbolicToken, SymbolicNonTerminal>;
 
-pub type SymbolicProduction = Production<usize, SymbolicNonTerminal, SymbolicSymbol, Ident>;
+pub type SymbolicProduction =
+    Production<usize, SymbolicNonTerminal, SymbolicSymbol, (Ident, ProductionPriority)>;
 
 pub type SymbolicGrammar = Grammar<SymbolicToken, SymbolicNonTerminal, SymbolicProduction, Context>;
 

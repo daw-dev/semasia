@@ -9,7 +9,7 @@ use crate::{
 
 impl Display for EnrichedToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.id().fmt(f)
+        write!(f, "{} ({:?}, {:?})", self.id(), self.extras().1, self.extras().2)
     }
 }
 
@@ -47,8 +47,9 @@ impl Display for EnrichedProduction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}: {} -> ({})",
+            "{} ({:?}): {} -> ({})",
             self.id(),
+            self.extras(),
             self.head(),
             self.body().iter().format(", ")
         )
@@ -60,7 +61,7 @@ impl Display for SymbolicProduction {
         write!(
             f,
             "{}: {} -> ({})",
-            self.extras(),
+            self.extras().0,
             self.head(),
             self.body().iter().format(", ")
         )

@@ -1,6 +1,7 @@
 #![allow(clippy::mutable_key_type)]
 
 use crate::{
+    conflicts::{Associativity, ProductionPriority},
     parsing::{
         action::{EofAction, TokenAction},
         tables::{EofTable, NonTerminalTable, TokenTable, TransitionTables},
@@ -8,7 +9,8 @@ use crate::{
     symbolic_grammar::{SymbolicGrammar, SymbolicProduction, SymbolicSymbol, SymbolicToken},
 };
 use itertools::Itertools;
-use std::{cell::RefCell, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
+use proc_macro_error::abort;
+use std::{cell::RefCell, cmp::Ordering, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
 
 #[derive(Clone)]
 struct LookAhead<'a> {
@@ -122,7 +124,7 @@ impl Display for LalrItem<'_> {
         write!(
             f,
             "{}: {} -> ({}·{})",
-            self.production.extras(),
+            self.production.extras().0,
             self.production.head(),
             before_marker.iter().format(", "),
             after_marker.iter().format(", ")
@@ -390,42 +392,92 @@ impl<'a> LalrAutomaton<'a> {
             {
                 let lookahead = reducing_item.lookahead_node.compute_lookahead();
                 for token in lookahead.tokens.into_iter() {
-                    let action = TokenAction::Reduce(*reducing_item.production.id());
+                    let production_id = *reducing_item.production.id();
+                    let mut action = TokenAction::Reduce(production_id);
                     let entry = &mut token_table[(state_id, *token.id())];
-                    if let Some(reduce) = entry.take() {
-                        eprintln!("reduce/reduce conflict");
-                        eprintln!("current reduce: {reduce:?}");
-                        eprintln!("new reduce: {action:?}");
+                    if let Some(TokenAction::Reduce(reduce)) = entry.take() {
+                        let old_reduce = &self.grammar().productions()[reduce];
+                        let new_reduce = &self.grammar().productions()[production_id];
+                        match old_reduce.extras().1.cmp(&new_reduce.extras().1) {
+                            Ordering::Less => {
+                                action = TokenAction::Reduce(reduce);
+                            }
+                            Ordering::Equal => {
+                                abort!(
+                                    old_reduce.extras().0, "reduce/reduce conflict";
+                                    note = old_reduce.extras().0.span() => "put #[priority(<value>)]"
+                                );
+                            }
+                            Ordering::Greater => {}
+                        }
                     }
                     *entry = Some(action);
                 }
                 if lookahead.can_eof_follow {
-                    let action = if reducing_item.is_accepting() {
+                    let production_id = *reducing_item.production.id();
+                    let mut action = if reducing_item.is_accepting() {
                         EofAction::Accept
                     } else {
-                        EofAction::Reduce(*reducing_item.production.id())
+                        EofAction::Reduce(production_id)
                     };
                     let entry = &mut eof_table[state_id];
-                    if let Some(reduce) = entry.take() {
-                        eprintln!("reduce/reduce conflict");
-                        eprintln!("current reduce: {reduce:?}");
-                        eprintln!("new reduce: {action:?}");
+                    if let Some(EofAction::Reduce(reduce)) = entry.take() {
+                        let old_reduce = &self.grammar().productions()[reduce];
+                        let new_reduce = &self.grammar().productions()[production_id];
+                        match old_reduce.extras().1.cmp(&new_reduce.extras().1) {
+                            Ordering::Less => {
+                                action = EofAction::Reduce(reduce);
+                            }
+                            Ordering::Equal => {
+                                abort!(
+                                    old_reduce.extras().0, "reduce/reduce conflict";
+                                    note = old_reduce.extras().0.span() => "put #[priority(<value>)]"
+                                );
+                            }
+                            Ordering::Greater => {}
+                        }
                     }
                     *entry = Some(action);
                 }
             }
 
-            for (token, target) in token_transitions.iter().enumerate() {
+            for (token_id, target) in token_transitions.iter().enumerate() {
                 let Some(target) = target else {
                     continue;
                 };
-                let entry = &mut token_table[(state_id, token)];
-                if let Some(reduce) = entry.take() {
-                    eprintln!("shift/reduce conflict");
-                    eprintln!("shift: {:?}", TokenAction::Shift(*target));
-                    eprintln!("reduce: {reduce:?}");
+                let token = &self.grammar().tokens()[token_id];
+                let mut action = TokenAction::Shift(*target);
+                let entry = &mut token_table[(state_id, token_id)];
+                if let Some(TokenAction::Reduce(reduce)) = entry.take() {
+                    let reduce_production = &self.grammar().productions()[reduce];
+                    let ord = match (reduce_production.extras().1, token.extras().extras().1) {
+                        (ProductionPriority::None, None) => Ordering::Equal,
+                        (ProductionPriority::Inherited(_), None) => Ordering::Greater,
+                        (ProductionPriority::Explicit(_), None) => Ordering::Greater,
+                        (ProductionPriority::None, Some(_)) => Ordering::Less,
+                        (ProductionPriority::Inherited(a), Some(b)) => a.cmp(&b),
+                        (ProductionPriority::Explicit(a), Some(b)) => a.cmp(&b),
+                    };
+                    match ord {
+                        Ordering::Less => {}
+                        Ordering::Equal => match token.extras().extras().2 {
+                            Associativity::Unspecified => {
+                                abort!(
+                                    reduce_production.extras().0,
+                                    "shift/reduce conflict (priority: {:?})",
+                                    reduce_production.extras().1;
+                                    note = token.extras().id().span() => "this token has the same priority",
+                                )
+                            }
+                            Associativity::Left => {
+                                action = TokenAction::Reduce(reduce);
+                            }
+                            Associativity::Right => {}
+                        },
+                        Ordering::Greater => action = TokenAction::Reduce(reduce),
+                    }
                 }
-                *entry = Some(TokenAction::Shift(*target));
+                *entry = Some(action);
             }
 
             goto_table.add_state();

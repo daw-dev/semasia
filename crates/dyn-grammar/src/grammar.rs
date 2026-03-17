@@ -11,7 +11,7 @@ use syn::Ident;
 use crate::{
     EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedProduction,
     EnrichedSymbol, EnrichedToken,
-    conflicts::Precedence,
+    conflicts::ProductionPriority,
     symbolic_grammar::{
         SymbolicGrammar, SymbolicNonTerminal, SymbolicProduction, SymbolicSymbol, SymbolicToken,
     },
@@ -311,16 +311,19 @@ impl EnrichedBaseProduction {
             })
             .collect::<Body<_>>();
         let precedence = match self.extras {
-            Some(prec) => Precedence::Explicit(prec),
+            Some(prec) => ProductionPriority::Explicit(prec),
             None => body
                 .iter()
                 .rev()
                 .filter_map(|sym| match sym {
                     Symbol::NonTerminal(_) => None,
-                    Symbol::Token(tok) => Some(tok.extras().1.clone()),
+                    Symbol::Token(tok) => match tok.extras().1.clone() {
+                        Some(val) => Some(ProductionPriority::Inherited(val)),
+                        None => None,
+                    },
                 })
                 .next()
-                .unwrap_or(Precedence::Implicit(0)),
+                .unwrap_or_default(),
         };
 
         EnrichedProduction::new(
@@ -421,9 +424,12 @@ impl From<EnrichedGrammar> for SymbolicGrammar {
             Body::new(vec![SymbolicSymbol::NonTerminal(
                 non_terminals[value.start_symbol].clone(),
             )]),
-            Ident::new(
-                "__SemasiaParse",
-                non_terminals[value.start_symbol].extras().id().span(),
+            (
+                Ident::new(
+                    "__SemasiaParse",
+                    non_terminals[value.start_symbol].extras().id().span(),
+                ),
+                ProductionPriority::Explicit(usize::MAX),
             ),
         );
         let productions = value
@@ -465,7 +471,7 @@ impl From<EnrichedGrammar> for SymbolicGrammar {
                     id,
                     SymbolicNonTerminal::new(head_id, enr.head),
                     Body::new(body),
-                    enr.id,
+                    (enr.id, enr.extras),
                 )
             })
             .chain(iter::once(extra_production))

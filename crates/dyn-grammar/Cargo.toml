@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 itertools = "0.14.0"
+proc-macro-error = "1.0.4"
 syn = { version = "2.0.110", features = ["full", "extra-traits"] }
