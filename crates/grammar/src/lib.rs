@@ -64,7 +64,7 @@ dummy_attribute!(
 );
 dummy_attribute!(left_associative, "tokens");
 dummy_attribute!(right_associative, "tokens");
-dummy_attribute!(precedence, "tokens or productions");
+dummy_attribute!(priority, "tokens or productions");
 dummy_attribute!(
     context,
     "ONLY ONE type alias, struct, enum or use directive"

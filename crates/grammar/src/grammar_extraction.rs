@@ -1,8 +1,6 @@
 use dyn_grammar::{
     EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedToken, Match,
-    conflicts::Associativity,
-    grammar::Body,
-    lalr::LalrAutomaton,
+    conflicts::Associativity, grammar::Body, lalr::LalrAutomaton,
     symbolic_grammar::SymbolicGrammar,
 };
 use ebnf_parser::EbnfProduction;
@@ -168,54 +166,50 @@ impl Constructor {
             }
             true
         });
-        let mut res_precedence = None;
+        let mut res_priority = None;
         attrs.retain(|attr| {
-            if !attr.path().is_ident("precedence") {
+            if !attr.path().is_ident("priority") {
                 return true;
             }
-            let precedence: Result<usize, _> =
+            let priority: Result<usize, _> =
                 attr.parse_args_with(|input: syn::parse::ParseStream| {
                     let lit_int: LitInt = input.parse()?;
                     lit_int.base10_parse()
                 });
-            if let Ok(precedence) = precedence {
-                if res_precedence.is_some() {
-                    abort!(attr, "duplicated precedence attribute!");
+            if let Ok(priority) = priority {
+                if res_priority.is_some() {
+                    abort!(attr, "duplicated priority attribute!");
                 }
-                res_precedence = Some(precedence);
+                res_priority = Some(priority);
                 return false;
             }
             true
         });
         let mut res_assoc = None;
         attrs.retain(|attr| {
-            if !attr.path().is_ident("associativity") {
-                return true;
-            }
-            let associativity: Result<Associativity, _> =
-                attr.parse_args_with(|input: syn::parse::ParseStream| {
-                    let ident: Ident = input.parse()?;
-                    if ident == "Left" {
-                        Ok(Associativity::Left)
-                    } else if ident == "Right" {
-                        Ok(Associativity::Right)
-                    } else {
-                        abort!(ident, "only Left and Right are permitted associativity")
+            let assoc = attr
+                .path()
+                .is_ident("left_associative")
+                .then(|| Associativity::Left)
+                .or(attr
+                    .path()
+                    .is_ident("right_associative")
+                    .then(|| Associativity::Right));
+            match assoc {
+                Some(assoc) => {
+                    if res_assoc.is_some() {
+                        abort!(attr, "duplicated associativity attribute!");
                     }
-                });
-            if let Ok(associativity) = associativity {
-                if res_assoc.is_some() {
-                    abort!(attr, "duplicated precedence attribute!");
+                    res_assoc = Some(assoc);
+                    false
                 }
-                res_assoc = Some(associativity);
-                return false;
+                None => true,
             }
-            true
         });
         res_match.map(|match_string| {
             EnrichedToken::new(
                 ident,
-                (match_string, res_precedence, res_assoc.unwrap_or_default()),
+                (match_string, res_priority, res_assoc.unwrap_or_default()),
             )
         })
     }
@@ -249,21 +243,21 @@ impl Constructor {
     fn extract_production(item: &mut Item) -> Option<EnrichedBaseProduction> {
         match item {
             Item::Macro(mac) if mac.mac.path.is_ident("production") => {
-                let mut res_precedence = None;
+                let mut res_priority = None;
                 mac.attrs.retain(|attr| {
-                    if !attr.path().is_ident("precedence") {
+                    if !attr.path().is_ident("priority") {
                         return true;
                     }
-                    let precedence: Result<usize, _> =
+                    let priority: Result<usize, _> =
                         attr.parse_args_with(|input: syn::parse::ParseStream| {
                             let lit_int: LitInt = input.parse()?;
                             lit_int.base10_parse()
                         });
-                    if let Ok(precedence) = precedence {
-                        if res_precedence.is_some() {
-                            abort!(attr, "duplicated precedence attribute!");
+                    if let Ok(priority) = priority {
+                        if res_priority.is_some() {
+                            abort!(attr, "duplicated priority attribute!");
                         }
-                        res_precedence = Some(precedence);
+                        res_priority = Some(priority);
                         return false;
                     }
                     true
@@ -305,7 +299,7 @@ impl Constructor {
                             name,
                             head,
                             Body::new(body),
-                            res_precedence,
+                            res_priority,
                         ));
                         if input.is_empty() {
                             return res;
@@ -341,12 +335,7 @@ impl Extracted {
 impl Simplified {
     pub fn analyze(&self) -> Analyzed<'_> {
         let automaton = LalrAutomaton::compute(&self.grammar);
-        // eprintln!("automaton: {automaton}");
         let (token_table, eof_table, non_terminal_table) = automaton.generate_tables();
-        // eprintln!("tables:");
-        // eprintln!("{token_table}");
-        // eprintln!("{eof_table}");
-        // eprintln!("{non_terminal_table}");
         Analyzed {
             automaton,
             token_table,

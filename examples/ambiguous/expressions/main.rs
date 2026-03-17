@@ -12,28 +12,28 @@ mod ambiguous {
     pub type Number = f64;
 
     #[token("+")]
-    #[associativity(Left)]
-    #[precedence(0)]
+    #[left_associative]
+    #[priority(0)]
     pub struct Plus;
 
     #[token("-")]
-    #[associativity(Left)]
-    #[precedence(0)]
+    #[left_associative]
+    #[priority(0)]
     pub struct Minus;
 
     #[token("*")]
-    #[associativity(Left)]
-    #[precedence(1)]
+    #[left_associative]
+    #[priority(1)]
     pub struct Times;
 
     #[token("/")]
-    #[associativity(Left)]
-    #[precedence(1)]
+    #[left_associative]
+    #[priority(1)]
     pub struct DivisionOp;
 
     #[token("^")]
-    #[associativity(Right)]
-    #[precedence(2)]
+    #[right_associative]
+    #[priority(2)]
     pub struct Power;
 
     #[token("(")]
@@ -54,7 +54,7 @@ mod ambiguous {
 
     production!(Parethesis, Expression -> (OpenPar, Expression, ClosePar), |(_, e, _)| e);
 
-    #[precedence(3)]
+    #[priority(3)]
     production!(Negation, Expression -> (Minus, Expression), |(_, e)| -e);
 
     production!(ActualNumber, Expression -> Number);
