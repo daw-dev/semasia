@@ -6,10 +6,10 @@ mod ambiguous {
 
     #[non_terminal]
     #[start_symbol]
-    pub type Expression = usize;
+    pub type Expression = f64;
 
-    #[token(regex = r"\d+")]
-    pub type Number = usize;
+    #[token(regex = r"\d+(\.\d+)?")]
+    pub type Number = f64;
 
     #[token("+")]
     #[associativity(Left)]
@@ -50,9 +50,12 @@ mod ambiguous {
 
     production!(Division, Expression -> (Expression, DivisionOp, Expression), |(e1, _, e2)| e1 * e2);
 
-    production!(Exponent, Expression -> (Expression, Power, Expression), |(e1, _, e2)| e1.pow(e2 as u32));
+    production!(Exponent, Expression -> (Expression, Power, Expression), |(e1, _, e2)| e1.powf(e2));
 
     production!(Parethesis, Expression -> (OpenPar, Expression, ClosePar), |(_, e, _)| e);
+
+    #[precedence(3)]
+    production!(Negation, Expression -> (Minus, Expression), |(_, e)| -e);
 
     production!(ActualNumber, Expression -> Number);
 }
@@ -60,7 +63,7 @@ mod ambiguous {
 use ambiguous::*;
 
 fn main() {
-    let res = Parser::lex_parse("15 - 2 * 2 ^ 2").expect("couldn't parse");
+    let res = Parser::lex_parse("-15 - 2 * -2 ^ 3").expect("couldn't parse");
 
     println!("{res}");
 }
