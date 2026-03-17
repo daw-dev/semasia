@@ -2,9 +2,11 @@ use itertools::Itertools;
 use std::{
     fmt::Display,
     hash::Hash,
+    iter,
     ops::{Deref, DerefMut, Index, IndexMut},
     slice::SliceIndex,
 };
+use syn::Ident;
 
 use crate::{
     EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedProduction,
@@ -358,6 +360,10 @@ impl<TokenType, NonTerminalType, ProductionType, Extras>
         &self.productions
     }
 
+    pub fn productions_mut(&mut self) -> &mut Vec<ProductionType> {
+        &mut self.productions
+    }
+
     pub fn extras(&self) -> &Extras {
         &self.extras
     }
@@ -377,6 +383,26 @@ impl From<EnrichedGrammar> for SymbolicGrammar {
             .enumerate()
             .map(|(id, enr)| SymbolicNonTerminal::new(id, enr))
             .collect_vec();
+        let extra_production = SymbolicProduction::new(
+            value.productions.len(),
+            SymbolicNonTerminal::new(
+                non_terminals.len(),
+                EnrichedNonTerminal::new(
+                    Ident::new(
+                        "__SemasiaStart",
+                        non_terminals[value.start_symbol].extras().id().span(),
+                    ),
+                    (),
+                ),
+            ),
+            Body::new(vec![SymbolicSymbol::NonTerminal(
+                non_terminals[value.start_symbol].clone(),
+            )]),
+            Ident::new(
+                "__SemasiaParse",
+                non_terminals[value.start_symbol].extras().id().span(),
+            ),
+        );
         let productions = value
             .productions
             .into_iter()
@@ -419,7 +445,15 @@ impl From<EnrichedGrammar> for SymbolicGrammar {
                     enr.id,
                 )
             })
+            .chain(iter::once(extra_production))
             .collect_vec();
-        SymbolicGrammar::new(tokens, non_terminals, value.start_symbol, productions, value.extras)
+        eprintln!("ciaooo");
+        SymbolicGrammar::new(
+            tokens,
+            non_terminals,
+            value.start_symbol,
+            productions,
+            value.extras,
+        )
     }
 }

@@ -1,7 +1,8 @@
 use syn::Ident;
 
 use crate::{
-    Context, EnrichedNonTerminal, EnrichedToken, grammar::{Grammar, NonTerminal, Production, Symbol, Token}
+    Context, EnrichedNonTerminal, EnrichedToken,
+    grammar::{Grammar, NonTerminal, Production, Symbol, Token},
 };
 use std::collections::HashSet;
 

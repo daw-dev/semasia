@@ -99,6 +99,7 @@ struct LalrItem<'a> {
     production: &'a SymbolicProduction,
     marker_position: usize,
     lookahead_node: LookAheadNodeRef<'a>,
+    is_accepting: bool,
 }
 
 impl Hash for LalrItem<'_> {
@@ -137,6 +138,16 @@ impl<'a> LalrItem<'a> {
             production,
             marker_position: 0,
             lookahead_node,
+            is_accepting: false,
+        }
+    }
+
+    pub fn accepting(production: &'a SymbolicProduction, counter: &mut usize) -> Self {
+        Self {
+            production,
+            marker_position: 0,
+            lookahead_node: LookAheadNodeRef::initial_lookahead_node(counter),
+            is_accepting: true,
         }
     }
 
@@ -163,7 +174,7 @@ impl<'a> LalrItem<'a> {
     }
 
     fn is_accepting(&self) -> bool {
-        todo!()
+        self.is_accepting
     }
 }
 
@@ -267,12 +278,11 @@ impl<'a> LalrAutomaton<'a> {
         automaton
     }
 
-    pub fn populate(&mut self)
-    {
+    pub fn populate(&mut self) {
         let mut counter = 0;
-        let first_state = LalrState::new(HashSet::from_iter([LalrItem::new(
-            self.grammar.productions().first().unwrap(),
-            LookAheadNodeRef::initial_lookahead_node(&mut counter),
+        let first_state = LalrState::new(HashSet::from_iter([LalrItem::accepting(
+            self.grammar.productions().last().unwrap(),
+            &mut counter,
         )]));
         self.states.push(first_state);
 

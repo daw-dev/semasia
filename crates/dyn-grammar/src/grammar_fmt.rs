@@ -88,7 +88,7 @@ impl Display for EnrichedGrammar {
 
 impl Display for SymbolicGrammar {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("EnrichedGrammar")
+        f.debug_struct("SymbolicGrammar")
             .field(
                 "tokens",
                 &format!("[{}]", self.tokens().iter().format(", ")),

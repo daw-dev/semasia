@@ -1,11 +1,13 @@
 use dyn_grammar::{
-    EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedToken, Match,
-    grammar::Body, lalr::LalrAutomaton,
+    EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedProduction,
+    EnrichedSymbol, EnrichedToken, Match, grammar::Body, lalr::LalrAutomaton,
+    symbolic_grammar::SymbolicGrammar,
 };
 use ebnf_parser::EbnfProduction;
 use itertools::Itertools;
 use proc_macro_error::{abort, abort_call_site, emit_call_site_warning};
-use std::collections::HashSet;
+use proc_macro2::{Span, extra};
+use std::{collections::HashSet, iter};
 use syn::{
     Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitStr, Meta, Type, UseGroup,
     UseTree,
@@ -87,6 +89,8 @@ impl Constructor {
             productions,
             dyn_grammar::Context(compiler_ctx),
         );
+
+        eprintln!("grammar: {enriched_grammar}");
 
         Extracted {
             grammar: enriched_grammar,
@@ -248,16 +252,22 @@ impl Constructor {
 
 impl Extracted {
     pub fn simplify(self) -> Simplified {
-        Simplified {
-            grammar: self.grammar.into(),
-        }
+        let grammar = SymbolicGrammar::from(self.grammar);
+        eprintln!("grammar: {grammar}");
+        Simplified { grammar }
     }
 }
 
 impl Simplified {
-    pub fn analyze(&self) -> Analyzed {
+    pub fn analyze(&self) -> Analyzed<'_> {
+        eprintln!("computing automaton");
         let automaton = LalrAutomaton::compute(&self.grammar);
+        eprintln!("automaton: {automaton}");
         let (token_table, eof_table, non_terminal_table) = automaton.generate_tables();
+        eprintln!("tables:");
+        eprintln!("{token_table}");
+        eprintln!("{eof_table}");
+        eprintln!("{non_terminal_table}");
         Analyzed {
             automaton,
             token_table,

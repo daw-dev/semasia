@@ -18,6 +18,7 @@ impl<'a> Analyzed<'a> {
         items_to_add.extend(self.token_enum());
         items_to_add.extend(self.non_terminal_enum());
         items_to_add.extend(self.production_enum());
+        eprintln!("prova");
         items_to_add.push(self.compiler_context());
         items_to_add.extend(self.match_tables());
         items_to_add.push(self.parser());
@@ -64,7 +65,7 @@ impl<'a> Analyzed<'a> {
                 },
             }
         });
-        let tokens: Vec<_> = tokens.iter().map(|token| token.id()).collect();
+        let tokens: Vec<_> = tokens.iter().map(|token| token.extras().id()).collect();
         let counter = 0usize..;
         let file: syn::File = parse_quote! {
             fn parse<T: std::str::FromStr>(lex: &mut logos::Lexer<Token>) -> Option<T> {
@@ -161,22 +162,23 @@ impl<'a> Analyzed<'a> {
         let idents = productions
             .iter()
             .map(SymbolicProduction::extras)
+            .filter(|ident| ident != &"__SemasiaParse")
             .collect_vec();
         let reductions = productions.iter().map(|prod| {
-            let prod_name = prod.id();
-            let head_type = prod.head().id();
+            let prod_name = prod.extras();
+            let head_type = prod.head().extras().id();
             let exprs = prod.body().iter().enumerate().map(|(i, sym)| {
                 let var_name = Ident::new(&format!("t{i}"), Span::call_site().into());
                 match sym {
                     SymbolicSymbol::Token(enriched_token) => {
-                        let type_ident = enriched_token.id();
+                        let type_ident = enriched_token.extras().id();
                         quote! {
                             let Some(Symbol::Token(Token::#type_ident(#var_name))) = stacks.symbol_stack.pop() else { unreachable!("this is not a token") };
                             stacks.state_stack.pop();
                         }
                     }
                     SymbolicSymbol::NonTerminal(enriched_non_terminal) => {
-                        let type_ident = enriched_non_terminal.id();
+                        let type_ident = enriched_non_terminal.extras().id();
                         quote! {
                             let Some(Symbol::NonTerminal(NonTerminal::#type_ident(#var_name))) = stacks.symbol_stack.pop() else { unreachable!("this is not a non terminal") };
                             stacks.state_stack.pop();
