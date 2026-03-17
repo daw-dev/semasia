@@ -1,34 +1,25 @@
 use dyn_grammar::{
-    EnrichedGrammar,
+    Context, EnrichedGrammar,
     parsing::tables::{EofTable, NonTerminalTable, TokenTable},
-    production::EnrichedProduction,
+    symbolic_grammar::SymbolicProduction,
+    symbolic_grammar::SymbolicSymbol,
 };
 use itertools::Itertools;
 use proc_macro::Span;
 use quote::quote;
 use syn::{Ident, Item, parse_quote};
 
-use crate::Constructor;
+use crate::constructor::Analyzed;
 
-impl Constructor {
-    pub fn inject_items(&self, items: &mut Vec<Item>) {
-        let (token_table, eof_table, non_terminal_table) = self.automaton.generate_tables();
-        eprintln!("{token_table}");
-        eprintln!("{eof_table}");
-        eprintln!("{non_terminal_table}");
-
+impl<'a> Analyzed<'a> {
+    pub fn inject_items(&self, items: &mut Vec<Item>, internal_mod_name: Option<Ident>) {
         let mut items_to_add = Vec::new();
         items_to_add.extend(Self::uses());
         items_to_add.extend(self.token_enum());
         items_to_add.extend(self.non_terminal_enum());
         items_to_add.extend(self.production_enum());
         items_to_add.push(self.compiler_context());
-        items_to_add.extend(Self::match_tables(
-            &self.enriched_grammar,
-            token_table,
-            eof_table,
-            non_terminal_table,
-        ));
+        items_to_add.extend(self.match_tables());
         items_to_add.push(self.parser());
 
         for item in items_to_add.iter() {
@@ -36,7 +27,7 @@ impl Constructor {
             eprintln!("{}", quote!(#item));
         }
 
-        match self.internal_mod_name.as_ref() {
+        match internal_mod_name.as_ref() {
             Some(name) => items.push(parse_quote! {
                 pub mod #name {
                     use super::*;
@@ -59,21 +50,21 @@ impl Constructor {
     }
 
     fn token_enum(&self) -> Vec<Item> {
-        let tokens = self.enriched_grammar.tokens();
+        let tokens = self.automaton.grammar().tokens();
         let variants = tokens.iter().map(|token| {
-            let ident = token.ident();
-            match token.match_string() {
-                dyn_grammar::token::Match::Literal(lit) => quote! {
+            let ident = token.extras().id();
+            match &token.extras().extras().0 {
+                dyn_grammar::Match::Literal(lit) => quote! {
                     #[token(#lit, |_| #ident)]
                     #ident(#ident)
                 },
-                dyn_grammar::token::Match::Regex(regex) => quote! {
+                dyn_grammar::Match::Regex(regex) => quote! {
                     #[regex(#regex, parse)]
                     #ident(#ident)
                 },
             }
         });
-        let tokens: Vec<_> = tokens.iter().map(|token| token.ident()).collect();
+        let tokens: Vec<_> = tokens.iter().map(|token| token.extras().id()).collect();
         let counter = 0usize..;
         let file: syn::File = parse_quote! {
             fn parse<T: std::str::FromStr>(lex: &mut logos::Lexer<Token>) -> Option<T> {
@@ -114,12 +105,13 @@ impl Constructor {
     }
 
     fn non_terminal_enum(&self) -> Vec<Item> {
-        let start_symbol = self.enriched_grammar.start_symbol().ident();
+        let start_symbol = self.automaton.grammar().start_symbol().extras().id();
         let non_terminals = self
-            .enriched_grammar
+            .automaton
+            .grammar()
             .non_terminals()
             .iter()
-            .map(|non_terminal| non_terminal.ident())
+            .map(|non_terminal| non_terminal.extras().id())
             .collect_vec();
         let counter = 0usize..;
         let file: syn::File = parse_quote! {
@@ -165,26 +157,27 @@ impl Constructor {
     }
 
     fn production_enum(&self) -> Vec<Item> {
-        let productions = &self.enriched_grammar.productions();
+        let productions = &self.automaton.grammar().productions();
         let idents = productions
             .iter()
-            .map(EnrichedProduction::ident)
+            .map(SymbolicProduction::extras)
+            .filter(|ident| ident != &"__SemasiaParse")
             .collect_vec();
         let reductions = productions.iter().map(|prod| {
-            let prod_name = prod.ident();
-            let head_type = prod.head();
+            let prod_name = prod.extras();
+            let head_type = prod.head().extras().id();
             let exprs = prod.body().iter().enumerate().map(|(i, sym)| {
                 let var_name = Ident::new(&format!("t{i}"), Span::call_site().into());
                 match sym {
-                    dyn_grammar::enriched_symbol::EnrichedSymbol::Token(enriched_token) => {
-                        let type_ident = enriched_token.ident();
+                    SymbolicSymbol::Token(enriched_token) => {
+                        let type_ident = enriched_token.extras().id();
                         quote! {
                             let Some(Symbol::Token(Token::#type_ident(#var_name))) = stacks.symbol_stack.pop() else { unreachable!("this is not a token") };
                             stacks.state_stack.pop();
                         }
                     }
-                    dyn_grammar::enriched_symbol::EnrichedSymbol::NonTerminal(enriched_non_terminal) => {
-                        let type_ident = enriched_non_terminal.ident();
+                    SymbolicSymbol::NonTerminal(enriched_non_terminal) => {
+                        let type_ident = enriched_non_terminal.extras().id();
                         quote! {
                             let Some(Symbol::NonTerminal(NonTerminal::#type_ident(#var_name))) = stacks.symbol_stack.pop() else { unreachable!("this is not a non terminal") };
                             stacks.state_stack.pop();
@@ -228,7 +221,7 @@ impl Constructor {
     }
 
     fn compiler_context(&self) -> Item {
-        let compiler_ctx = self.enriched_grammar.context();
+        let Context(compiler_ctx) = self.automaton.grammar().extras();
         compiler_ctx
             .as_ref()
             .map(|ctx| {
@@ -263,7 +256,7 @@ impl Constructor {
                             .productions()
                             .get(prod_id)
                             .expect("production not found");
-                        let prod_name = actual_production.ident();
+                        let prod_name = actual_production.id();
                         parse_quote!(parser::TokenAction::Reduce(ProductionName::#prod_name))
                     }
                 }) {
@@ -284,7 +277,7 @@ impl Constructor {
                             .productions()
                             .get(prod_id)
                             .expect("production not found");
-                        let prod_name = actual_production.ident();
+                        let prod_name = actual_production.id();
                         parse_quote!(parser::EofAction::Reduce(ProductionName::#prod_name))
                     }
                     dyn_grammar::parsing::action::EofAction::Accept => {
@@ -342,13 +335,9 @@ impl Constructor {
         file.items
     }
 
-    fn match_tables(
-        enriched_grammar: &EnrichedGrammar,
-        token_table: TokenTable,
-        eof_table: EofTable,
-        non_terminal_table: NonTerminalTable,
-    ) -> Vec<Item> {
-        let token_table_patts = token_table
+    fn match_tables(&self) -> Vec<Item> {
+        let token_table_patts = self
+            .token_table
             .table
             .iter()
             .enumerate()
@@ -366,18 +355,21 @@ impl Constructor {
                         quote!(parser::TokenAction::Shift(#state))
                     }
                     dyn_grammar::parsing::action::TokenAction::Reduce(production) => {
-                        let production = enriched_grammar
+                        let production = self
+                            .automaton
+                            .grammar()
                             .productions()
                             .get(*production)
                             .expect("production not found")
-                            .ident();
+                            .extras();
                         quote!(parser::TokenAction::Reduce(ProductionName::#production))
                     }
                 };
                 quote!((#state, #token_id) => Some(#action))
             });
 
-        let token_in_state_patts = token_table
+        let token_in_state_patts = self
+            .token_table
             .table
             .iter()
             .enumerate()
@@ -388,11 +380,13 @@ impl Constructor {
                         .enumerate()
                         .flat_map(move |(token_id, opt_action)| {
                             opt_action.as_ref().map(|_| {
-                                enriched_grammar
+                                self.automaton
+                                    .grammar()
                                     .tokens()
                                     .get(token_id)
                                     .unwrap()
-                                    .ident()
+                                    .extras()
+                                    .id()
                                     .to_string()
                             })
                         })
@@ -402,19 +396,21 @@ impl Constructor {
             .map(|(state, tokens)| quote!(#state => &[#(#tokens),*]));
 
         let eof_table_patts =
-            eof_table
+            self.eof_table
                 .table
-                .into_iter()
+                .iter()
                 .enumerate()
                 .flat_map(|(state, opt_action)| {
-                    opt_action.map(move |action| {
+                    opt_action.as_ref().map(move |action| {
                         let action = match action {
                             dyn_grammar::parsing::action::EofAction::Reduce(production) => {
-                                let production = enriched_grammar
+                                let production = self
+                                    .automaton
+                                    .grammar()
                                     .productions()
-                                    .get(production)
+                                    .get(*production)
                                     .expect("production not found")
-                                    .ident();
+                                    .extras();
                                 quote!(parser::EofAction::Reduce(ProductionName::#production))
                             }
                             dyn_grammar::parsing::action::EofAction::Accept => {
@@ -425,16 +421,15 @@ impl Constructor {
                     })
                 });
 
-        let non_terminal_patts = non_terminal_table
+        let non_terminal_patts = self
+            .non_terminal_table
             .table
-            .into_iter()
+            .iter()
             .enumerate()
             .flat_map(|(state, row)| {
-                row.into_iter()
-                    .enumerate()
-                    .map(move |(token_id, opt_action)| {
-                        opt_action.map(move |action| (state, token_id, action))
-                    })
+                row.iter().enumerate().map(move |(token_id, opt_action)| {
+                    opt_action.map(move |action| (state, token_id, action))
+                })
             })
             .flatten()
             .map(|(state, token_id, target)| quote!((#state, #token_id) => Some(#target)));
@@ -475,7 +470,7 @@ impl Constructor {
     }
 
     fn parser(&self) -> Item {
-        let start_symbol = self.enriched_grammar.start_symbol().ident();
+        let start_symbol = self.automaton.grammar().start_symbol().extras().id();
         parse_quote!(pub type Parser = parser::Parser<NonTerminal, Token, #start_symbol, ProductionName, Tables, __CompilerContext>;)
     }
 }

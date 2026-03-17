@@ -1,24 +1,20 @@
 use dyn_grammar::{
-    EnrichedGrammar,
-    lalr::LalrAutomaton,
-    non_terminal::EnrichedNonTerminal,
-    production::EnrichedBaseProduction,
-    symbolic_grammar::SymbolicGrammar,
-    token::{EnrichedToken, Match},
+    EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedToken, Match,
+    grammar::Body, lalr::LalrAutomaton, symbolic_grammar::SymbolicGrammar,
 };
 use ebnf_parser::EbnfProduction;
 use itertools::Itertools;
 use proc_macro_error::{abort, abort_call_site, emit_call_site_warning};
-use std::{collections::HashSet, rc::Rc};
+use std::collections::HashSet;
 use syn::{
     Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitStr, Meta, Type, UseGroup,
     UseTree,
 };
 
-use crate::constructor::Constructor;
+use crate::constructor::*;
 
 impl Constructor {
-    pub fn extract(items: &mut [Item], internal_mod_name: Option<Ident>) -> Self {
+    pub fn extract(self, items: &mut [Item]) -> Extracted {
         let mut tokens = Vec::new();
         let mut non_terminals = Vec::new();
         let mut ebnf_extra_non_terminals = HashSet::new();
@@ -37,12 +33,14 @@ impl Constructor {
             } else if let Some((non_terminal, is_start)) = Self::extract_non_terminal(item) {
                 if is_start {
                     if let Some(cur_start) = start_symbol {
-                        panic!(
-                            "you can only declare one start symbol, found both {} and {}",
-                            cur_start, non_terminal
+                        let start_nt: &EnrichedNonTerminal = &non_terminals[cur_start];
+                        abort!(
+                            start_nt.id(),
+                            "you can only declare one start symbol";
+                            note = non_terminal.id().span() => "second start symbol defined here"
                         );
                     }
-                    start_symbol = Some(non_terminal.clone());
+                    start_symbol = Some(non_terminals.len());
                 }
                 non_terminals.push(non_terminal);
             } else if let Some(production) = Self::extract_production(item) {
@@ -52,8 +50,7 @@ impl Constructor {
                 let extra_nts = extra_prods
                     .iter()
                     .map(EnrichedBaseProduction::head)
-                    .cloned()
-                    .map(EnrichedNonTerminal::new);
+                    .map(|head| EnrichedNonTerminal::new(head.clone(), ()));
                 ebnf_extra_non_terminals.extend(extra_nts);
                 productions.extend(extra_prods);
             }
@@ -71,35 +68,30 @@ impl Constructor {
         let start_symbol = start_symbol.unwrap_or_else(|| {
             emit_call_site_warning!(
                 "no start symbol was declared, using {}", non_terminals[0];
-                help = non_terminals[0].ident().span() => "add #[start_symbol] here"
+                help = non_terminals[0].id().span() => "add #[start_symbol] here"
             );
-            non_terminals[0].clone()
+            0
         });
 
         non_terminals.extend(ebnf_extra_non_terminals);
 
-        let enriched_grammar = Rc::new(EnrichedGrammar::new(
-            compiler_ctx,
-            non_terminals.into_iter().unique().collect(),
+        let productions = productions
+            .into_iter()
+            .map(|prod| prod.into_production(&tokens, &non_terminals))
+            .collect();
+
+        let enriched_grammar = EnrichedGrammar::new(
             tokens,
+            non_terminals.into_iter().unique().collect(),
             start_symbol,
             productions,
-        ));
+            dyn_grammar::Context(compiler_ctx),
+        );
 
-        eprintln!("{enriched_grammar}");
+        eprintln!("grammar: {enriched_grammar}");
 
-        let sym_grammar = SymbolicGrammar::from(enriched_grammar.clone());
-
-        eprintln!("{sym_grammar}");
-
-        let automaton = LalrAutomaton::compute(sym_grammar);
-
-        eprintln!("{automaton}");
-
-        Self {
-            enriched_grammar,
-            automaton,
-            internal_mod_name,
+        Extracted {
+            grammar: enriched_grammar,
         }
     }
 
@@ -173,9 +165,11 @@ impl Constructor {
         res.map(|match_string| {
             EnrichedToken::new(
                 ident,
-                match_string,
-                todo!("check for precedence attribute"),
-                todo!("check for associativity attribute"),
+                (
+                    match_string,
+                    todo!("check for precedence attribute"),
+                    todo!("check for associativity attribute"),
+                ),
             )
         })
     }
@@ -203,7 +197,7 @@ impl Constructor {
             attrs.remove(id);
             is_start = true;
         }
-        Some((EnrichedNonTerminal::new(ident), is_start))
+        Some((EnrichedNonTerminal::new(ident, ()), is_start))
     }
 
     fn extract_production(item: &mut Item) -> Option<EnrichedBaseProduction> {
@@ -243,8 +237,8 @@ impl Constructor {
                     let res = Ok(EnrichedBaseProduction::new(
                         name,
                         head,
-                        body,
-                        todo!("check for precedence attribute"),
+                        Body::new(body),
+                        todo!("check precedence"),
                     ));
                     if input.is_empty() {
                         return res;
@@ -264,6 +258,33 @@ impl Constructor {
                 mac.mac.parse_body::<EbnfProduction>().ok()
             }
             _ => None,
+        }
+    }
+}
+
+impl Extracted {
+    pub fn simplify(self) -> Simplified {
+        let grammar = SymbolicGrammar::from(self.grammar);
+        eprintln!("grammar: {grammar}");
+        Simplified { grammar }
+    }
+}
+
+impl Simplified {
+    pub fn analyze(&self) -> Analyzed<'_> {
+        eprintln!("computing automaton");
+        let automaton = LalrAutomaton::compute(&self.grammar);
+        eprintln!("automaton: {automaton}");
+        let (token_table, eof_table, non_terminal_table) = automaton.generate_tables();
+        eprintln!("tables:");
+        eprintln!("{token_table}");
+        eprintln!("{eof_table}");
+        eprintln!("{non_terminal_table}");
+        Analyzed {
+            automaton,
+            token_table,
+            eof_table,
+            non_terminal_table,
         }
     }
 }
