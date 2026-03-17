@@ -43,10 +43,14 @@ pub struct DummyProductions;
 #[derive(Debug)]
 pub struct DummyTable;
 
-pub type DummyParser = Parser<DummyNonTerminal, DummyToken, DummyStartSymbol, DummyProductions, DummyTable, ()>;
+pub type DummyParser =
+    Parser<DummyNonTerminal, DummyToken, DummyStartSymbol, DummyProductions, DummyTable, ()>;
 
 impl Tables<DummyNonTerminal, DummyToken, DummyProductions> for DummyTable {
-    fn query_token_table(_current_state: usize, _current_token: &DummyToken) -> Option<TokenAction<DummyProductions>> {
+    fn query_token_table(
+        _current_state: usize,
+        _current_token: &DummyToken,
+    ) -> Option<TokenAction<DummyProductions>> {
         unreachable!()
     }
 
@@ -64,7 +68,11 @@ impl Tables<DummyNonTerminal, DummyToken, DummyProductions> for DummyTable {
 }
 
 impl Reduce<DummyNonTerminal, DummyToken, ()> for DummyProductions {
-    fn reduce(&self, _ctx: &mut (), _stacks: &mut Stacks<DummyNonTerminal, DummyToken>) -> DummyNonTerminal {
+    fn reduce(
+        &self,
+        _ctx: &mut (),
+        _stacks: &mut Stacks<DummyNonTerminal, DummyToken>,
+    ) -> DummyNonTerminal {
         unreachable!()
     }
 }
