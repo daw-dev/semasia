@@ -218,8 +218,14 @@ impl<SymbolType> Body<SymbolType> {
     pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, SymbolType> {
         self.body.iter_mut()
     }
+}
 
-    pub fn into_iter(self) -> std::vec::IntoIter<SymbolType> {
+impl<SymbolType> IntoIterator for Body<SymbolType> {
+    type Item = SymbolType;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
         self.body.into_iter()
     }
 }
@@ -297,7 +303,11 @@ impl EnrichedBaseProduction {
                             ident,
                             tokens[id].extras().clone(),
                         ))
-                    } else if let Some(_) = non_terminals.iter().position(|nt| nt.id() == &ident) {
+                    } else if non_terminals
+                        .iter()
+                        .position(|nt| nt.id() == &ident)
+                        .is_some()
+                    {
                         EnrichedSymbol::NonTerminal(EnrichedNonTerminal::new(ident, ()))
                     } else {
                         panic!("symbol is neither a token nor a non terminal")

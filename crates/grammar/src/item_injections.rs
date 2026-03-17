@@ -428,11 +428,9 @@ impl<'a> Analyzed<'a> {
             .iter()
             .enumerate()
             .flat_map(|(state, row)| {
-                row.into_iter()
-                    .enumerate()
-                    .map(move |(token_id, opt_action)| {
-                        opt_action.map(move |action| (state, token_id, action))
-                    })
+                row.iter().enumerate().map(move |(token_id, opt_action)| {
+                    opt_action.map(move |action| (state, token_id, action))
+                })
             })
             .flatten()
             .map(|(state, token_id, target)| quote!((#state, #token_id) => Some(#target)));
