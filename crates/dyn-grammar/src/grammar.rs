@@ -211,11 +211,11 @@ impl<SymbolType> Body<SymbolType> {
         Self { body }
     }
 
-    pub fn iter(&self) -> std::slice::Iter<SymbolType> {
+    pub fn iter(&self) -> std::slice::Iter<'_, SymbolType> {
         self.body.iter()
     }
 
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<SymbolType> {
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, SymbolType> {
         self.body.iter_mut()
     }
 

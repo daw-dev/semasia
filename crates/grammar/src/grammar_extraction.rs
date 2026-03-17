@@ -1,13 +1,11 @@
 use dyn_grammar::{
-    EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedProduction,
-    EnrichedSymbol, EnrichedToken, Match, grammar::Body, lalr::LalrAutomaton,
-    symbolic_grammar::SymbolicGrammar,
+    EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedToken, Match,
+    grammar::Body, lalr::LalrAutomaton, symbolic_grammar::SymbolicGrammar,
 };
 use ebnf_parser::EbnfProduction;
 use itertools::Itertools;
 use proc_macro_error::{abort, abort_call_site, emit_call_site_warning};
-use proc_macro2::{Span, extra};
-use std::{collections::HashSet, iter};
+use std::collections::HashSet;
 use syn::{
     Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitStr, Meta, Type, UseGroup,
     UseTree,

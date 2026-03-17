@@ -3,10 +3,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use crate::{
-    parsing::action::{EofAction, TokenAction},
-    symbolic_grammar::SymbolicToken,
-};
+use crate::parsing::action::{EofAction, TokenAction};
 
 #[derive(Debug)]
 pub struct TokenTable {

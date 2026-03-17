@@ -1,17 +1,6 @@
-use crate::{
-    grammar::{Grammar, NonTerminal, Production, Symbol, Token},
-};
+use crate::grammar::{Grammar, NonTerminal, Production, Symbol, Token};
 use std::fmt::Display;
 use syn::Ident;
-
-// #[derive(Debug)]
-// pub struct EnrichedGrammar {
-//     context: Option<Ident>,
-//     non_terminals: Vec<EnrichedNonTerminal>,
-//     tokens: Vec<EnrichedToken>,
-//     start_symbol: EnrichedNonTerminal,
-//     productions: Vec<EnrichedProduction>,
-// }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Match {

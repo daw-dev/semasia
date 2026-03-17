@@ -1,4 +1,9 @@
-use dyn_grammar::{EnrichedGrammar, lalr::LalrAutomaton, parsing::tables::{EofTable, NonTerminalTable, TokenTable}, symbolic_grammar::SymbolicGrammar};
+use dyn_grammar::{
+    EnrichedGrammar,
+    lalr::LalrAutomaton,
+    parsing::tables::{EofTable, NonTerminalTable, TokenTable},
+    symbolic_grammar::SymbolicGrammar,
+};
 
 pub struct Constructor;
 

@@ -5,9 +5,7 @@ use crate::{
         action::{EofAction, TokenAction},
         tables::{EofTable, NonTerminalTable, TokenTable, TransitionTables},
     },
-    symbolic_grammar::{
-        SymbolicGrammar, SymbolicNonTerminal, SymbolicProduction, SymbolicSymbol, SymbolicToken,
-    },
+    symbolic_grammar::{SymbolicGrammar, SymbolicProduction, SymbolicSymbol, SymbolicToken},
 };
 use itertools::Itertools;
 use std::{cell::RefCell, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
