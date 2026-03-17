@@ -1,8 +1,7 @@
 use syn::Ident;
 
 use crate::{
-    EnrichedNonTerminal, EnrichedToken,
-    grammar::{Grammar, NonTerminal, Production, Symbol, Token},
+    Context, EnrichedNonTerminal, EnrichedToken, grammar::{Grammar, NonTerminal, Production, Symbol, Token}
 };
 use std::collections::HashSet;
 
@@ -34,7 +33,7 @@ pub struct SymbolicFollowSet {
     pub eof_follows: bool,
 }
 
-pub type SymbolicGrammar = Grammar<SymbolicToken, SymbolicNonTerminal, SymbolicProduction>;
+pub type SymbolicGrammar = Grammar<SymbolicToken, SymbolicNonTerminal, SymbolicProduction, Context>;
 
 pub struct FirstSet<TokenId> {
     pub tokens: HashSet<TokenId>,

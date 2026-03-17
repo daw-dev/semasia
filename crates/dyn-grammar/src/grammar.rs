@@ -7,9 +7,11 @@ use std::{
 };
 
 use crate::{
-    EnrichedGrammar, EnrichedNonTerminal, EnrichedSymbol, EnrichedToken, production::{EnrichedBaseProduction, EnrichedProduction}, symbolic_grammar::{
+    EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedProduction,
+    EnrichedSymbol, EnrichedToken,
+    symbolic_grammar::{
         SymbolicGrammar, SymbolicNonTerminal, SymbolicProduction, SymbolicSymbol, SymbolicToken,
-    }
+    },
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -196,6 +198,12 @@ where
     }
 }
 
+impl<SymbolType> FromIterator<SymbolType> for Body<SymbolType> {
+    fn from_iter<T: IntoIterator<Item = SymbolType>>(iter: T) -> Self {
+        Self::new(iter.into_iter().collect())
+    }
+}
+
 impl<SymbolType> Body<SymbolType> {
     pub fn new(body: Vec<SymbolType>) -> Self {
         Self { body }
@@ -229,7 +237,9 @@ impl<ProductionId: PartialEq, HeadType, BodySymbol, Extras> PartialEq
     }
 }
 
-impl<ProductionId: Hash, HeadType, BodySymbol, Extras> Hash for Production<ProductionId, HeadType, BodySymbol, Extras> {
+impl<ProductionId: Hash, HeadType, BodySymbol, Extras> Hash
+    for Production<ProductionId, HeadType, BodySymbol, Extras>
+{
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.id.hash(state);
     }
@@ -276,24 +286,23 @@ impl EnrichedBaseProduction {
     ) -> EnrichedProduction {
         EnrichedProduction::new(
             self.id,
-            self.head,
+            EnrichedNonTerminal::new(self.head, ()),
             self.body
                 .into_iter()
                 .map(|ident| {
-                    tokens
-                        .iter()
-                        .position(|tok| tok.ident() == &ident)
-                        .map(|id| EnrichedSymbol::Token(tokens[id].clone()))
-                        .or_else(|| {
-                            non_terminals
-                                .iter()
-                                .position(|nt| nt.ident() == &ident)
-                                .map(|id| EnrichedSymbol::NonTerminal(non_terminals[id].clone()))
-                        })
-                        .expect("ident is neither a non terminal nor a token")
+                    if let Some(id) = tokens.iter().position(|tok| tok.id() == &ident) {
+                        EnrichedSymbol::Token(EnrichedToken::new(
+                            ident,
+                            tokens[id].extras().clone(),
+                        ))
+                    } else if let Some(_) = non_terminals.iter().position(|nt| nt.id() == &ident) {
+                        EnrichedSymbol::NonTerminal(EnrichedNonTerminal::new(ident, ()))
+                    } else {
+                        panic!("symbol is neither a token nor a non terminal")
+                    }
                 })
                 .collect(),
-            self.id()
+            (),
         )
     }
 }
@@ -411,6 +420,6 @@ impl From<EnrichedGrammar> for SymbolicGrammar {
                 )
             })
             .collect_vec();
-        SymbolicGrammar::new(tokens, non_terminals, value.start_symbol, productions, ())
+        SymbolicGrammar::new(tokens, non_terminals, value.start_symbol, productions, value.extras)
     }
 }

@@ -1,8 +1,5 @@
-pub mod production;
-
 use crate::{
-    grammar::{Grammar, NonTerminal, Symbol, Token},
-    production::EnrichedProduction,
+    grammar::{Grammar, NonTerminal, Production, Symbol, Token},
 };
 use std::fmt::Display;
 use syn::Ident;
@@ -37,6 +34,10 @@ pub type EnrichedNonTerminal = NonTerminal<Ident>;
 
 pub type EnrichedSymbol = Symbol<EnrichedToken, EnrichedNonTerminal>;
 
-pub struct Context(Option<Ident>);
+pub struct Context(pub Option<Ident>);
+
+pub type EnrichedBaseProduction = Production<Ident, Ident, Ident>;
+
+pub type EnrichedProduction = Production<Ident, EnrichedNonTerminal, EnrichedSymbol>;
 
 pub type EnrichedGrammar = Grammar<EnrichedToken, EnrichedNonTerminal, EnrichedProduction, Context>;

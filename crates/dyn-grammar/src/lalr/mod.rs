@@ -5,14 +5,12 @@ use crate::{
         action::{EofAction, TokenAction},
         tables::{EofTable, NonTerminalTable, TokenTable, TransitionTables},
     },
-    production::EnrichedProduction,
     symbolic_grammar::{
         SymbolicGrammar, SymbolicNonTerminal, SymbolicProduction, SymbolicSymbol, SymbolicToken,
     },
 };
 use itertools::Itertools;
 use std::{cell::RefCell, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
-use syn::Ident;
 
 #[derive(Clone)]
 struct LookAhead<'a> {
@@ -215,9 +213,7 @@ impl<'a> LalrState<'a> {
                 continue;
             };
 
-            let item_production = grammar
-                .get_production(*item.production.id())
-                .expect("production not found!");
+            let item_production = item.production;
 
             let beta = &item_production.body()[item.marker_position + 1..];
 
@@ -255,13 +251,13 @@ impl<'a> LalrState<'a> {
 }
 
 pub struct LalrAutomaton<'a> {
-    grammar: SymbolicGrammar,
+    grammar: &'a SymbolicGrammar,
     states: Vec<LalrState<'a>>,
     transitions: TransitionTables,
 }
 
 impl<'a> LalrAutomaton<'a> {
-    pub fn compute(grammar: SymbolicGrammar) -> Self {
+    pub fn compute(grammar: &'a SymbolicGrammar) -> Self {
         let mut automaton = Self {
             grammar,
             states: Vec::new(),
@@ -271,13 +267,14 @@ impl<'a> LalrAutomaton<'a> {
         automaton
     }
 
-    pub fn populate(&mut self) {
+    pub fn populate(&mut self)
+    {
         let mut counter = 0;
         let first_state = LalrState::new(HashSet::from_iter([LalrItem::new(
             self.grammar.productions().first().unwrap(),
             LookAheadNodeRef::initial_lookahead_node(&mut counter),
         )]));
-        self.add_state(first_state);
+        self.states.push(first_state);
 
         while let Some(state) = self.states.iter_mut().find(|state| !state.marked) {
             state.marked = true;
@@ -335,7 +332,7 @@ impl<'a> LalrAutomaton<'a> {
                             }
                             None => {
                                 let state_id = self.states.len();
-                                self.add_state(target_state);
+                                self.states.push(target_state);
                                 state_id
                             }
                         }
@@ -350,7 +347,7 @@ impl<'a> LalrAutomaton<'a> {
                             Some(i) => i,
                             None => {
                                 let state_id = self.states.len();
-                                self.add_state(target_state);
+                                self.states.push(target_state);
                                 state_id
                             }
                         }
@@ -360,10 +357,6 @@ impl<'a> LalrAutomaton<'a> {
             self.transitions
                 .add_transitions(token_transitions, non_terminal_transitions);
         }
-    }
-
-    fn add_state(&mut self, state: LalrState<'a>) {
-        self.states.push(state);
     }
 
     pub fn states_count(&self) -> usize {
@@ -418,7 +411,7 @@ impl<'a> LalrAutomaton<'a> {
                 let Some(target) = target else {
                     continue;
                 };
-                let entry = &mut token_table[(state_id, SymbolicToken::with_id(token))];
+                let entry = &mut token_table[(state_id, token)];
                 if let Some(reduce) = entry.take() {
                     eprintln!("shift/reduce conflict");
                     eprintln!("shift: {:?}", TokenAction::Shift(*target));
@@ -429,16 +422,20 @@ impl<'a> LalrAutomaton<'a> {
 
             goto_table.add_state();
             for (non_terminal, target) in non_terminal_transitions.iter().enumerate() {
-                goto_table[(state_id, SymbolicNonTerminal::with_id(non_terminal))] = *target;
+                goto_table[(state_id, non_terminal)] = *target;
             }
         }
 
         (token_table, eof_table, goto_table)
     }
+
+    pub fn grammar(&self) -> &SymbolicGrammar {
+        self.grammar
+    }
 }
 
-impl From<SymbolicGrammar> for LalrAutomaton<'_> {
-    fn from(value: SymbolicGrammar) -> Self {
+impl<'a> From<&'a SymbolicGrammar> for LalrAutomaton<'a> {
+    fn from(value: &'a SymbolicGrammar) -> Self {
         Self::compute(value)
     }
 }
