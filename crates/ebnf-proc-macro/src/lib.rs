@@ -41,6 +41,7 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
                     };
                     Some(quote!(|t| #head::#enum_variant(t)))
                 }
+                // not so easy: if body is more than one element you have to put t1, t2, t3, ...
                 ebnf_parser::CompiledSemAction::RepetitionMore => Some(quote!(|(mut acc, t)| {
                     acc.push(t);
                     acc
