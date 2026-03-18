@@ -1,6 +1,6 @@
 use crate::constructor::Constructor;
 use proc_macro::TokenStream;
-use proc_macro_error::{abort_call_site, proc_macro_error, set_dummy};
+use proc_macro_error::{abort_call_site, abort_if_dirty, proc_macro_error, set_dummy};
 use quote::quote;
 use syn::{File, Ident, ItemMod};
 
@@ -29,12 +29,16 @@ pub fn grammar(attr: TokenStream, item: TokenStream) -> TokenStream {
         let analyzed = simplified.analyze();
         analyzed.inject_items(items, internal_mod_name);
 
+        abort_if_dirty();
+
         quote! { #module }.into()
     } else if let Ok(File { items, .. }) = &mut syn::parse(item) {
         let extracted = Constructor.extract(items);
         let simplified = extracted.simplify();
         let analyzed = simplified.analyze();
         analyzed.inject_items(items, internal_mod_name);
+
+        abort_if_dirty();
 
         quote! { #(#items)* }.into()
     } else {

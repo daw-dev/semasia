@@ -5,7 +5,7 @@ use dyn_grammar::{
 };
 use ebnf_parser::EbnfProduction;
 use itertools::Itertools;
-use proc_macro_error::{abort, abort_call_site, emit_call_site_warning};
+use proc_macro_error::{emit_call_site_error, emit_call_site_warning, emit_error};
 use std::collections::HashSet;
 use syn::{
     Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitInt, LitStr, Meta, Type,
@@ -26,7 +26,7 @@ impl Constructor {
         for item in items.iter_mut() {
             if let Some(ctx) = Self::extract_context(item) {
                 if compiler_ctx.is_some() {
-                    abort!(ctx, "Compiler context defined for the second time here");
+                    emit_error!(ctx, "Compiler context defined for the second time here");
                 }
                 compiler_ctx = Some(ctx);
             } else if let Some(token) = Self::extract_token(item) {
@@ -35,7 +35,7 @@ impl Constructor {
                 if is_start {
                     if let Some(cur_start) = start_symbol {
                         let start_nt: &EnrichedNonTerminal = &non_terminals[cur_start];
-                        abort!(
+                        emit_error!(
                             start_nt.id(),
                             "you can only declare one start symbol";
                             note = non_terminal.id().span() => "second start symbol defined here"
@@ -58,7 +58,7 @@ impl Constructor {
         }
 
         if non_terminals.is_empty() || tokens.is_empty() || productions.is_empty() {
-            abort_call_site!(
+            emit_call_site_error!(
                 "every grammar has to have some non-terminals, tokens and productions. Found non-terminals: [{}], tokens: [{}], productions: [{}]",
                 non_terminals.iter().format(","),
                 tokens.iter().format(","),
@@ -159,7 +159,7 @@ impl Constructor {
             });
             if let Ok(match_string) = match_string {
                 if res_match.is_some() {
-                    abort!(attr, "duplicated token attribute!");
+                    emit_error!(attr, "duplicated token attribute!");
                 }
                 res_match = Some(match_string);
                 return false;
@@ -178,7 +178,7 @@ impl Constructor {
                 });
             if let Ok(priority) = priority {
                 if res_priority.is_some() {
-                    abort!(attr, "duplicated priority attribute!");
+                    emit_error!(attr, "duplicated priority attribute!");
                 }
                 res_priority = Some(priority);
                 return false;
@@ -198,7 +198,7 @@ impl Constructor {
             match assoc {
                 Some(assoc) => {
                     if res_assoc.is_some() {
-                        abort!(attr, "duplicated associativity attribute!");
+                        emit_error!(attr, "duplicated associativity attribute!");
                     }
                     res_assoc = Some(assoc);
                     false
@@ -255,7 +255,7 @@ impl Constructor {
                         });
                     if let Ok(priority) = priority {
                         if res_priority.is_some() {
-                            abort!(attr, "duplicated priority attribute!");
+                            emit_error!(attr, "duplicated priority attribute!");
                         }
                         res_priority = Some(priority);
                         return false;

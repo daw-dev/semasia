@@ -9,7 +9,7 @@ use crate::{
     symbolic_grammar::{SymbolicGrammar, SymbolicProduction, SymbolicSymbol, SymbolicToken},
 };
 use itertools::Itertools;
-use proc_macro_error::abort;
+use proc_macro_error::{abort, abort_if_dirty, emit_error};
 use std::{cell::RefCell, cmp::Ordering, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
 
 #[derive(Clone)]
@@ -403,7 +403,7 @@ impl<'a> LalrAutomaton<'a> {
                                 action = TokenAction::Reduce(reduce);
                             }
                             Ordering::Equal => {
-                                abort!(
+                                emit_error!(
                                     old_reduce.extras().0, "reduce/reduce conflict";
                                     note = old_reduce.extras().0.span() => "put #[priority(<value>)]"
                                 );
@@ -429,7 +429,7 @@ impl<'a> LalrAutomaton<'a> {
                                 action = EofAction::Reduce(reduce);
                             }
                             Ordering::Equal => {
-                                abort!(
+                                emit_error!(
                                     old_reduce.extras().0, "reduce/reduce conflict";
                                     note = old_reduce.extras().0.span() => "put #[priority(<value>)]"
                                 );
@@ -462,12 +462,12 @@ impl<'a> LalrAutomaton<'a> {
                         Ordering::Less => {}
                         Ordering::Equal => match token.extras().extras().2 {
                             Associativity::Unspecified => {
-                                abort!(
+                                emit_error!(
                                     reduce_production.extras().0,
                                     "shift/reduce conflict (priority: {:?})",
                                     reduce_production.extras().1;
                                     note = token.extras().id().span() => "this token has the same priority",
-                                )
+                                );
                             }
                             Associativity::Left => {
                                 action = TokenAction::Reduce(reduce);
@@ -485,6 +485,8 @@ impl<'a> LalrAutomaton<'a> {
                 goto_table[(state_id, non_terminal)] = *target;
             }
         }
+
+        abort_if_dirty();
 
         (token_table, eof_table, goto_table)
     }

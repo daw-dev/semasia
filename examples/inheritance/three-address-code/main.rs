@@ -1,10 +1,11 @@
-use static_sdd::*;
+use semasia::*;
 
 #[grammar]
 mod compiler {
     use super::*;
     use std::ops::Shl;
 
+    #[derive(Debug)]
     pub enum Statement {
         Label(String),
         GoTo(String),
@@ -13,7 +14,7 @@ mod compiler {
     }
 
     #[context]
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     pub struct CompilationContext {
         current_label: usize,
     }
@@ -30,6 +31,7 @@ mod compiler {
     #[start_symbol]
     pub type Program = Code;
 
+    #[derive(Debug)]
     pub struct Code {
         lines: Vec<Statement>,
     }
@@ -94,6 +96,7 @@ mod compiler {
     pub type Condition = FromInherited<ConditionLabels, Code>;
 
     #[token("skip")]
+    #[priority(0)]
     pub struct Skip;
 
     #[token("true")]
@@ -103,30 +106,40 @@ mod compiler {
     pub struct False;
 
     #[token("||")]
+    #[left_associative]
     pub struct OrOp;
 
     #[token("&&")]
+    #[left_associative]
     pub struct AndOp;
 
     #[token("if")]
+    #[left_associative]
     pub struct If;
 
-    production!(ProgramIsStatement, Program -> FutureStatement, |ctx, s| s.resolve(ctx.new_label()));
+    production!(ProgramIsStatement, Program -> FutureStatement, |ctx, s| {
+        println!("a statement is a program");
+        s.resolve(ctx.new_label())
+    });
 
     production!(StatementIsStatements, FutureStatement -> (FutureStatement, FutureStatement), |ctx, (s1, s2)| {
+        println!("two statements are a statement");
         let s1_next = ctx.new_label();
         FromInherited::new(|s_next| {
             s1.resolve(s1_next) << s2.resolve(s_next)
         })
     });
 
+    #[priority(1)]
     production!(IfStatement, FutureStatement -> (If, Condition, FutureStatement), |(_, b, s)| {
+        println!("if statement is a statement");
         FromInherited::new(|s_next: String| {
             b.resolve(ConditionLabels { t: None, f: Some(s_next.clone()) }) << s.resolve(s_next)
         })
     });
 
     production!(OrCondition, Condition -> (Condition, OrOp, Condition), |ctx, (b1, _, b2)| {
+        println!("or condition is a condition");
         let b1_true = ctx.new_label();
         FromInherited::new(|b_labels: ConditionLabels| {
             let b1_true = b_labels.t.clone().or_else(|| Some(b1_true));
@@ -140,20 +153,32 @@ mod compiler {
         })
     });
 
-    production!(SkipStatement, FutureStatement -> Skip, |_| FromInherited::new(|_| Code::new()));
+    production!(SkipStatement, FutureStatement -> Skip, |_| {
+        println!("skip becomes statement");
+        FromInherited::new(|_| Code::new())
+    });
 
-    production!(TrueCondition, Condition -> True, |_| FromInherited::new(|b_labels: ConditionLabels| {
-        b_labels.t.map(Statement::GoTo).into_iter().collect()
-    }));
+    production!(TrueCondition, Condition -> True, |_| {
+        println!("true is a condition");
+        FromInherited::new(|b_labels: ConditionLabels| {
+            b_labels.t.map(Statement::GoTo).into_iter().collect()
+        })
+    });
 
-    production!(FalseCondition, Condition -> False, |_| FromInherited::new(|b_labels: ConditionLabels| {
-        b_labels.f.map(Statement::GoTo).into_iter().collect()
-    }));
+    production!(FalseCondition, Condition -> False, |_| {
+        println!("false is a condition");
+        FromInherited::new(|b_labels: ConditionLabels| {
+            b_labels.f.map(Statement::GoTo).into_iter().collect()
+        })
+    });
 }
 
 use compiler::*;
 
 fn main() {
-    let res = parse_str(Default::default(), "if false || true skip").expect("couldn't parse");
-    eprintln!("code is {} lines long", res.len());
+    let res = Parser::lex_parse_default_ctx("if false || true skip skip")
+        .expect("couldn't parse")
+        .0;
+    println!("code is {} lines long", res.len());
+    println!("{res:?}")
 }
