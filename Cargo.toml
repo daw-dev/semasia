@@ -76,5 +76,9 @@ name = "calculus"
 path = "./examples/advanced/calculus/main.rs"
 
 [[example]]
+name = "daw-lang"
+path = "./examples/advanced/daw-lang/main.rs"
+
+[[example]]
 name = "test"
 path = "./examples/test/main.rs"

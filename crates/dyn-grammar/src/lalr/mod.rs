@@ -9,7 +9,7 @@ use crate::{
     symbolic_grammar::{SymbolicGrammar, SymbolicProduction, SymbolicSymbol, SymbolicToken},
 };
 use itertools::Itertools;
-use proc_macro_error::{abort, abort_if_dirty, emit_error};
+use proc_macro_error::{abort_if_dirty, emit_error};
 use std::{cell::RefCell, cmp::Ordering, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
 
 #[derive(Clone)]

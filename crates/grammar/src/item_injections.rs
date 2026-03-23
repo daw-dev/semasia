@@ -65,6 +65,7 @@ impl<'a> Analyzed<'a> {
         });
         let tokens: Vec<_> = tokens.iter().map(|token| token.extras().id()).collect();
         let counter = 0usize..;
+        // TODO: find better way to parse
         let file: syn::File = parse_quote! {
             fn parse<T: std::str::FromStr>(lex: &mut logos::Lexer<Token>) -> Option<T> {
                 lex.slice().parse().ok()

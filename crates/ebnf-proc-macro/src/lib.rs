@@ -67,7 +67,5 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
     }
     .into();
 
-    eprintln!("{res}");
-
     res
 }

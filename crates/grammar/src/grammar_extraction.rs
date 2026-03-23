@@ -5,7 +5,7 @@ use dyn_grammar::{
 };
 use ebnf_parser::EbnfProduction;
 use itertools::Itertools;
-use proc_macro_error::{emit_call_site_error, emit_call_site_warning, emit_error};
+use proc_macro_error::{abort_if_dirty, emit_call_site_error, emit_call_site_warning, emit_error};
 use std::collections::HashSet;
 use syn::{
     Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitInt, LitStr, Meta, Type,
@@ -21,12 +21,15 @@ impl Constructor {
         let mut ebnf_extra_non_terminals = HashSet::new();
         let mut productions = Vec::new();
         let mut start_symbol = None;
-        let mut compiler_ctx = None;
+        let mut compiler_ctx: Option<Ident> = None;
 
         for item in items.iter_mut() {
             if let Some(ctx) = Self::extract_context(item) {
-                if compiler_ctx.is_some() {
-                    emit_error!(ctx, "Compiler context defined for the second time here");
+                if let Some(old_ctx) = compiler_ctx.as_ref() {
+                    emit_error!(
+                        old_ctx, "you can only declare one compilation context";
+                        note = ctx.span() => "second compiler context defined here"
+                    );
                 }
                 compiler_ctx = Some(ctx);
             } else if let Some(token) = Self::extract_token(item) {
@@ -67,10 +70,15 @@ impl Constructor {
         }
 
         let start_symbol = start_symbol.unwrap_or_else(|| {
-            emit_call_site_warning!(
-                "no start symbol was declared, using {}", non_terminals[0];
-                help = non_terminals[0].id().span() => "add #[start_symbol] here"
-            );
+            match non_terminals.get(0) {
+                Some(nt) => {
+                    emit_call_site_warning!(
+                        "no start symbol was declared, using {}", non_terminals[0];
+                        help = nt.id().span() => "add #[start_symbol] here"
+                    );
+                }
+                None => {}
+            }
             0
         });
 
@@ -81,7 +89,7 @@ impl Constructor {
             .map(|prod| prod.into_production(&tokens, &non_terminals))
             .collect();
 
-        let enriched_grammar = EnrichedGrammar::new(
+        let grammar = EnrichedGrammar::new(
             tokens,
             non_terminals.into_iter().unique().collect(),
             start_symbol,
@@ -89,11 +97,7 @@ impl Constructor {
             dyn_grammar::Context(compiler_ctx),
         );
 
-        eprintln!("grammar: {enriched_grammar}");
-
-        Extracted {
-            grammar: enriched_grammar,
-        }
+        Extracted { grammar }
     }
 
     fn extract_ident_from_use_tree(tree: &mut UseTree) -> Option<Ident> {
@@ -326,8 +330,8 @@ impl Constructor {
 
 impl Extracted {
     pub fn simplify(self) -> Simplified {
+        abort_if_dirty();
         let grammar = SymbolicGrammar::from(self.grammar);
-        eprintln!("grammar: {grammar}");
         Simplified { grammar }
     }
 }

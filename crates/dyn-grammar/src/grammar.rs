@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use proc_macro_error::{abort, abort_call_site};
 use std::{
     fmt::Display,
     hash::Hash,
@@ -306,7 +307,7 @@ impl EnrichedBaseProduction {
                 {
                     EnrichedSymbol::NonTerminal(EnrichedNonTerminal::new(ident, ()))
                 } else {
-                    panic!("symbol is neither a token nor a non terminal")
+                    abort!(ident, "symbol is neither a token nor a non-terminal")
                 }
             })
             .collect::<Body<_>>();
@@ -379,7 +380,9 @@ impl<TokenType, NonTerminalType, ProductionType, Extras>
     }
 
     pub fn start_symbol(&self) -> &NonTerminalType {
-        self.non_terminals().get(self.start_symbol).unwrap()
+        self.non_terminals()
+            .get(self.start_symbol)
+            .unwrap_or_else(|| abort_call_site!("every grammar has to have a start symbol"))
     }
 
     pub fn productions(&self) -> &Vec<ProductionType> {
@@ -476,7 +479,6 @@ impl From<EnrichedGrammar> for SymbolicGrammar {
             })
             .chain(iter::once(extra_production))
             .collect_vec();
-        eprintln!("ciaooo");
         SymbolicGrammar::new(
             tokens,
             non_terminals,
