@@ -20,5 +20,13 @@ mod addition {
 }
 
 pub fn main() {
-
+    let result = addition::Parser::lex_parse("1 + 2 + 3 + 4");
+    match result {
+        Ok(result) => {
+            println!("{result}");
+        },
+        Err(err) => {
+            println!("{err}");
+        },
+    }
 }
