@@ -1,6 +1,6 @@
 use ebnf_parser::EbnfProduction;
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 
 #[proc_macro]
 pub fn ebnf(input: TokenStream) -> TokenStream {
@@ -42,10 +42,15 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
                     Some(quote!(|t| #head::#enum_variant(t)))
                 }
                 // not so easy: if body is more than one element you have to put t1, t2, t3, ...
-                ebnf_parser::CompiledSemAction::RepetitionMore => Some(quote!(|(mut acc, t)| {
-                    acc.push(t);
-                    acc
-                })),
+                ebnf_parser::CompiledSemAction::RepetitionMore => {
+                    let vars = (0..production.body.len() - 1)
+                        .map(|i| format_ident!("t{i}"))
+                        .collect::<Vec<_>>();
+                    Some(quote!(|(mut acc, #(#vars),*)| {
+                        acc.push((#(#vars),*));
+                        acc
+                    }))
+                }
                 ebnf_parser::CompiledSemAction::RepetitionDone => Some(quote!(|_| Vec::new())),
                 ebnf_parser::CompiledSemAction::OptionalSome => Some(quote!(|t| Some(t))),
                 ebnf_parser::CompiledSemAction::OptionalNone => Some(quote!(|_| None)),
