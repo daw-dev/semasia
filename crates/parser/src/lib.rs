@@ -1,9 +1,9 @@
 use crate::results::{
-    LexError, LexParseError, ParseEof, ParseEofError, ParseError, ParseOneError, ParseToken,
-    ParseTokenError,
+    LexError, LexParseError, ParseEof, ParseEofError, ParseEofErrorReason, ParseError,
+    ParseOneError, ParseToken, ParseTokenError, ParseTokenErrorReason,
 };
 use logos::Logos;
-use std::{fmt::Display, marker::PhantomData};
+use std::{fmt::Display, marker::PhantomData, ops::Range};
 
 mod actions;
 pub mod dummy;
@@ -100,7 +100,7 @@ impl<
     fn parse_token(
         &mut self,
         token: Token,
-    ) -> Result<ParseToken<Token>, ParseTokenError<NonTerminal, Token>> {
+    ) -> Result<ParseToken<Token>, ParseTokenErrorReason<NonTerminal, Token>> {
         let current_state = self.stacks.current_state();
         match Tab::query_token_table(current_state, &token) {
             Some(TokenAction::Shift(new_state)) => {
@@ -111,7 +111,7 @@ impl<
                 let head = prod.reduce(&mut self.ctx, &mut self.stacks);
                 let new_current_state = self.stacks.current_state();
                 let Some(next_state) = Tab::query_goto_table(new_current_state, &head) else {
-                    return Err(ParseTokenError::GotoNotFound {
+                    return Err(ParseTokenErrorReason::GotoNotFound {
                         leftover_non_terminal: head,
                     });
                 };
@@ -120,20 +120,20 @@ impl<
                     leftover_token: token,
                 })
             }
-            None => Err(ParseTokenError::ActionNotFound {
+            None => Err(ParseTokenErrorReason::ActionNotFound {
                 leftover_token: token,
             }),
         }
     }
 
-    fn parse_eof(&mut self) -> Result<ParseEof, ParseEofError<NonTerminal>> {
+    fn parse_eof(&mut self) -> Result<ParseEof, ParseEofErrorReason<NonTerminal>> {
         let current_state = self.stacks.current_state();
         match Tab::query_eof_table(current_state) {
             Some(EofAction::Reduce(prod)) => {
                 let head = prod.reduce(&mut self.ctx, &mut self.stacks);
                 let new_current_state = self.stacks.current_state();
                 let Some(next_state) = Tab::query_goto_table(new_current_state, &head) else {
-                    return Err(ParseEofError::GotoNotFound {
+                    return Err(ParseEofErrorReason::GotoNotFound {
                         leftover_non_terminal: head,
                     });
                 };
@@ -141,15 +141,16 @@ impl<
                 Ok(ParseEof::Reduced)
             }
             Some(EofAction::Accept) => Ok(ParseEof::Accepted),
-            None => Err(ParseEofError::ActionNotFound),
+            None => Err(ParseEofErrorReason::ActionNotFound),
         }
     }
 
     pub fn parse_with_ctx(
         ctx: Ctx,
         tokens: impl IntoIterator<Item = Token>,
-    ) -> Result<(StartSymbol, Ctx), ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>> {
+    ) -> Result<(StartSymbol, Ctx), ParseError<Self, NonTerminal, Token, usize, ()>> {
         let mut parser = Self::new(ctx);
+        let mut span = 0;
         for mut token in tokens.into_iter() {
             loop {
                 match parser.parse_token(token) {
@@ -160,10 +161,15 @@ impl<
                         token = leftover_token;
                     }
                     Err(err) => {
-                        return Err(ParseError::new(parser, ParseOneError::ParseTokenError(err)));
+                        return Err(ParseError::new(
+                            parser,
+                            ParseOneError::ParseTokenError(ParseTokenError::new(err, span)),
+                            ()
+                        ));
                     }
                 }
             }
+            span += 1;
         }
 
         loop {
@@ -174,7 +180,13 @@ impl<
                 Ok(ParseEof::Reduced) => {
                     continue;
                 }
-                Err(err) => return Err(ParseError::new(parser, ParseOneError::ParseEofError(err))),
+                Err(err) => {
+                    return Err(ParseError::new(
+                        parser,
+                        ParseOneError::ParseEofError(ParseEofError::new(err)),
+                        ()
+                    ));
+                }
             }
         }
 
@@ -187,7 +199,7 @@ impl<
 
     pub fn parse_default_ctx(
         tokens: impl IntoIterator<Item = Token>,
-    ) -> Result<(StartSymbol, Ctx), ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
+    ) -> Result<(StartSymbol, Ctx), ParseError<Self, NonTerminal, Token, usize, ()>>
     where
         Ctx: Default,
     {
@@ -197,16 +209,26 @@ impl<
     pub fn lex_parse_with_ctx<'source>(
         ctx: Ctx,
         source: &'source Token::Source,
-    ) -> Result<(StartSymbol, Ctx), LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
+    ) -> Result<
+        (StartSymbol, Ctx),
+        LexParseError<
+            LexError<'source, Self, Token>,
+            ParseError<Self, NonTerminal, Token, Range<usize>, &'source Token::Source>,
+        >,
+    >
     where
         Token: Logos<'source>,
         Token::Extras: Default,
     {
         let mut parser = Self::new(ctx);
-        for token in Token::lexer(source) {
+        for (token, span) in Token::lexer(source).spanned() {
             let mut token = match token {
                 Ok(token) => token,
-                Err(err) => return Err(LexParseError::LexError(LexError::new(parser, err))),
+                Err(err) => {
+                    return Err(LexParseError::LexError(LexError::new(
+                        parser, err, span, source,
+                    )));
+                }
             };
 
             loop {
@@ -220,7 +242,8 @@ impl<
                     Err(err) => {
                         return Err(LexParseError::ParseError(ParseError::new(
                             parser,
-                            ParseOneError::ParseTokenError(err),
+                            ParseOneError::ParseTokenError(ParseTokenError::new(err, span)),
+                            source,
                         )));
                     }
                 }
@@ -238,7 +261,8 @@ impl<
                 Err(err) => {
                     return Err(LexParseError::ParseError(ParseError::new(
                         parser,
-                        ParseOneError::ParseEofError(err),
+                        ParseOneError::ParseEofError(ParseEofError::new(err)),
+                        source,
                     )));
                 }
             }
@@ -253,7 +277,13 @@ impl<
 
     pub fn lex_parse_default_ctx<'source>(
         source: &'source Token::Source,
-    ) -> Result<(StartSymbol, Ctx), LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>>
+    ) -> Result<
+        (StartSymbol, Ctx),
+        LexParseError<
+            LexError<'source, Self, Token>,
+            ParseError<Self, NonTerminal, Token, Range<usize>, &'source Token::Source>,
+        >,
+    >
     where
         Token: Logos<'source>,
         Token::Extras: Default,
@@ -273,13 +303,19 @@ impl<
 {
     pub fn parse(
         tokens: impl Iterator<Item = Token>,
-    ) -> Result<StartSymbol, ParseError<NonTerminal, Token, StartSymbol, Prod, Tab, ()>> {
+    ) -> Result<StartSymbol, ParseError<Self, NonTerminal, Token, usize, ()>> {
         Self::parse_with_ctx((), tokens).map(|ok| ok.0)
     }
 
     pub fn lex_parse<'source>(
         source: &'source Token::Source,
-    ) -> Result<StartSymbol, LexParseError<'source, NonTerminal, Token, StartSymbol, Prod, Tab, ()>>
+    ) -> Result<
+        StartSymbol,
+        LexParseError<
+            LexError<'source, Self, Token>,
+            ParseError<Self, NonTerminal, Token, Range<usize>, &'source Token::Source>,
+        >,
+    >
     where
         Token: Logos<'source>,
         Token::Extras: Default,
