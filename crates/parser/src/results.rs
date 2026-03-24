@@ -1,9 +1,10 @@
 use std::{fmt::Display, ops::Range};
 
+use colored::Colorize;
 use itertools::Itertools;
 use logos::Logos;
 
-use crate::{Parser, Reduce, Tables};
+use crate::{Parser, Tables};
 
 #[derive(Debug)]
 pub enum ParseToken<Token> {
@@ -81,43 +82,106 @@ impl<Parser, NonTerminal, Token, Span, Source>
     }
 }
 
-impl<'source, Parser, NonTerminal, Token> Display
-    for ParseError<Parser, NonTerminal, Token, Range<usize>, &'source Token::Source>
+impl<'source, NonTerminal, Token, StartSymbol, Prod, Tab, Ctx> Display
+    for ParseError<
+        Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>,
+        NonTerminal,
+        Token,
+        Range<usize>,
+        &'source Token::Source,
+    >
 where
-    Token: Logos<'source> + Display,
-    Token::Source: Display,
+    Token: Logos<'source, Source = str> + Display,
+    Tab: Tables<NonTerminal, Token, Prod>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // write!(
-        //     f,
-        //     "ParseError: after [{}] expected any of [{}]",
-        //     self.parser.stacks.symbol_stack.iter().format(", "),
-        //     Tab::tokens_in_state(self.parser.stacks.current_state())
-        //         .iter()
-        //         .format(", ")
-        // )
         match &self.parse_one_error {
             ParseOneError::ParseTokenError(parse_token_error) => match &parse_token_error.reason {
                 ParseTokenErrorReason::ActionNotFound { leftover_token } => {
                     writeln!(
                         f,
-                        "unexpected token {leftover_token}, expected tokens are: ..."
+                        "{}{}{}",
+                        "error".red().bold(),
+                        ": unexpected token ".bold(),
+                        leftover_token.to_string().bold(),
                     )?;
-                    writeln!(f, "{}", self.source)?;
+                    let (line, span, line_count) =
+                        to_line_span(self.source, parse_token_error.span.clone());
+                    let line_count_str = line_count.to_string();
+                    let line_count_len = line_count_str.len();
+                    writeln!(
+                        f,
+                        "{} {} {}",
+                        line_count_str.blue().bold(),
+                        "|".blue().bold(),
+                        line
+                    )?;
+                    writeln!(
+                        f,
+                        "{}{}{}{}",
+                        " ".repeat(line_count_len),
+                        " | ".blue().bold(),
+                        " ".repeat(span.start),
+                        "^".repeat(span.end - span.start).red().bold()
+                    )?;
                     write!(
                         f,
-                        "{}{}",
-                        " ".repeat(parse_token_error.span.start),
-                        "^".repeat(parse_token_error.span.end - parse_token_error.span.start)
+                        "{}{}{}{}{}",
+                        " ".repeat(line_count_len),
+                        " = ".blue().bold(),
+                        "note: ".bold(),
+                        "expected tokens are ",
+                        Tab::tokens_in_state(self.parser.stacks.current_state())
+                            .iter()
+                            .format(", "),
                     )
                 }
                 ParseTokenErrorReason::GotoNotFound {
                     leftover_non_terminal: _,
                 } => unreachable!("correctly reduced a production, but no goto action found"),
             },
-            ParseOneError::ParseEofError(parse_eof_error) => {
-                write!(f, "parse_eof_error")
-            }
+            ParseOneError::ParseEofError(parse_eof_error) => match &parse_eof_error.reason {
+                ParseEofErrorReason::ActionNotFound => {
+                    writeln!(
+                        f,
+                        "{}{}",
+                        "error".red().bold(),
+                        ": unexpected end of source".bold(),
+                    )?;
+                    let (line, line_count) = last_line(self.source);
+                    let line_count_str = line_count.to_string();
+                    let line_count_len = line_count_str.len();
+                    writeln!(
+                        f,
+                        "{} {} {}",
+                        line_count_str.blue().bold(),
+                        "|".blue().bold(),
+                        line
+                    )?;
+                    writeln!(
+                        f,
+                        "{}{}{}{}",
+                        " ".repeat(line_count_len),
+                        " | ".blue().bold(),
+                        " ".repeat(line.len()),
+                        "^".red().bold()
+                    )?;
+                    write!(
+                        f,
+                        "{}{}{}{}{}",
+                        " ".repeat(line_count_len),
+                        " = ".blue().bold(),
+                        "note: ".bold(),
+                        "expected tokens are ",
+                        Tab::tokens_in_state(self.parser.stacks.current_state())
+                            .iter()
+                            .format(", "),
+                    )
+                }
+                ParseEofErrorReason::GotoNotFound {
+                    leftover_non_terminal: _,
+                } => unreachable!("correctly reduced a production, but no goto action found"),
+            },
         }
     }
 }
@@ -146,24 +210,56 @@ impl<'source, Parser, Token: Logos<'source>> LexError<'source, Parser, Token> {
     }
 }
 
-impl<'source, Parser, Token: Logos<'source>> Display for LexError<'source, Parser, Token>
-where
-    Token::Source: Display,
+impl<'source, Parser, Token: Logos<'source, Source = str>> Display
+    for LexError<'source, Parser, Token>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Character not recognized:")?;
-        if self.span.start > 15 {
-            writeln!(f, "")
-        } else {
-            writeln!(f, "{}", self.source)?;
-            write!(
-                f,
-                "{}{}",
-                " ".repeat(self.span.start),
-                "^".repeat(self.span.end - self.span.start)
-            )
-        }
+        writeln!(
+            f,
+            "{}{}",
+            "error".red().bold(),
+            ": unexpected character".bold()
+        )?;
+        let (line, span, line_count) = to_line_span(self.source, self.span.clone());
+        let line_count_str = line_count.to_string();
+        let line_count_len = line_count_str.len();
+        writeln!(
+            f,
+            "{} {} {}",
+            line_count_str.blue().bold(),
+            "|".blue().bold(),
+            line
+        )?;
+        write!(
+            f,
+            "{}{}{}{}",
+            " ".repeat(line_count_len),
+            " | ".blue().bold(),
+            " ".repeat(span.start),
+            "^".repeat(span.end - span.start).red().bold()
+        )
     }
+}
+
+fn to_line_span(source: &str, mut span: Range<usize>) -> (&str, Range<usize>, usize) {
+    for (line_count, line) in source.split('\n').enumerate() {
+        let line_len = line.len();
+        if span.start < line_len {
+            return (line, span, line_count + 1);
+        }
+        span.start -= line_len + 1;
+        span.end -= line_len + 1;
+    }
+    unreachable!()
+}
+
+fn last_line(source: &str) -> (&str, usize) {
+    source
+        .split('\n')
+        .enumerate()
+        .last()
+        .map(|(line_count, line)| (line, line_count + 1))
+        .unwrap()
 }
 
 #[derive(Debug)]

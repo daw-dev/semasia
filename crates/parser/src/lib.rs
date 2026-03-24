@@ -68,11 +68,11 @@ impl<NonTerminal, Terminal> Default for Stacks<NonTerminal, Terminal> {
 
 #[derive(Debug)]
 pub struct Parser<
-    NonTerminal: Into<StartSymbol>,
+    NonTerminal,
     Token,
     StartSymbol,
-    Prod: Reduce<NonTerminal, Token, Ctx>,
-    Tab: Tables<NonTerminal, Token, Prod>,
+    Prod,
+    Tab,
     Ctx,
 > {
     stacks: Stacks<NonTerminal, Token>,
