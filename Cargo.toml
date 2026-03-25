@@ -36,10 +36,6 @@ name = "arithmetic"
 path = "./examples/basic/arithmetic/main.rs"
 
 [[example]]
-name = "generic-addition"
-path = "./examples/generics/addition/main.rs"
-
-[[example]]
 name = "ambiguous-expressions"
 path = "./examples/ambiguous/expressions/main.rs"
 
@@ -67,9 +63,9 @@ path = "./examples/ebnf/abcs/main.rs"
 name = "simple-addition"
 path = "./examples/ebnf/simple-addition/main.rs"
 
-[[example]]
-name = "chess"
-path = "./examples/advanced/chess/main.rs"
+# [[example]]
+# name = "chess"
+# path = "./examples/advanced/chess/main.rs"
 
 [[example]]
 name = "calculus"

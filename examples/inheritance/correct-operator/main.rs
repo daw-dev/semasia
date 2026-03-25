@@ -1,4 +1,4 @@
-use static_sdd::*;
+use semasia::*;
 
 #[grammar]
 mod division {
@@ -121,6 +121,6 @@ mod division {
 }
 
 fn main() {
-    let res = division::parse_str((), "5/2*1.0").expect("couldn't parse");
+    let res = division::Parser::lex_parse("5/2*1.0").expect("couldn't parse");
     println!("{res:?}");
 }
