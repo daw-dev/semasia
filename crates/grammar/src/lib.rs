@@ -27,16 +27,19 @@ pub fn grammar(attr: TokenStream, item: TokenStream) -> TokenStream {
         let extracted = Constructor.extract(items);
         let simplified = extracted.simplify();
         let analyzed = simplified.analyze();
-        analyzed.inject_items(items, internal_mod_name);
+        analyzed.inject_items(items, internal_mod_name, std::mem::take(&mut module.attrs));
 
         abort_if_dirty();
 
         quote! { #module }.into()
-    } else if let Ok(File { items, .. }) = &mut syn::parse(item) {
-        let extracted = Constructor.extract(items);
+    } else if let Ok(File {
+        mut items, attrs, ..
+    }) = syn::parse(item)
+    {
+        let extracted = Constructor.extract(&mut items);
         let simplified = extracted.simplify();
         let analyzed = simplified.analyze();
-        analyzed.inject_items(items, internal_mod_name);
+        analyzed.inject_items(&mut items, internal_mod_name, attrs);
 
         abort_if_dirty();
 

@@ -3,10 +3,11 @@ pub mod ctx;
 pub mod tokens;
 pub mod types;
 
-#[semasia::grammar]
-pub mod language {
-    use crate::grammar::ast::Function;
+use semasia::grammar;
 
+#[grammar]
+#[logos(skip r"[\s\t\f]+")]
+pub mod language {
     use super::*;
     use semasia::*;
 
@@ -80,19 +81,19 @@ pub mod language {
     ebnf!(ProgramIsStatement, Program -> (Item*), |st| Program { root_items: st });
 
     // ITEMS
-    // ebnf!(
-    //     ItemIsFunction,
-    //     Item ->
-    //         (Type, Ident, OpenPar, (Type, Ident)*, ClosePar, OpenCurly, Statement*, CloseCurly),
-    //     |(return_type, ident, _, params, _, _, body, _)| {
-    //         Item::Function(Function {
-    //             return_type,
-    //             ident,
-    //             params,
-    //             body,
-    //         })
-    //     }
-    // );
+    ebnf!(
+        ItemIsFunction,
+        Item ->
+            (Type, Ident, OpenPar, (Type, Ident)*, ClosePar, OpenCurly, Statement*, CloseCurly),
+        |(return_type, ident, _, params, _, _, body, _)| {
+            Item::Function(ast::Function {
+                return_type,
+                ident,
+                params,
+                body,
+            })
+        }
+    );
 
     // EXPRESSIONS
     production!(ExpressionIsIdent, Expression -> Ident, |id| Expression::Ident(id));

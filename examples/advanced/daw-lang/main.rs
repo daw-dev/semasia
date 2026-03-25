@@ -1,7 +1,6 @@
 mod grammar;
 
 use grammar::language;
-use parser::results::LexParseError;
 
 fn main() {
     let file = include_str!("main.c");
@@ -12,11 +11,6 @@ fn main() {
         Ok((program, _)) => {
             println!("{program:?}");
         }
-        Err(LexParseError::LexError(err)) => {
-            eprintln!("Lexing Error: {err:?}");
-        }
-        Err(LexParseError::ParseError(err)) => {
-            eprintln!("Parsing Error: {err}");
-        }
+        Err(err) => eprintln!("{err}"),
     }
 }

@@ -11,10 +11,10 @@ use syn::{Ident, Item, parse_quote};
 use crate::constructor::Analyzed;
 
 impl<'a> Analyzed<'a> {
-    pub fn inject_items(&self, items: &mut Vec<Item>, internal_mod_name: Option<Ident>) {
+    pub fn inject_items(&self, items: &mut Vec<Item>, internal_mod_name: Option<Ident>, root_attributes: Vec<syn::Attribute>) {
         let mut items_to_add = Vec::new();
         items_to_add.extend(Self::uses());
-        items_to_add.extend(self.token_enum());
+        items_to_add.extend(self.token_enum(root_attributes));
         items_to_add.extend(self.non_terminal_enum());
         items_to_add.extend(self.production_enum());
         items_to_add.extend(self.match_tables());
@@ -44,7 +44,7 @@ impl<'a> Analyzed<'a> {
         file.items
     }
 
-    fn token_enum(&self) -> Vec<Item> {
+    fn token_enum(&self, root_attributes: Vec<syn::Attribute>) -> Vec<Item> {
         let tokens = self.automaton.grammar().tokens();
         let variants = tokens.iter().map(|token| {
             let ident = token.extras().id();
@@ -68,7 +68,7 @@ impl<'a> Analyzed<'a> {
             }
 
             #[derive(Logos)]
-            #[logos(skip r"[ \t\n\f]+")]
+            #(#root_attributes)*
             pub enum Token {
                 #(#variants,)*
             }
