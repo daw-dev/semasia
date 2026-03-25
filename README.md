@@ -151,12 +151,7 @@ mod arrays {
 This tool utilizes Rust's ownership model to achieve a zero-copy parsing, every symbol (token or internal non-terminal)
 will be passed as owned value at each reduction of the parsing so that nothing will ever be copied.
 
-### Future Features
-
-While all the features above are natively supported in the current version of the tool, the following are features that
-will be added in the future.
-
-#### Expressive Errors, Suggestions and Recovery
+### Expressive Errors, Suggestions and Recovery
 
 Whenever parsing can't be done, the `parse` function (or any of its variants) should return an expressive error
 
@@ -179,6 +174,24 @@ Found unexpected token Times, expected tokens are Num or OpenPar
 
 Furthermore, the error should contain the stack that is used for the parsing so that if errors are fixed the parsing
 can resume.
+
+#### EBNF Syntax
+
+The library will also allow to use extended bnf form to simplify some productions allowing to use symbols
+such as * for repetitions, ? for optional symbols and | for union types (in that case the user also needs
+to specify the name of the enum that will be created):
+
+```rust
+ebnf!(Prods, A -> (AOrB { A, B }, C*, D?), |(a_or_b: AOrB, c: Vec<C>, d: Option<D>)| todo!());
+// A produces: either A or B followed by a sequence of Cs and an optional D
+```
+
+Such `ebnf!` macro will quietly create multiple simpler productions.
+
+### Future Features
+
+While all the features above are natively supported in the current version of the tool, the following are features that
+will be added in the future.
 
 #### Table generation caching
 
@@ -224,19 +237,6 @@ mod daw_lang {
 ```
 
 Ideally, this would also speed-up parsing because each grammar uses different and smaller parsing tables.
-
-#### EBNF Syntax
-
-The library will also allow to use extended bnf form to simplify some productions allowing to use symbols
-such as * for repetitions, ? for optional symbols and | for union types (in that case the user also needs
-to specify the name of the enum that will be created):
-
-```rust
-ebnf!(Prods, A -> (AOrB { A | B }, C*, D?), |(a_or_b: AOrB, c: Vec<C>, d: Option<D>));
-// A produces: either A or B followed by a sequence of Cs and an optional D
-```
-
-Such `ebnf!` macro will quietly create multiple simpler productions.
 
 #### Generic Symbols
 
