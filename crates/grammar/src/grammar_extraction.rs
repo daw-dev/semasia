@@ -1,15 +1,16 @@
 use dyn_grammar::{
-    EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedToken, Match,
+    EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedToken,
     conflicts::Associativity, grammar::Body, lalr::LalrAutomaton,
     symbolic_grammar::SymbolicGrammar,
 };
 use ebnf_parser::EbnfProduction;
 use itertools::Itertools;
 use proc_macro_error::{abort_if_dirty, emit_call_site_error, emit_call_site_warning, emit_error};
+use quote::quote;
 use std::collections::HashSet;
 use syn::{
-    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitInt, LitStr, Meta, Type,
-    UseGroup, UseTree,
+    Attribute, Ident, Item, ItemEnum, ItemStruct, ItemType, ItemUse, LitInt, Meta, Type, UseGroup,
+    UseTree, parse::Parser, parse_quote,
 };
 
 use crate::constructor::*;
@@ -62,12 +63,12 @@ impl Constructor {
 
         if non_terminals.is_empty() || productions.is_empty() {
             emit_call_site_error!(
-                "every grammar has to have some non-terminals and productions.";
-                note = "Found non-terminals: [{}], tokens: [{}], productions: [{}]",
-                    non_terminals.iter().format(","),
-                    tokens.iter().format(","),
-                    productions.iter().format(",");
-                );
+            "every grammar has to have some non-terminals and productions.";
+            note = "Found non-terminals: [{}], tokens: [{}], productions: [{}]",
+                non_terminals.iter().format(", "),
+                tokens.iter().format(", "),
+                productions.iter().format(", ");
+            );
         }
 
         let start_symbol = start_symbol.unwrap_or_else(|| {
@@ -81,6 +82,8 @@ impl Constructor {
         });
 
         non_terminals.extend(ebnf_extra_non_terminals);
+
+        eprintln!("{}", tokens.iter().format(", "));
 
         let productions = productions
             .into_iter()
@@ -122,6 +125,10 @@ impl Constructor {
         }
     }
 
+    fn is_marker(item: &Item) -> bool {
+        matches!(item, Item::Struct(str) if matches!(str.fields, syn::Fields::Unit))
+    }
+
     fn extract_context(item: &mut Item) -> Option<Ident> {
         let (attrs, ident) = Self::extract_info(item)?;
         let id = attrs.iter().enumerate().find_map(|(i, attr)| {
@@ -137,81 +144,71 @@ impl Constructor {
     }
 
     fn extract_token(item: &mut Item) -> Option<EnrichedToken> {
+        let is_marker = Self::is_marker(item);
         let (attrs, ident) = Self::extract_info(item)?;
-        let mut res_match = None;
-        attrs.retain(|attr| {
-            if !attr.path().is_ident("token") {
-                return true;
-            }
-            let match_string = attr.parse_args_with(|input: syn::parse::ParseStream| {
-                if input.peek(syn::Ident) && input.peek2(syn::Token![=]) {
-                    let regex_ident: Ident = input.parse()?;
-                    if regex_ident != "regex" {
-                        return Err(syn::Error::new(
-                            regex_ident.span(),
-                            "expected optional \"regex\"",
-                        ));
+        let token_attrs = attrs
+            .extract_if(.., |attr| {
+                if !attr.path().is_ident("token") && !attr.path().is_ident("regex") {
+                    return false;
+                }
+                if !is_marker {
+                    return true;
+                }
+                if let Meta::List(raw_list) = &mut attr.meta {
+                    let parser =
+                        syn::punctuated::Punctuated::<syn::Expr, syn::Token![,]>::parse_terminated;
+                    if let Ok(mut list) = parser.parse2(raw_list.tokens.clone().into()) {
+                        list.insert(1, parse_quote!(|_| #ident));
+                        raw_list.tokens = quote!(#list);
                     }
-                    input.parse::<syn::Token![=]>()?;
-                    let regex: LitStr = input.parse()?;
-                    Ok(Match::Regex(regex.value()))
-                } else {
-                    Ok(Match::Literal(input.parse::<LitStr>()?.value()))
+                }
+                true
+            })
+            .collect_vec();
+        (!token_attrs.is_empty()).then(|| {
+            let mut res_priority = None;
+            attrs.retain(|attr| {
+                if !attr.path().is_ident("priority") {
+                    return true;
+                }
+                let priority: Result<usize, _> =
+                    attr.parse_args_with(|input: syn::parse::ParseStream| {
+                        let lit_int: LitInt = input.parse()?;
+                        lit_int.base10_parse()
+                    });
+                if let Ok(priority) = priority {
+                    if res_priority.is_some() {
+                        emit_error!(attr, "duplicated priority attribute!");
+                    }
+                    res_priority = Some(priority);
+                    return false;
+                }
+                true
+            });
+            let mut res_assoc = None;
+            attrs.retain(|attr| {
+                let assoc = attr
+                    .path()
+                    .is_ident("left_associative")
+                    .then_some(Associativity::Left)
+                    .or(attr
+                        .path()
+                        .is_ident("right_associative")
+                        .then_some(Associativity::Right));
+                match assoc {
+                    Some(assoc) => {
+                        if res_assoc.is_some() {
+                            emit_error!(attr, "duplicated associativity attribute!");
+                        }
+                        res_assoc = Some(assoc);
+                        false
+                    }
+                    None => true,
                 }
             });
-            if let Ok(match_string) = match_string {
-                if res_match.is_some() {
-                    emit_error!(attr, "duplicated token attribute!");
-                }
-                res_match = Some(match_string);
-                return false;
-            }
-            true
-        });
-        let mut res_priority = None;
-        attrs.retain(|attr| {
-            if !attr.path().is_ident("priority") {
-                return true;
-            }
-            let priority: Result<usize, _> =
-                attr.parse_args_with(|input: syn::parse::ParseStream| {
-                    let lit_int: LitInt = input.parse()?;
-                    lit_int.base10_parse()
-                });
-            if let Ok(priority) = priority {
-                if res_priority.is_some() {
-                    emit_error!(attr, "duplicated priority attribute!");
-                }
-                res_priority = Some(priority);
-                return false;
-            }
-            true
-        });
-        let mut res_assoc = None;
-        attrs.retain(|attr| {
-            let assoc = attr
-                .path()
-                .is_ident("left_associative")
-                .then_some(Associativity::Left)
-                .or(attr
-                    .path()
-                    .is_ident("right_associative")
-                    .then_some(Associativity::Right));
-            match assoc {
-                Some(assoc) => {
-                    if res_assoc.is_some() {
-                        emit_error!(attr, "duplicated associativity attribute!");
-                    }
-                    res_assoc = Some(assoc);
-                    false
-                }
-                None => true,
-            }
-        });
-        res_match.map(|match_string| {
             EnrichedToken::new(
                 ident,
-                (match_string, res_priority, res_assoc.unwrap_or_default()),
+                (token_attrs, res_priority, res_assoc.unwrap_or_default()),
             )
         })
     }

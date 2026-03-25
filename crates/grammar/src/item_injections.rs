@@ -11,7 +11,12 @@ use syn::{Ident, Item, parse_quote};
 use crate::constructor::Analyzed;
 
 impl<'a> Analyzed<'a> {
-    pub fn inject_items(&self, items: &mut Vec<Item>, internal_mod_name: Option<Ident>, root_attributes: Vec<syn::Attribute>) {
+    pub fn inject_items(
+        &self,
+        items: &mut Vec<Item>,
+        internal_mod_name: Option<Ident>,
+        root_attributes: Vec<syn::Attribute>,
+    ) {
         let mut items_to_add = Vec::new();
         items_to_add.extend(Self::uses());
         items_to_add.extend(self.token_enum(root_attributes));
@@ -48,15 +53,10 @@ impl<'a> Analyzed<'a> {
         let tokens = self.automaton.grammar().tokens();
         let variants = tokens.iter().map(|token| {
             let ident = token.extras().id();
-            match &token.extras().extras().0 {
-                dyn_grammar::Match::Literal(lit) => quote! {
-                    #[token(#lit, |_| #ident)]
-                    #ident(#ident)
-                },
-                dyn_grammar::Match::Regex(regex) => quote! {
-                    #[regex(#regex, parse)]
-                    #ident(#ident)
-                },
+            let attributes = &token.extras().extras().0;
+            quote! {
+                #(#attributes)*
+                #ident(#ident)
             }
         });
         let tokens: Vec<_> = tokens.iter().map(|token| token.extras().id()).collect();
@@ -65,6 +65,10 @@ impl<'a> Analyzed<'a> {
         let file: syn::File = parse_quote! {
             fn parse<T: std::str::FromStr>(lex: &mut logos::Lexer<Token>) -> Option<T> {
                 lex.slice().parse().ok()
+            }
+
+            fn make_default<T: std::default::Default>(lex: &mut logos::Lexer<Token>) -> T {
+                T::default()
             }
 
             #[derive(Logos)]

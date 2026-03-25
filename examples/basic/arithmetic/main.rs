@@ -1,6 +1,7 @@
 use semasia::*;
 
 #[grammar]
+#[logos(skip r"[ \t\n\f]+")]
 mod expressions {
     use super::*;
 
@@ -14,7 +15,7 @@ mod expressions {
     #[non_terminal]
     pub type Factor = usize;
 
-    #[token(regex = r"\d+")]
+    #[regex(r"\d+", parse)]
     pub type Number = usize;
 
     #[token("+")]
@@ -40,7 +41,7 @@ mod expressions {
 use expressions::*;
 
 fn main() {
-    let res = Parser::lex_parse("(1 + 2) * 3 + 4");
+    let res = Parser::lex_parse("(1 + 2) ) * 3 + 4");
 
     match res {
         Ok(res) => println!("result is {res}"),

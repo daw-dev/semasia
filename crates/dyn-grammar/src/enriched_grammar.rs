@@ -2,25 +2,9 @@ use crate::{
     conflicts::{Associativity, ProductionPriority, TokenPriority},
     grammar::{Grammar, NonTerminal, Production, Symbol, Token},
 };
-use std::fmt::Display;
 use syn::Ident;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Match {
-    Literal(String),
-    Regex(String),
-}
-
-impl Display for Match {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Literal(lit) => write!(f, "\"{lit}\""),
-            Self::Regex(reg) => write!(f, "/{reg}/"),
-        }
-    }
-}
-
-pub type EnrichedToken = Token<Ident, (Match, TokenPriority, Associativity)>;
+pub type EnrichedToken = Token<Ident, (Vec<syn::Attribute>, TokenPriority, Associativity)>;
 
 pub type EnrichedNonTerminal = NonTerminal<Ident>;
 
