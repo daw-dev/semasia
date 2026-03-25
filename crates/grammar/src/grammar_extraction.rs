@@ -60,9 +60,9 @@ impl Constructor {
             }
         }
 
-        if non_terminals.is_empty() || tokens.is_empty() || productions.is_empty() {
+        if non_terminals.is_empty() || productions.is_empty() {
             emit_call_site_error!(
-                "every grammar has to have some non-terminals, tokens and productions. Found non-terminals: [{}], tokens: [{}], productions: [{}]",
+                "every grammar has to have some non-terminals and productions. Found non-terminals: [{}], tokens: [{}], productions: [{}]",
                 non_terminals.iter().format(","),
                 tokens.iter().format(","),
                 productions.iter().format(","),
