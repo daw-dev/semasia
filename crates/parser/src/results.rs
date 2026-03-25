@@ -126,11 +126,10 @@ where
                     )?;
                     write!(
                         f,
-                        "{}{}{}{}{}",
+                        "{}{}{}expected tokens are {}",
                         " ".repeat(line_count_len),
                         " = ".blue().bold(),
                         "note: ".bold(),
-                        "expected tokens are ",
                         Tab::tokens_in_state(self.parser.stacks.current_state())
                             .iter()
                             .format(", "),
@@ -168,11 +167,10 @@ where
                     )?;
                     write!(
                         f,
-                        "{}{}{}{}{}",
+                        "{}{}{}expected tokens are {}",
                         " ".repeat(line_count_len),
                         " = ".blue().bold(),
                         "note: ".bold(),
-                        "expected tokens are ",
                         Tab::tokens_in_state(self.parser.stacks.current_state())
                             .iter()
                             .format(", "),

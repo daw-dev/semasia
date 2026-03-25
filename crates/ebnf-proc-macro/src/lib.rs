@@ -67,10 +67,8 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
             quote!(production!(#ident, #head -> #body, #sem_action);)
         }));
 
-    let res = quote! {
+    quote! {
         #(#items)*
     }
-    .into();
-
-    res
+    .into()
 }

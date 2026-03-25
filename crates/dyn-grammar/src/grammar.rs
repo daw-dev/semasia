@@ -318,10 +318,7 @@ impl EnrichedBaseProduction {
                 .rev()
                 .filter_map(|sym| match sym {
                     Symbol::NonTerminal(_) => None,
-                    Symbol::Token(tok) => match tok.extras().1.clone() {
-                        Some(val) => Some(ProductionPriority::Inherited(val)),
-                        None => None,
-                    },
+                    Symbol::Token(tok) => tok.extras().1.map(ProductionPriority::Inherited),
                 })
                 .next()
                 .unwrap_or_default(),

@@ -361,7 +361,8 @@ impl<'a> Analyzed<'a> {
                             .productions()
                             .get(*production)
                             .expect("production not found")
-                            .extras().0;
+                            .extras()
+                            .0;
                         quote!(parser::TokenAction::Reduce(ProductionName::#production))
                     }
                 };
@@ -410,7 +411,8 @@ impl<'a> Analyzed<'a> {
                                     .productions()
                                     .get(*production)
                                     .expect("production not found")
-                                    .extras().0;
+                                    .extras()
+                                    .0;
                                 quote!(parser::EofAction::Reduce(ProductionName::#production))
                             }
                             dyn_grammar::parsing::action::EofAction::Accept => {

@@ -70,14 +70,11 @@ impl Constructor {
         }
 
         let start_symbol = start_symbol.unwrap_or_else(|| {
-            match non_terminals.get(0) {
-                Some(nt) => {
-                    emit_call_site_warning!(
-                        "no start symbol was declared, using {}", non_terminals[0];
-                        help = nt.id().span() => "add #[start_symbol] here"
-                    );
-                }
-                None => {}
+            if let Some(nt) = non_terminals.first() {
+                emit_call_site_warning!(
+                    "no start symbol was declared, using {}", non_terminals[0];
+                    help = nt.id().span() => "add #[start_symbol] here"
+                );
             }
             0
         });
@@ -194,11 +191,11 @@ impl Constructor {
             let assoc = attr
                 .path()
                 .is_ident("left_associative")
-                .then(|| Associativity::Left)
+                .then_some(Associativity::Left)
                 .or(attr
                     .path()
                     .is_ident("right_associative")
-                    .then(|| Associativity::Right));
+                    .then_some(Associativity::Right));
             match assoc {
                 Some(assoc) => {
                     if res_assoc.is_some() {

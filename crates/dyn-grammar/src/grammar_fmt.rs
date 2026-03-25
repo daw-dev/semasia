@@ -9,7 +9,13 @@ use crate::{
 
 impl Display for EnrichedToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} ({:?}, {:?})", self.id(), self.extras().1, self.extras().2)
+        write!(
+            f,
+            "{} ({:?}, {:?})",
+            self.id(),
+            self.extras().1,
+            self.extras().2
+        )
     }
 }
 

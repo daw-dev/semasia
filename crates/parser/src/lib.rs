@@ -67,18 +67,30 @@ impl<NonTerminal, Terminal> Default for Stacks<NonTerminal, Terminal> {
 }
 
 #[derive(Debug)]
-pub struct Parser<
-    NonTerminal,
-    Token,
-    StartSymbol,
-    Prod,
-    Tab,
-    Ctx,
-> {
+pub struct Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx> {
     stacks: Stacks<NonTerminal, Token>,
     ctx: Ctx,
     phantom_data: PhantomData<(StartSymbol, Prod, Tab)>,
 }
+
+pub type ParseSource = ();
+
+pub type ParseResult<Parser, NonTerminal, Token, ReturnType> =
+    Result<ReturnType, ParseError<Parser, NonTerminal, Token, usize, ParseSource>>;
+
+pub type LexParseResult<'source, Parser, NonTerminal, Token, ReturnType> = Result<
+    ReturnType,
+    LexParseError<
+        LexError<'source, Parser, Token>,
+        ParseError<
+            Parser,
+            NonTerminal,
+            Token,
+            Range<usize>,
+            &'source <Token as Logos<'source>>::Source,
+        >,
+    >,
+>;
 
 impl<
     NonTerminal: Into<StartSymbol>,
@@ -148,10 +160,9 @@ impl<
     pub fn parse_with_ctx(
         ctx: Ctx,
         tokens: impl IntoIterator<Item = Token>,
-    ) -> Result<(StartSymbol, Ctx), ParseError<Self, NonTerminal, Token, usize, ()>> {
+    ) -> ParseResult<Self, NonTerminal, Token, (StartSymbol, Ctx)> {
         let mut parser = Self::new(ctx);
-        let mut span = 0;
-        for mut token in tokens.into_iter() {
+        for (span, mut token) in tokens.into_iter().enumerate() {
             loop {
                 match parser.parse_token(token) {
                     Ok(ParseToken::Shifted) => {
@@ -164,12 +175,11 @@ impl<
                         return Err(ParseError::new(
                             parser,
                             ParseOneError::ParseTokenError(ParseTokenError::new(err, span)),
-                            ()
+                            (),
                         ));
                     }
                 }
             }
-            span += 1;
         }
 
         loop {
@@ -184,7 +194,7 @@ impl<
                     return Err(ParseError::new(
                         parser,
                         ParseOneError::ParseEofError(ParseEofError::new(err)),
-                        ()
+                        (),
                     ));
                 }
             }
@@ -199,7 +209,7 @@ impl<
 
     pub fn parse_default_ctx(
         tokens: impl IntoIterator<Item = Token>,
-    ) -> Result<(StartSymbol, Ctx), ParseError<Self, NonTerminal, Token, usize, ()>>
+    ) -> ParseResult<Self, NonTerminal, Token, (StartSymbol, Ctx)>
     where
         Ctx: Default,
     {
@@ -209,13 +219,7 @@ impl<
     pub fn lex_parse_with_ctx<'source>(
         ctx: Ctx,
         source: &'source Token::Source,
-    ) -> Result<
-        (StartSymbol, Ctx),
-        LexParseError<
-            LexError<'source, Self, Token>,
-            ParseError<Self, NonTerminal, Token, Range<usize>, &'source Token::Source>,
-        >,
-    >
+    ) -> LexParseResult<'source, Self, NonTerminal, Token, (StartSymbol, Ctx)>
     where
         Token: Logos<'source>,
         Token::Extras: Default,
@@ -277,13 +281,7 @@ impl<
 
     pub fn lex_parse_default_ctx<'source>(
         source: &'source Token::Source,
-    ) -> Result<
-        (StartSymbol, Ctx),
-        LexParseError<
-            LexError<'source, Self, Token>,
-            ParseError<Self, NonTerminal, Token, Range<usize>, &'source Token::Source>,
-        >,
-    >
+    ) -> LexParseResult<'source, Self, NonTerminal, Token, (StartSymbol, Ctx)>
     where
         Token: Logos<'source>,
         Token::Extras: Default,
@@ -303,19 +301,13 @@ impl<
 {
     pub fn parse(
         tokens: impl Iterator<Item = Token>,
-    ) -> Result<StartSymbol, ParseError<Self, NonTerminal, Token, usize, ()>> {
+    ) -> ParseResult<Self, NonTerminal, Token, StartSymbol> {
         Self::parse_with_ctx((), tokens).map(|ok| ok.0)
     }
 
     pub fn lex_parse<'source>(
         source: &'source Token::Source,
-    ) -> Result<
-        StartSymbol,
-        LexParseError<
-            LexError<'source, Self, Token>,
-            ParseError<Self, NonTerminal, Token, Range<usize>, &'source Token::Source>,
-        >,
-    >
+    ) -> LexParseResult<'source, Self, NonTerminal, Token, StartSymbol>
     where
         Token: Logos<'source>,
         Token::Extras: Default,

@@ -24,9 +24,9 @@ pub fn main() {
     match result {
         Ok(result) => {
             println!("{result}");
-        },
+        }
         Err(err) => {
             println!("{err}");
-        },
+        }
     }
 }

@@ -11,10 +11,10 @@ fn main() {
     match result {
         Ok((program, _)) => {
             println!("{program:?}");
-        },
+        }
         Err(LexParseError::LexError(err)) => {
             eprintln!("Lexing Error: {err:?}");
-        },
+        }
         Err(LexParseError::ParseError(err)) => {
             eprintln!("Parsing Error: {err}");
         }
