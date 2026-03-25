@@ -17,14 +17,8 @@ impl<'a> Analyzed<'a> {
         items_to_add.extend(self.token_enum());
         items_to_add.extend(self.non_terminal_enum());
         items_to_add.extend(self.production_enum());
-        items_to_add.push(self.compiler_context());
         items_to_add.extend(self.match_tables());
         items_to_add.push(self.parser());
-
-        // for item in items_to_add.iter() {
-        //     eprintln!("------------------------------");
-        //     eprintln!("{}", quote!(#item));
-        // }
 
         match internal_mod_name.as_ref() {
             Some(name) => items.push(parse_quote! {
@@ -38,6 +32,8 @@ impl<'a> Analyzed<'a> {
                 items.extend(items_to_add);
             }
         }
+
+        items.push(self.compiler_context());
     }
 
     fn uses() -> Vec<Item> {
