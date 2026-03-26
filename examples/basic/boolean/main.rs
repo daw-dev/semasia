@@ -34,7 +34,7 @@ mod sat {
     #[non_terminal]
     pub type N = Formula;
 
-    #[token(regex = r"[a-zA-Z]+")]
+    #[regex(r"[a-zA-Z]+", to_string)]
     pub type Atom = String;
 
     #[token("->")]
@@ -81,6 +81,6 @@ fn main() {
 
     match res {
         Ok(res) => println!("{res:?}"),
-        Err(err) => println!("{err:?}"),
+        Err(err) => eprintln!("{err}"),
     }
 }

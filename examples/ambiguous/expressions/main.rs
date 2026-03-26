@@ -1,6 +1,7 @@
 use semasia::*;
 
 #[grammar]
+#[logos(skip r"\s+")]
 mod ambiguous {
     use super::*;
 
@@ -8,7 +9,7 @@ mod ambiguous {
     #[start_symbol]
     pub type Expression = f64;
 
-    #[token(regex = r"\d+(\.\d+)?")]
+    #[regex(r"\d+(\.\d+)?", parse)]
     pub type Number = f64;
 
     #[token("+")]
@@ -43,27 +44,23 @@ mod ambiguous {
     pub struct ClosePar;
 
     production!(Sum, Expression -> (Expression, Plus, Expression), |(e1, _, e2)| e1 + e2);
-
     production!(Difference, Expression -> (Expression, Minus, Expression), |(e1, _, e2)| e1 - e2);
-
     production!(Product, Expression -> (Expression, Times, Expression), |(e1, _, e2)| e1 * e2);
-
     production!(Division, Expression -> (Expression, DivisionOp, Expression), |(e1, _, e2)| e1 * e2);
-
     production!(Exponent, Expression -> (Expression, Power, Expression), |(e1, _, e2)| e1.powf(e2));
-
     production!(Parethesis, Expression -> (OpenPar, Expression, ClosePar), |(_, e, _)| e);
-
     #[priority(3)]
     production!(Negation, Expression -> (Minus, Expression), |(_, e)| -e);
-
     production!(ActualNumber, Expression -> Number);
 }
 
 use ambiguous::*;
 
 fn main() {
-    let res = Parser::lex_parse("-15 - 2 * -2 ^ 3").expect("couldn't parse");
+    let res = Parser::lex_parse("-15 - 2 * -2 ^ 3");
 
-    println!("{res}");
+    match res {
+        Ok(res) => println!("result: {res:?}"),
+        Err(err) => eprintln!("{err}"),
+    }
 }

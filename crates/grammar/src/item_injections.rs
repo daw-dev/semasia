@@ -67,6 +67,10 @@ impl<'a> Analyzed<'a> {
                 lex.slice().parse().ok()
             }
 
+            fn to_string(lex: &mut logos::Lexer<Token>) -> String {
+                lex.slice().to_string()
+            }
+
             fn make_default<T: std::default::Default>(lex: &mut logos::Lexer<Token>) -> T {
                 T::default()
             }

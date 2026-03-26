@@ -16,16 +16,8 @@ parser = { path = "crates/parser" }
 logos = "0.16.0"
 
 [[example]]
-name = "basic-addition"
-path = "./examples/basic/addition/main.rs"
-
-[[example]]
-name = "addition-ast"
-path = "./examples/basic/addition-ast/main.rs"
-
-[[example]]
-name = "balanced"
-path = "./examples/basic/balanced/main.rs"
+name = "arithmetic-ast"
+path = "./examples/basic/arithmetic-ast/main.rs"
 
 [[example]]
 name = "boolean"

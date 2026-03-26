@@ -1,7 +1,7 @@
 use semasia::*;
 
 #[grammar]
-#[logos(skip r"[ \t\n\f]+")]
+#[logos(skip r"\s+")]
 mod expressions {
     use super::*;
 

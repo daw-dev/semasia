@@ -83,8 +83,6 @@ impl Constructor {
 
         non_terminals.extend(ebnf_extra_non_terminals);
 
-        eprintln!("{}", tokens.iter().format(", "));
-
         let productions = productions
             .into_iter()
             .map(|prod| prod.into_production(&tokens, &non_terminals))
