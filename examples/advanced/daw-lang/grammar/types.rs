@@ -6,6 +6,7 @@ pub enum Type {
     Array(Box<Type>, usize),
     BaseType(Ident),
     Void,
+    Function(Box<Type>, Vec<Type>),
 }
 
 impl Type {
@@ -36,11 +37,11 @@ impl Type {
     }
 
     fn is_integer(ident: &Ident) -> bool {
-        ident.as_ref() == "char" || ident.as_ref() == "int" || ident.as_ref() == "long"
+        ident == "char" || ident == "int" || ident == "long"
     }
 
     fn is_decimal(ident: &Ident) -> bool {
-        ident.as_ref() == "float" || ident.as_ref() == "double"
+        ident == "float" || ident == "double"
     }
 
     fn is_base_compatible(left: &Ident, right: &Ident) -> bool {

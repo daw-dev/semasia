@@ -10,10 +10,10 @@ pub struct CompilationContext {
 }
 
 impl CompilationContext {
-    pub fn declare(&mut self, ident: &Ident, ty: &Type) {
+    pub fn declare(&mut self, ident: Ident, ty: Type) {
         if self
             .symbol_table
-            .insert(ident.clone(), ty.clone())
+            .insert(ident, ty)
             .is_some()
         {
             panic!("ident is already declared!");

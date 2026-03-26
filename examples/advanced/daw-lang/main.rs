@@ -8,9 +8,13 @@ fn main() {
     print!("{file}");
     let result = language::Parser::lex_parse_default_ctx(file);
     match result {
-        Ok((program, _)) => {
+        Ok((program, ctx)) => {
             println!("{program:?}");
+            println!("ctx is {ctx:?}");
         }
-        Err(err) => eprintln!("{err}"),
+        Err(err) => {
+            eprintln!("{err}");
+            eprintln!("{err:?}");
+        },
     }
 }

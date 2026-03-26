@@ -1,6 +1,3 @@
-#![feature(custom_inner_attributes)]
-#![feature(proc_macro_hygiene)]
-
 mod functions;
 
 fn main() {
