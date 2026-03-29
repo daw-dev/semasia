@@ -55,6 +55,14 @@ path = "./examples/ebnf/abcs/main.rs"
 name = "simple-addition"
 path = "./examples/ebnf/simple-addition/main.rs"
 
+[[example]]
+name = "simplest-addition"
+path = "./examples/ebnf/simplest-addition/main.rs"
+
+[[example]]
+name = "laugh"
+path = "./examples/ebnf/laugh/main.rs"
+
 # [[example]]
 # name = "chess"
 # path = "./examples/advanced/chess/main.rs"

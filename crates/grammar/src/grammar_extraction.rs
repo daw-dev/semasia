@@ -51,7 +51,11 @@ impl Constructor {
             } else if let Some(production) = Self::extract_production(item) {
                 productions.push(production);
             } else if let Some(ebnf) = Self::extract_ebnf_production(item) {
+                // eprintln!("found {ebnf}");
                 let extra_prods = ebnf.compile().0.into_iter().map(Into::into).collect_vec();
+                // for prod in extra_prods.iter() {
+                //     eprintln!("{prod}");
+                // }
                 let extra_nts = extra_prods
                     .iter()
                     .map(EnrichedBaseProduction::head)
@@ -314,7 +318,14 @@ impl Constructor {
     fn extract_ebnf_production(item: &mut Item) -> Option<EbnfProduction> {
         match item {
             Item::Macro(mac) if mac.mac.path.is_ident("ebnf") => {
-                mac.mac.parse_body::<EbnfProduction>().ok()
+                let res = mac.mac.parse_body::<EbnfProduction>();
+                match res {
+                    Ok(ebnf) => Some(ebnf),
+                    Err(err) => {
+                        emit_error!(mac, "ebnf production not well formed"; note = "{}", err);
+                        None
+                    }
+                }
             }
             _ => None,
         }

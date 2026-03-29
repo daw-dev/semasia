@@ -45,7 +45,9 @@ impl EbnfAlternativeVariant {
     ) -> Vec<Ident> {
         id_stack.push(self.ident.to_string());
 
-        let compiled_body = self.v_type.compile_helper(productions, types, id_stack, span);
+        let compiled_body = self
+            .v_type
+            .compile_helper(productions, types, id_stack, span);
 
         productions.push(EbnfCompiledProduction {
             ident: EbnfBodyItem::compose_name(id_stack, Span::call_site()),
@@ -67,7 +69,7 @@ pub enum EbnfBodyItem {
         enum_ident: Ident,
         variants_types: Vec<EbnfAlternativeVariant>,
     },
-    Repetition(EbnfBody),
+    Repetition(EbnfBody, Option<EbnfBody>),
     Optional(EbnfBody),
     // TODO: add "constant" repetition
     // like ebnf!(..., -> (..., [Token; 5], ...));
@@ -113,23 +115,34 @@ impl EbnfBodyItem {
 
                 enum_ident
             }
-            EbnfBodyItem::Repetition(body) => {
+            EbnfBodyItem::Repetition(body, separator) => {
                 let rep_ident = Self::repetition_alias(id_stack, span);
 
                 let compiled_body = body.compile_helper(productions, types, id_stack, span);
+
+                let compiled_body_len = compiled_body.len();
 
                 types.push(EbnfCompiledType::Repetition {
                     alias_ident: rep_ident.clone(),
                     alias_vec_types: compiled_body.clone(),
                 });
 
+                let separator_body = separator
+                    .map(|separator| separator.compile_helper(productions, types, id_stack, span));
+
                 productions.push(EbnfCompiledProduction::new(
                     Self::repetition_more_ident(id_stack, span),
                     rep_ident.clone(),
                     std::iter::once(rep_ident.clone())
+                        .chain(
+                            separator_body
+                                .map(IntoIterator::into_iter)
+                                .into_iter()
+                                .flatten(),
+                        )
                         .chain(compiled_body)
                         .collect(),
-                    CompiledSemAction::RepetitionMore,
+                    CompiledSemAction::RepetitionMore(compiled_body_len),
                 ));
 
                 productions.push(EbnfCompiledProduction::new(
@@ -233,7 +246,8 @@ impl Parse for EbnfBodyItem {
                 Ok(Self::Optional(elements))
             } else if input.peek(Token![*]) {
                 input.parse::<Token![*]>()?;
-                Ok(Self::Repetition(elements))
+                let separator = input.parse::<EbnfBody>().ok();
+                Ok(Self::Repetition(elements, separator))
             } else {
                 Err(syn::Error::new(
                     Span::call_site(),
@@ -259,9 +273,13 @@ impl Parse for EbnfBodyItem {
                 }))
             } else if input.peek(Token![*]) {
                 input.parse::<Token![*]>()?;
-                Ok(Self::Repetition(EbnfBody {
-                    items: vec![EbnfBodyItem::Ident(ident)],
-                }))
+                let separator = input.parse::<EbnfBody>().ok();
+                Ok(Self::Repetition(
+                    EbnfBody {
+                        items: vec![EbnfBodyItem::Ident(ident)],
+                    },
+                    separator,
+                ))
             } else {
                 Ok(Self::Ident(ident))
             }
@@ -281,8 +299,11 @@ impl Display for EbnfBodyItem {
                 "{enum_ident} {{ {} }}",
                 variants_types.iter().format(", ")
             ),
-            EbnfBodyItem::Repetition(body) => {
+            EbnfBodyItem::Repetition(body, None) => {
                 write!(f, "{body}*")
+            }
+            EbnfBodyItem::Repetition(body, Some(separator)) => {
+                write!(f, "{body}*{separator}")
             }
             EbnfBodyItem::Optional(body) => {
                 write!(f, "{body}?")
@@ -359,7 +380,7 @@ pub enum EbnfCompiledType {
 #[derive(Debug)]
 pub enum CompiledSemAction {
     Alternative,
-    RepetitionMore,
+    RepetitionMore(usize),
     RepetitionDone,
     OptionalSome,
     OptionalNone,

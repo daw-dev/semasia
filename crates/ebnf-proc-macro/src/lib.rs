@@ -42,11 +42,10 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
                     Some(quote!(|t| #head::#enum_variant(t)))
                 }
                 // not so easy: if body is more than one element you have to put t1, t2, t3, ...
-                ebnf_parser::CompiledSemAction::RepetitionMore => {
-                    let vars = (0..production.body.len() - 1)
-                        .map(|i| format_ident!("t{i}"))
-                        .collect::<Vec<_>>();
-                    Some(quote!(|(mut acc, #(#vars),*)| {
+                ebnf_parser::CompiledSemAction::RepetitionMore(len) => {
+                    let vars = (0..len).map(|i| format_ident!("t{i}")).collect::<Vec<_>>();
+                    let fillers = std::iter::repeat_n(format_ident!("_"), body.len() - len - 1);
+                    Some(quote!(|(mut acc, #(#fillers,)* #(#vars),*)| {
                         acc.push((#(#vars),*));
                         acc
                     }))
