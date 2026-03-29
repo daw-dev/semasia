@@ -41,10 +41,11 @@ impl EbnfAlternativeVariant {
         productions: &mut Vec<EbnfCompiledProduction>,
         types: &mut Vec<EbnfCompiledType>,
         id_stack: &mut Vec<String>,
+        span: Span,
     ) -> Vec<Ident> {
         id_stack.push(self.ident.to_string());
 
-        let compiled_body = self.v_type.compile_helper(productions, types, id_stack);
+        let compiled_body = self.v_type.compile_helper(productions, types, id_stack, span);
 
         productions.push(EbnfCompiledProduction {
             ident: EbnfBodyItem::compose_name(id_stack, Span::call_site()),
@@ -97,6 +98,7 @@ impl EbnfBodyItem {
                                 productions,
                                 types,
                                 id_stack,
+                                span,
                             ),
                         )
                     })
@@ -114,7 +116,7 @@ impl EbnfBodyItem {
             EbnfBodyItem::Repetition(body) => {
                 let rep_ident = Self::repetition_alias(id_stack, span);
 
-                let compiled_body = body.compile_helper(productions, types, id_stack);
+                let compiled_body = body.compile_helper(productions, types, id_stack, span);
 
                 types.push(EbnfCompiledType::Repetition {
                     alias_ident: rep_ident.clone(),
@@ -142,7 +144,7 @@ impl EbnfBodyItem {
             EbnfBodyItem::Optional(body) => {
                 let opt_ident = Self::optional_alias(id_stack, span);
 
-                let compiled_body = body.compile_helper(productions, types, id_stack);
+                let compiled_body = body.compile_helper(productions, types, id_stack, span);
 
                 types.push(EbnfCompiledType::Optional {
                     alias_ident: opt_ident.clone(),
@@ -300,13 +302,14 @@ impl EbnfBody {
         productions: &mut Vec<EbnfCompiledProduction>,
         types: &mut Vec<EbnfCompiledType>,
         id_stack: &mut Vec<String>,
+        span: Span,
     ) -> Vec<Ident> {
         self.items
             .into_iter()
             .enumerate()
             .map(|(item_index, item)| {
                 id_stack.push(item_index.to_string());
-                let ident = item.compile_helper(productions, types, id_stack, Span::call_site());
+                let ident = item.compile_helper(productions, types, id_stack, span);
                 id_stack.pop();
                 ident
             })
@@ -416,6 +419,7 @@ impl EbnfProduction {
             &mut productions,
             &mut types,
             &mut vec!["_".to_string(), ident.to_string()],
+            ident.span().clone(),
         );
 
         productions.push(EbnfCompiledProduction {
