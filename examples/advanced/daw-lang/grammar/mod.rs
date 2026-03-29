@@ -12,6 +12,7 @@ use semasia::grammar;
 #[logos(skip r"\/\*.*\*\/")]
 pub mod language {
     use super::*;
+    use grammar::left_associative;
     use semasia::*;
 
     #[context]
@@ -63,9 +64,6 @@ pub mod language {
     #[token(",")]
     pub struct Comma;
 
-    #[token("return")]
-    pub struct Return;
-
     #[token("(")]
     pub struct OpenPar;
 
@@ -94,6 +92,24 @@ pub mod language {
 
     #[non_terminal]
     pub use expressions::Operator;
+
+    #[token("if")]
+    pub struct If;
+
+    #[token("else")]
+    pub struct Else;
+
+    #[token("while")]
+    pub struct While;
+
+    #[token("for")]
+    pub struct For;
+
+    #[token("do")]
+    pub struct Do;
+
+    #[token("return")]
+    pub struct Return;
 
     ebnf!(ProgramIsItems, Program -> (Item*), |st| Program { root_items: st });
 
@@ -155,7 +171,6 @@ pub mod language {
         }
         Statement::Assignment(ident, expr)
     });
-
     ebnf!(Declaration, Statement -> (Ident, Ident, (Equals, Expression)?, SemiColumn), |ctx, (ty, id, val_opt, _)| {
         ctx.declare(id.clone(), Type::BaseType(ty.clone()));
         match val_opt {
@@ -167,8 +182,23 @@ pub mod language {
             }
         }
     });
-
     ebnf!(ReturnStatement, Statement -> (Return, Expression?, SemiColumn), |(_, expr, _)| Statement::Return(expr));
+    ebnf!(
+        IfStatementBody,
+        Statement ->
+            (If, OpenPar, Expression, ClosePar, OpenCurly, Statement*, CloseCurly),
+        |(_, _, condition, _, _, statements, _)| {
+            todo!()
+        }
+    );
+    production!(
+        IfStatementOne,
+        Statement ->
+            (If, OpenPar, Expression, ClosePar, OpenCurly, Statement, CloseCurly),
+        |(_, _, condition, _, _, statement, _)| {
+            todo!()
+        }
+    );
 
     production!(StatementIsExpression, Statement -> (Expression, SemiColumn), |(expr, _)| Statement::Expression(expr));
 }
