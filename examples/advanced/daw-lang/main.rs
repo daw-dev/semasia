@@ -14,7 +14,6 @@ fn main() {
         }
         Err(err) => {
             eprintln!("{err}");
-            eprintln!("{err:?}");
         },
     }
 }

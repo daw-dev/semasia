@@ -17,9 +17,7 @@ mod laugh {
     #[token("H")]
     pub struct H;
 
-    ebnf!(LaughProd, Laugh -> (A * H), |as| todo!());
+    ebnf!(LaughProd, Laugh -> A * H, |_as| todo!());
 }
 
-fn main() {
-
-}
+fn main() {}

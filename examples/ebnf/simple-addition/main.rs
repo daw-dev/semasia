@@ -1,6 +1,7 @@
 use semasia::*;
 
 #[grammar]
+#[logos(skip r"\s+")]
 mod addition {
     use super::*;
 
@@ -8,7 +9,7 @@ mod addition {
     #[non_terminal]
     pub type Expression = usize;
 
-    #[token(regex = r"\d+")]
+    #[regex(r"\d+", parse)]
     pub type Number = usize;
 
     #[token("+")]
@@ -20,7 +21,7 @@ mod addition {
 }
 
 pub fn main() {
-    let result = addition::Parser::lex_parse("1 +\n 2 + 3 + 4");
+    let result = addition::Parser::lex_parse("1 + 2 + 3 + 4");
     match result {
         Ok(result) => {
             println!("{result}");

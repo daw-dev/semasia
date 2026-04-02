@@ -32,9 +32,6 @@ pub mod language {
     pub use expressions::Expression;
 
     #[non_terminal]
-    pub type Arguments = Vec<Expression>;
-
-    #[non_terminal]
     pub use ast::Item;
 
     #[non_terminal]
@@ -111,7 +108,7 @@ pub mod language {
     #[token("return")]
     pub struct Return;
 
-    ebnf!(ProgramIsItems, Program -> (Item*), |st| Program { root_items: st });
+    ebnf!(ProgramIsItems, Program -> Item*, |st| Program { root_items: st });
 
     // ITEMS
     ebnf!(
@@ -143,20 +140,14 @@ pub mod language {
     production!(ExpressionIsSum, Expression -> (Expression, Operator, Expression), |(left, op, right)| Expression::BinaryOperation(Box::new(left), op, Box::new(right)));
     production!(PlusOp, Operator -> Plus, |_| Operator::Plus);
     production!(TimesOp, Operator -> Times, |_| Operator::Times);
-    production!(
+    ebnf!(
         ExpressionIsFunctionCall,
         Expression ->
-            (Ident, OpenPar, Arguments, ClosePar),
+            (Ident, OpenPar, Expression * Comma, ClosePar),
         |(function_ident, _, arguments, _)| {
             Expression::FunctionCall(ast::FunctionCall { function_ident, arguments })
         }
     );
-
-    production!(ArgumentsIsDone, Arguments -> Expression, |e| vec![e]);
-    production!(ArgumentsIsMore, Arguments -> (Arguments, Comma, Expression), |(mut t, _, expr)| {
-        t.push(expr);
-        t
-    });
 
     // STATEMENTS
     production!(Assignment, Statement -> (Ident, Equals, Expression, SemiColumn), |ctx, (ident, _, expr, _)| {
@@ -183,14 +174,14 @@ pub mod language {
         }
     });
     ebnf!(ReturnStatement, Statement -> (Return, Expression?, SemiColumn), |(_, expr, _)| Statement::Return(expr));
-    ebnf!(
-        IfStatementBody,
-        Statement ->
-            (If, OpenPar, Expression, ClosePar, OpenCurly, Statement*, CloseCurly),
-        |(_, _, condition, _, _, statements, _)| {
-            todo!()
-        }
-    );
+    // ebnf!(
+    //     IfStatementBody,
+    //     Statement ->
+    //         (If, OpenPar, Expression, ClosePar, OpenCurly, Statement*, CloseCurly),
+    //     |(_, _, condition, _, _, statements, _)| {
+    //         todo!()
+    //     }
+    // );
     production!(
         IfStatementOne,
         Statement ->
