@@ -127,30 +127,67 @@ impl EbnfBodyItem {
                     alias_vec_types: compiled_body.clone(),
                 });
 
-                let separator_body = separator
-                    .map(|separator| separator.compile_helper(productions, types, id_stack, span));
+                match separator {
+                    Some(separator) => {
+                        let non_empty_rep_alias = Self::non_empty_repetition_alias(id_stack, span);
 
-                productions.push(EbnfCompiledProduction::new(
-                    Self::repetition_more_ident(id_stack, span),
-                    rep_ident.clone(),
-                    std::iter::once(rep_ident.clone())
-                        .chain(
-                            separator_body
-                                .map(IntoIterator::into_iter)
-                                .into_iter()
-                                .flatten(),
-                        )
-                        .chain(compiled_body)
-                        .collect(),
-                    CompiledSemAction::RepetitionMore(compiled_body_len),
-                ));
+                        types.push(EbnfCompiledType::Repetition {
+                            alias_ident: non_empty_rep_alias.clone(),
+                            alias_vec_types: compiled_body.clone(),
+                        });
 
-                productions.push(EbnfCompiledProduction::new(
-                    Self::repetition_done_ident(id_stack, span),
-                    rep_ident.clone(),
-                    Vec::with_capacity(0),
-                    CompiledSemAction::RepetitionDone,
-                ));
+                        let separator_body =
+                            separator.compile_helper(productions, types, id_stack, span);
+
+                        productions.push(EbnfCompiledProduction::new(
+                            Self::repetition_non_empty_ident(id_stack, span),
+                            rep_ident.clone(),
+                            vec![non_empty_rep_alias.clone()],
+                            CompiledSemAction::RepetitionNonEmpty,
+                        ));
+
+                        productions.push(EbnfCompiledProduction::new(
+                            Self::repetition_empty_ident(id_stack, span),
+                            rep_ident.clone(),
+                            Vec::with_capacity(0),
+                            CompiledSemAction::RepetitionEmpty,
+                        ));
+
+                        productions.push(EbnfCompiledProduction::new(
+                            Self::repetition_more_ident(id_stack, span),
+                            non_empty_rep_alias.clone(),
+                            std::iter::once(non_empty_rep_alias.clone())
+                                .chain(separator_body.into_iter())
+                                .chain(compiled_body.clone())
+                                .collect(),
+                            CompiledSemAction::RepetitionSepMore(compiled_body_len),
+                        ));
+
+                        productions.push(EbnfCompiledProduction::new(
+                            Self::repetition_done_ident(id_stack, span),
+                            non_empty_rep_alias.clone(),
+                            compiled_body,
+                            CompiledSemAction::RepetitionSepDone,
+                        ));
+                    }
+                    None => {
+                        productions.push(EbnfCompiledProduction::new(
+                            Self::repetition_more_ident(id_stack, span),
+                            rep_ident.clone(),
+                            std::iter::once(rep_ident.clone())
+                                .chain(compiled_body)
+                                .collect(),
+                            CompiledSemAction::SimpleRepetitionMore,
+                        ));
+
+                        productions.push(EbnfCompiledProduction::new(
+                            Self::repetition_done_ident(id_stack, span),
+                            rep_ident.clone(),
+                            Vec::with_capacity(0),
+                            CompiledSemAction::SimpleRepetitionDone,
+                        ));
+                    }
+                }
 
                 rep_ident
             }
@@ -185,11 +222,18 @@ impl EbnfBodyItem {
     }
 
     fn compose_name(id_stack: &[String], span: Span) -> Ident {
-        Ident::new(&id_stack.iter().format("_").to_string(), span)
+        Ident::new(&id_stack.iter().format("").to_string(), span)
     }
 
     fn repetition_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
         id_stack.push("Rep".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn non_empty_repetition_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("NonEmptyRep".to_string());
         let res = Self::compose_name(id_stack, span);
         id_stack.pop();
         res
@@ -204,6 +248,20 @@ impl EbnfBodyItem {
 
     fn repetition_done_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
         id_stack.push("Done".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn repetition_empty_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("Empty".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn repetition_non_empty_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("NonEmpty".to_string());
         let res = Self::compose_name(id_stack, span);
         id_stack.pop();
         res
@@ -380,8 +438,12 @@ pub enum EbnfCompiledType {
 #[derive(Debug)]
 pub enum CompiledSemAction {
     Alternative,
-    RepetitionMore(usize),
-    RepetitionDone,
+    RepetitionSepMore(usize),
+    RepetitionSepDone,
+    RepetitionEmpty,
+    RepetitionNonEmpty,
+    SimpleRepetitionMore,
+    SimpleRepetitionDone,
     OptionalSome,
     OptionalNone,
     Compiled(Option<ExprClosure>),
@@ -439,7 +501,7 @@ impl EbnfProduction {
         let compiled_body = self.body.compile_helper(
             &mut productions,
             &mut types,
-            &mut vec!["_".to_string(), ident.to_string()],
+            &mut vec!["__Semasia".to_string(), ident.to_string()],
             ident.span().clone(),
         );
 

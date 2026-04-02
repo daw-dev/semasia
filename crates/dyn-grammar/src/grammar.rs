@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use proc_macro_error::{abort, abort_call_site};
+use proc_macro_error::{abort, abort_call_site, emit_error};
 use std::{
     fmt::Display,
     hash::Hash,
@@ -294,6 +294,9 @@ impl EnrichedBaseProduction {
         tokens: &[EnrichedToken],
         non_terminals: &[EnrichedNonTerminal],
     ) -> EnrichedProduction {
+        if non_terminals.iter().find(|nt| nt.id == self.head).is_none() {
+            emit_error!(self.head, "head of production must be a non-terminal");
+        }
         let body = self
             .body
             .into_iter()

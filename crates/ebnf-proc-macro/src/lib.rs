@@ -42,7 +42,7 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
                     Some(quote!(|t| #head::#enum_variant(t)))
                 }
                 // not so easy: if body is more than one element you have to put t1, t2, t3, ...
-                ebnf_parser::CompiledSemAction::RepetitionMore(len) => {
+                ebnf_parser::CompiledSemAction::RepetitionSepMore(len) => {
                     let vars = (0..len).map(|i| format_ident!("t{i}")).collect::<Vec<_>>();
                     let fillers = std::iter::repeat_n(format_ident!("_"), body.len() - len - 1);
                     Some(quote!(|(mut acc, #(#fillers,)* #(#vars),*)| {
@@ -50,7 +50,23 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
                         acc
                     }))
                 }
-                ebnf_parser::CompiledSemAction::RepetitionDone => Some(quote!(|_| Vec::new())),
+                ebnf_parser::CompiledSemAction::RepetitionSepDone => Some(quote!(|t| vec![t])),
+                ebnf_parser::CompiledSemAction::RepetitionEmpty => {
+                    Some(quote!(|_| Vec::with_capacity(0)))
+                }
+                ebnf_parser::CompiledSemAction::RepetitionNonEmpty => None,
+                ebnf_parser::CompiledSemAction::SimpleRepetitionMore => {
+                    let vars = (0..production.body.len() - 1)
+                        .map(|i| format_ident!("t{i}"))
+                        .collect::<Vec<_>>();
+                    Some(quote!(|(mut acc, #(#vars),*)| {
+                        acc.push((#(#vars),*));
+                        acc
+                    }))
+                }
+                ebnf_parser::CompiledSemAction::SimpleRepetitionDone => {
+                    Some(quote!(|_| Vec::new()))
+                }
                 ebnf_parser::CompiledSemAction::OptionalSome => Some(quote!(|t| Some(t))),
                 ebnf_parser::CompiledSemAction::OptionalNone => Some(quote!(|_| None)),
                 ebnf_parser::CompiledSemAction::Compiled(sem_action) => {
@@ -63,7 +79,9 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
                 body => quote!((#(#body),*)),
             };
 
-            quote!(production!(#ident, #head -> #body, #sem_action);)
+            let sem_action = sem_action.map(|act| quote!(, #act));
+
+            quote!(production!(#ident, #head -> #body #sem_action);)
         }));
 
     quote! {

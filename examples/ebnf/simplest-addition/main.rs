@@ -19,7 +19,7 @@ mod addition {
 }
 
 fn main() {
-    let result = addition::Parser::lex_parse("+ 1 + 2 + 3");
+    let result = addition::Parser::lex_parse("1 + 2 + 3");
     match result {
         Ok(result) => println!("result is {result}"),
         Err(err) => eprintln!("{err}"),
