@@ -15,6 +15,9 @@ ebnf-proc-macro = { path = "crates/ebnf-proc-macro" }
 parser = { path = "crates/parser" }
 logos = "0.16.0"
 
+[dev-dependencies]
+itertools = "0.14.0"
+
 [[example]]
 name = "arithmetic-ast"
 path = "./examples/basic/arithmetic-ast/main.rs"

@@ -1,3 +1,7 @@
+use std::fmt::Display;
+
+use itertools::Itertools;
+
 use crate::grammar::tokens::Ident;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -62,5 +66,17 @@ impl Type {
                 (Type::Void, _) => true,
                 _ => false,
             }
+    }
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Pointer(ty) => write!(f, "{ty}*"),
+            Type::Array(ty, size) => write!(f, "{ty}[{size}]"),
+            Type::BaseType(base) => write!(f, "{base}"),
+            Type::Void => write!(f, "void"),
+            Type::Function(ret, params) => write!(f, "{ret}->({})", params.iter().format(",")),
+        }
     }
 }

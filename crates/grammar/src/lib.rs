@@ -15,7 +15,7 @@ pub fn grammar(attr: TokenStream, item: TokenStream) -> TokenStream {
     if let Ok(mut module) = syn::parse::<ItemMod>(item.clone()) {
         let ident = &module.ident;
         set_dummy(quote! {
-            mod #ident {
+            pub mod #ident {
                 pub type Parser = parser::dummy::DummyParser;
             }
         });

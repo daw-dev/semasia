@@ -5,6 +5,13 @@ int main() {
   int c = a + b;
   print(c);
 
+  /* if (a == b) { */
+  /*   print("uguali"); */
+  /* } else if (a > b) { */
+  /*   print("a maggiore"); */
+  /* } else { */
+  /*   print("b maggiore"); */
+  /* } */
+
   return 0;
 }
-

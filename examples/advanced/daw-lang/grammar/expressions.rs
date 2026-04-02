@@ -1,3 +1,7 @@
+use std::fmt::Display;
+
+use itertools::Itertools;
+
 use crate::grammar::{ast::FunctionCall, ctx::CompilationContext, tokens::*, types::Type};
 
 #[derive(Debug)]
@@ -30,7 +34,29 @@ impl Expression {
             Expression::FunctionCall(func) => ctx
                 .get_type(&func.function_ident)
                 .expect("such function does not exist"),
-            Expression::BinaryOperation(left, op, right) => todo!(),
+            Expression::BinaryOperation(_left, _op, _right) => todo!(),
+        }
+    }
+}
+
+impl Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expression::LitInt(str)
+            | Expression::LitDecimal(str)
+            | Expression::LitChar(str)
+            | Expression::LitString(str)
+            | Expression::Ident(str) => write!(f, "{str}"),
+            Expression::Deref(expr) => write!(f, "*{expr}"),
+            Expression::Reference(expr) => write!(f, "&{expr}"),
+            Expression::Index(expr, idx) => write!(f, "{expr}[{idx}]"),
+            Expression::FunctionCall(func) => write!(
+                f,
+                "{}({})",
+                func.function_ident,
+                func.arguments.iter().format(", ")
+            ),
+            Expression::BinaryOperation(left, op, right) => write!(f, "{left} {op} {right}"),
         }
     }
 }
@@ -39,4 +65,15 @@ impl Expression {
 pub enum Operator {
     Plus,
     Times,
+    EqualsEquals,
+}
+
+impl Display for Operator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Operator::Plus => write!(f, "+"),
+            Operator::Times => write!(f, "-"),
+            Operator::EqualsEquals => write!(f, "=="),
+        }
+    }
 }

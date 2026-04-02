@@ -147,10 +147,10 @@ impl<'a> Analyzed<'a> {
                 }
             }
 
-            impl Into<#start_symbol> for NonTerminal {
-                fn into(self) -> #start_symbol {
-                    match self {
-                        Self::#start_symbol(val) => val,
+            impl From<NonTerminal> for #start_symbol {
+                fn from(value: NonTerminal) -> #start_symbol {
+                    match value {
+                        NonTerminal::#start_symbol(val) => val,
                         _ => panic!(),
                     }
                 }

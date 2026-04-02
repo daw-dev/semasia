@@ -9,10 +9,9 @@ use semasia::grammar;
 #[grammar]
 #[logos(skip r"\s+")]
 #[logos(skip r"\/\/.*")]
-#[logos(skip r"\/\*.*\*\/")]
+#[logos(skip r"\/\*(?m).*\*\/")]
 pub mod language {
     use super::*;
-    use grammar::left_associative;
     use semasia::*;
 
     #[context]
@@ -20,10 +19,7 @@ pub mod language {
 
     #[start_symbol]
     #[non_terminal]
-    #[derive(Debug)]
-    pub struct Program {
-        root_items: Vec<Item>,
-    }
+    pub use ast::Program;
 
     #[non_terminal]
     pub use ast::Statement;
@@ -54,6 +50,10 @@ pub mod language {
 
     #[token("=")]
     pub struct Equals;
+
+    #[token("==")]
+    #[left_associative]
+    pub struct EqualsEquals;
 
     #[token(";")]
     pub struct SemiColumn;
@@ -137,9 +137,11 @@ pub mod language {
     production!(ExpressionIsIdent, Expression -> Ident, |id| Expression::Ident(id));
     production!(ExpressionIsLitInt, Expression -> LitInt, |lit| Expression::LitInt(lit));
     production!(ExpressionIsLitDecimal, Expression -> LitDecimal, |lit| Expression::LitDecimal(lit));
-    production!(ExpressionIsSum, Expression -> (Expression, Operator, Expression), |(left, op, right)| Expression::BinaryOperation(Box::new(left), op, Box::new(right)));
+    production!(ExpressionIsLitString, Expression -> LitString, |lit| Expression::LitString(lit));
+    production!(ExpressionIsOperation, Expression -> (Expression, Operator, Expression), |(left, op, right)| Expression::BinaryOperation(Box::new(left), op, Box::new(right)));
     production!(PlusOp, Operator -> Plus, |_| Operator::Plus);
     production!(TimesOp, Operator -> Times, |_| Operator::Times);
+    production!(EqualsEqualsOp, Operator -> EqualsEquals, |_| Operator::EqualsEquals);
     ebnf!(
         ExpressionIsFunctionCall,
         Expression ->
@@ -150,6 +152,9 @@ pub mod language {
     );
 
     // STATEMENTS
+    ebnf!(StatementIsBody, Statement -> (OpenCurly, Statement*, CloseCurly), |(_, statements, _)| {
+        Statement::Body(statements)
+    });
     production!(Assignment, Statement -> (Ident, Equals, Expression, SemiColumn), |ctx, (ident, _, expr, _)| {
         match ctx.get_type(&ident) {
             Some(ty) => {
@@ -174,19 +179,11 @@ pub mod language {
         }
     });
     ebnf!(ReturnStatement, Statement -> (Return, Expression?, SemiColumn), |(_, expr, _)| Statement::Return(expr));
-    // ebnf!(
-    //     IfStatementBody,
-    //     Statement ->
-    //         (If, OpenPar, Expression, ClosePar, OpenCurly, Statement*, CloseCurly),
-    //     |(_, _, condition, _, _, statements, _)| {
-    //         todo!()
-    //     }
-    // );
-    production!(
-        IfStatementOne,
+    ebnf!(
+        IfStatement,
         Statement ->
-            (If, OpenPar, Expression, ClosePar, OpenCurly, Statement, CloseCurly),
-        |(_, _, condition, _, _, statement, _)| {
+            (If, OpenPar, Expression, ClosePar, Statement, (Else, Statement)?),
+        |(_, _, condition, _, statements, else_st)| {
             todo!()
         }
     );

@@ -501,7 +501,7 @@ impl EbnfProduction {
         let compiled_body = self.body.compile_helper(
             &mut productions,
             &mut types,
-            &mut vec!["__Semasia".to_string(), ident.to_string()],
+            &mut vec!["__Ebnf".to_string(), ident.to_string()],
             ident.span().clone(),
         );
 

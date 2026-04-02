@@ -93,9 +93,9 @@ pub type LexParseResult<'source, Parser, NonTerminal, Token, ReturnType> = Resul
 >;
 
 impl<
-    NonTerminal: Into<StartSymbol>,
+    NonTerminal,
     Token,
-    StartSymbol,
+    StartSymbol: From<NonTerminal>,
     Prod: Reduce<NonTerminal, Token, Ctx>,
     Tab: Tables<NonTerminal, Token, Prod>,
     Ctx,
@@ -292,9 +292,9 @@ impl<
 }
 
 impl<
-    NonTerminal: Into<StartSymbol>,
+    NonTerminal,
     Token,
-    StartSymbol,
+    StartSymbol: From<NonTerminal>,
     Prod: Reduce<NonTerminal, Token, ()>,
     Tab: Tables<NonTerminal, Token, Prod>,
 > Parser<NonTerminal, Token, StartSymbol, Prod, Tab, ()>
