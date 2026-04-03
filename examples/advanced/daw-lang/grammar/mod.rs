@@ -3,6 +3,7 @@ pub mod ctx;
 pub mod expressions;
 pub mod tokens;
 pub mod types;
+pub mod fmt;
 
 use semasia::grammar;
 
@@ -11,6 +12,8 @@ use semasia::grammar;
 #[logos(skip r"\/\/.*")]
 #[logos(skip r"\/\*(?m).*\*\/")]
 pub mod language {
+    use crate::grammar::fmt::Indented;
+
     use super::*;
     use semasia::*;
 
@@ -108,7 +111,13 @@ pub mod language {
     #[token("return")]
     pub struct Return;
 
-    ebnf!(ProgramIsItems, Program -> Item*, |st| Program { root_items: st });
+    // ebnf!(ProgramIsItems, Program -> Item*, |st| Program { root_items: st });
+    ebnf!(ProgramIsStatements, Program -> Statement*, |st| {
+        for stmt in st.iter() {
+            println!("{}", Indented(stmt, 0));
+        }
+        Program { root_items: vec![] }
+    });
 
     // ITEMS
     ebnf!(
@@ -183,8 +192,16 @@ pub mod language {
         IfStatement,
         Statement ->
             (If, OpenPar, Expression, ClosePar, Statement, (Else, Statement)?),
-        |(_, _, condition, _, statements, else_st)| {
-            todo!()
+        |(_, _, condition, _, statement, else_st)| {
+            println!("IF STATEMENT FOUND");
+            if else_st.is_some() {
+                println!("IT ALSO HAS AN ELSE");
+            }
+            Statement::IfStatement(
+                condition,
+                Box::new(statement),
+                else_st.map(|(_, st)| Box::new(st)),
+            )
         }
     );
 

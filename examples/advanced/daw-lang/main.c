@@ -1,9 +1,9 @@
-int main() {
+/* int main() { */
   // this is a comment
-  int a = 5;
-  int b = 2;
-  int c = a + b;
-  print(c);
+  /* int a = 5; */
+  /* int b = 2; */
+  /* int c = a + b; */
+  /* print(c); */
 
   /* if (a == b) { */
   /*   print("uguali"); */
@@ -12,6 +12,12 @@ int main() {
   /* } else { */
   /*   print("b maggiore"); */
   /* } */
+  /**/
+  /* return 0; */
+/* } */
 
-  return 0;
+if (a == b) {
+  print("hello world!");
+} else {
+  print(":(");
 }

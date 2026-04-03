@@ -3,7 +3,11 @@ use crate::results::{
     ParseOneError, ParseToken, ParseTokenError, ParseTokenErrorReason,
 };
 use logos::Logos;
-use std::{fmt::Display, marker::PhantomData, ops::Range};
+use std::{
+    fmt::{Debug, Display},
+    marker::PhantomData,
+    ops::Range,
+};
 
 mod actions;
 pub mod dummy;
@@ -66,11 +70,24 @@ impl<NonTerminal, Terminal> Default for Stacks<NonTerminal, Terminal> {
     }
 }
 
-#[derive(Debug)]
 pub struct Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx> {
     stacks: Stacks<NonTerminal, Token>,
     ctx: Ctx,
     phantom_data: PhantomData<(StartSymbol, Prod, Tab)>,
+}
+
+impl<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx> Debug
+    for Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>
+where
+    Stacks<NonTerminal, Token>: Debug,
+    Ctx: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Parser")
+            .field("stacks", &self.stacks)
+            .field("ctx", &self.ctx)
+            .finish()
+    }
 }
 
 pub type ParseSource = ();
@@ -101,7 +118,7 @@ impl<
     Ctx,
 > Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>
 {
-    fn new(ctx: Ctx) -> Self {
+    pub fn with_ctx(ctx: Ctx) -> Self {
         Self {
             stacks: Stacks::new(),
             ctx,
@@ -109,7 +126,14 @@ impl<
         }
     }
 
-    fn parse_token(
+    pub fn default_ctx() -> Self
+    where
+        Ctx: Default,
+    {
+        Self::with_ctx(Default::default())
+    }
+
+    pub fn parse_token(
         &mut self,
         token: Token,
     ) -> Result<ParseToken<Token>, ParseTokenErrorReason<NonTerminal, Token>> {
@@ -161,7 +185,7 @@ impl<
         ctx: Ctx,
         tokens: impl IntoIterator<Item = Token>,
     ) -> ParseResult<Self, NonTerminal, Token, (StartSymbol, Ctx)> {
-        let mut parser = Self::new(ctx);
+        let mut parser = Self::with_ctx(ctx);
         for (span, mut token) in tokens.into_iter().enumerate() {
             loop {
                 match parser.parse_token(token) {
@@ -224,7 +248,7 @@ impl<
         Token: Logos<'source>,
         Token::Extras: Default,
     {
-        let mut parser = Self::new(ctx);
+        let mut parser = Self::with_ctx(ctx);
         for (token, span) in Token::lexer(source).spanned() {
             let mut token = match token {
                 Ok(token) => token,
