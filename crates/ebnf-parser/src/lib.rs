@@ -457,6 +457,18 @@ pub struct EbnfCompiledProduction {
     pub sem_action: CompiledSemAction,
 }
 
+impl Display for EbnfCompiledProduction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}: {} -> ({})",
+            self.ident,
+            self.head,
+            self.body.iter().format(", ")
+        )
+    }
+}
+
 impl EbnfCompiledProduction {
     pub fn new(ident: Ident, head: Ident, body: Vec<Ident>, sem_action: CompiledSemAction) -> Self {
         Self {
