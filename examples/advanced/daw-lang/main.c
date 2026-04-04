@@ -1,23 +1,17 @@
-/* int main() { */
+int main() {
   // this is a comment
-  /* int a = 5; */
-  /* int b = 2; */
-  /* int c = a + b; */
-  /* print(c); */
+  int a = 5;
+  int b = 2;
+  int c = a + b;
+  print(c);
 
-  /* if (a == b) { */
-  /*   print("uguali"); */
-  /* } else if (a > b) { */
-  /*   print("a maggiore"); */
-  /* } else { */
-  /*   print("b maggiore"); */
-  /* } */
-  /**/
-  /* return 0; */
-/* } */
+  if (a == b) {
+    print("uguali");
+  } else if (a > b) {
+    print("a maggiore");
+  } else {
+    print("b maggiore");
+  }
 
-if (a == b) {
-  print("hello world!");
-} else {
-  print(":(");
+  return 0;
 }

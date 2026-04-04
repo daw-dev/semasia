@@ -1,7 +1,7 @@
 mod grammar;
 
 use grammar::language;
-use parser::results::LexParseError;
+use parser::{results::LexParseError};
 
 fn main() {
     let file = include_str!("main.c");
@@ -23,16 +23,56 @@ fn main() {
 }
 
 #[test]
-fn if_statement_test() {
-    use language::*;
+fn test_if_statement() -> Result<(), Box<dyn std::error::Error>>{
+    fn lex(source: &str) -> Token {
+        Token::lexer(source).next().unwrap().unwrap()
+    }
 
-    let result = language::Parser::parse_default_ctx([
-        Token::Ident("int".to_string()),
-        Token::Ident("main".to_string()),
-        Token::OpenPar(OpenPar),
-        Token::ClosePar(ClosePar),
-        Token::If(If),
-        Token::OpenPar(OpenPar),
-        Token::Ident("a".to_string()),
-    ]);
+    use parser::Tables;
+    use language::Token;
+    use logos::Logos;
+
+    let mut parser = language::Parser::default_ctx();
+    println!("{:?}", language::Tables::tokens_in_state(parser.current_state()));
+    parser.consume_token(lex("if"))?;
+    // println!("{parser:?}");
+    parser.consume_token(lex("("))?;
+    // println!("{parser:?}");
+    parser.consume_token(lex("123"))?;
+    // println!("{parser:?}");
+    parser.consume_token(lex(")"))?;
+    // println!("{parser:?}");
+    // parser.consume_token(lex("print"))?;
+    // parser.consume_token(lex("("))?;
+    parser.consume_token(lex("123"))?;
+    // parser.consume_token(lex(","))?;
+    // parser.consume_token(lex("321"))?;
+    // parser.consume_token(lex(")"))?;
+    parser.consume_token(lex(";"))?;
+    println!("{parser:?}");
+    println!("about to consume else");
+    println!("{:?}", language::Tables::tokens_in_state(parser.current_state()));
+    parser.consume_token(lex("else"))?;
+    println!("ELSE CONSUMED");
+    println!("{:?}", language::Tables::tokens_in_state(parser.current_state()));
+    parser.consume_token(lex(")"))?;
+    println!("{:?}", language::Tables::tokens_in_state(parser.current_state()));
+    parser.consume_token(lex("321"))?;
+    println!("{parser:?}");
+    println!("{:?}", language::Tables::tokens_in_state(parser.current_state()));
+    parser.consume_token(lex("print"))?;
+    parser.consume_token(lex("("))?;
+    parser.consume_token(lex("123"))?;
+    parser.consume_token(lex(")"))?;
+    parser.consume_token(lex(";"))?;
+
+    parser.consume_token(lex("print"))?;
+    parser.consume_token(lex("("))?;
+    parser.consume_token(lex("123"))?;
+    parser.consume_token(lex(")"))?;
+    parser.consume_token(lex(";"))?;
+    parser.consume_eof()?;
+    // QUESTO VUOL DIRE CHE NON FUNZIONA L'EBNF
+
+    Ok(())
 }

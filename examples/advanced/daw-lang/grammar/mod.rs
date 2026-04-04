@@ -12,8 +12,6 @@ use semasia::grammar;
 #[logos(skip r"\/\/.*")]
 #[logos(skip r"\/\*(?m).*\*\/")]
 pub mod language {
-    use crate::grammar::fmt::Indented;
-
     use super::*;
     use semasia::*;
 
@@ -58,6 +56,13 @@ pub mod language {
     #[left_associative]
     pub struct EqualsEquals;
 
+    #[token(">")]
+    #[left_associative]
+    pub struct GreaterThan;
+
+    #[token("<")]
+    pub struct LessThan;
+
     #[token(";")]
     pub struct SemiColumn;
 
@@ -97,6 +102,7 @@ pub mod language {
     pub struct If;
 
     #[token("else")]
+    #[right_associative]
     pub struct Else;
 
     #[token("while")]
@@ -111,13 +117,7 @@ pub mod language {
     #[token("return")]
     pub struct Return;
 
-    // ebnf!(ProgramIsItems, Program -> Item*, |st| Program { root_items: st });
-    ebnf!(ProgramIsStatements, Program -> Statement*, |st| {
-        for stmt in st.iter() {
-            println!("{}", Indented(stmt, 0));
-        }
-        Program { root_items: vec![] }
-    });
+    ebnf!(ProgramIsItems, Program -> Item*, |st| Program { root_items: st });
 
     // ITEMS
     ebnf!(
@@ -151,6 +151,7 @@ pub mod language {
     production!(PlusOp, Operator -> Plus, |_| Operator::Plus);
     production!(TimesOp, Operator -> Times, |_| Operator::Times);
     production!(EqualsEqualsOp, Operator -> EqualsEquals, |_| Operator::EqualsEquals);
+    production!(GreaterThanOp, Operator -> GreaterThan, |_| Operator::GreaterThan);
     ebnf!(
         ExpressionIsFunctionCall,
         Expression ->
@@ -193,14 +194,10 @@ pub mod language {
         Statement ->
             (If, OpenPar, Expression, ClosePar, Statement, (Else, Statement)?),
         |(_, _, condition, _, statement, else_st)| {
-            println!("IF STATEMENT FOUND");
-            if else_st.is_some() {
-                println!("IT ALSO HAS AN ELSE");
-            }
             Statement::IfStatement(
                 condition,
                 Box::new(statement),
-                else_st.map(|(_, st)| Box::new(st)),
+                else_st.map(|(_, else_st)| Box::new(else_st)),
             )
         }
     );

@@ -89,11 +89,11 @@ impl Display for Indented<&Statement> {
                     writeln!(f)?;
 
                     write!(f, "{}  ", "    ".repeat(*indentation))?;
-                    write!(
+                    writeln!(
                         f,
-                        "Else Statement: {}",
-                        Indented(else_st.as_ref(), indentation + 1)
+                        "Else Statement:",
                     )?;
+                    write!(f, "{}", Indented(else_st.as_ref(), indentation + 1))?;
                 }
 
                 Ok(())

@@ -463,17 +463,13 @@ impl<'a> LalrAutomaton<'a> {
                         Ordering::Equal => match token.extras().extras().2 {
                             Associativity::Unspecified => {
                                 let production = &self.grammar.productions()[reduce];
-                                if production.body().is_empty() {
-                                    action = TokenAction::Shift(token_id);
-                                } else {
-                                    emit_error!(
-                                        reduce_production.extras().0,
-                                        "shift/reduce conflict (priority: {:?})",
-                                        reduce_production.extras().1;
-                                        note = token.extras().id().span() => "this token has the same priority";
-                                        note = "what happens when after seeing {} you see {}?", production, token;
-                                    );
-                                }
+                                emit_error!(
+                                    reduce_production.extras().0,
+                                    "shift/reduce conflict (priority: {:?})",
+                                    reduce_production.extras().1;
+                                    note = token.extras().id().span() => "this token has the same priority";
+                                    note = "what happens when after seeing {} you see {}?", production, token;
+                                );
                             }
                             Associativity::Left => {
                                 action = TokenAction::Reduce(reduce);

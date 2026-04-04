@@ -66,6 +66,7 @@ pub enum Operator {
     Plus,
     Times,
     EqualsEquals,
+    GreaterThan,
 }
 
 impl Display for Operator {
@@ -74,6 +75,7 @@ impl Display for Operator {
             Operator::Plus => write!(f, "+"),
             Operator::Times => write!(f, "-"),
             Operator::EqualsEquals => write!(f, "=="),
+            Operator::GreaterThan => write!(f, ">"),
         }
     }
 }
