@@ -395,6 +395,11 @@ impl<'a> Analyzed<'a> {
                                     .to_string()
                             })
                         })
+                        .chain(
+                            self.eof_table.table[state]
+                                .is_some()
+                                .then_some("__EndOfStream".into()),
+                        )
                         .collect_vec(),
                 )
             })
