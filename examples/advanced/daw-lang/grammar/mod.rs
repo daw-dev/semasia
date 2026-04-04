@@ -201,6 +201,13 @@ pub mod language {
             )
         }
     );
+    production!(
+        WhileStatement,
+        Statement -> (While, OpenPar, Expression, ClosePar, Statement),
+        |(_, _, condition, _, stmt)| {
+            Statement::WhileStatement(condition, Box::new(stmt))
+        }
+    );
 
     production!(StatementIsExpression, Statement -> (Expression, SemiColumn), |(expr, _)| Statement::Expression(expr));
 }

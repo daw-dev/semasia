@@ -98,6 +98,24 @@ impl Display for Indented<&Statement> {
 
                 Ok(())
             }
+            Statement::WhileStatement(condition, body) => {
+                writeln!(f, "IfStatement:")?;
+
+                write!(f, "{}  ", "    ".repeat(*indentation))?;
+                write!(f, "Condition: {condition}")?;
+
+                writeln!(f)?;
+
+                write!(f, "{}  ", "    ".repeat(*indentation))?;
+                writeln!(
+                    f,
+                    "Statement:",
+                )?;
+
+                write!(f, "{}", Indented(body.as_ref(), indentation + 1))?;
+
+                Ok(())
+            }
         }
     }
 }

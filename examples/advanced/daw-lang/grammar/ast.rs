@@ -17,6 +17,7 @@ pub enum Statement {
     Continue,
     Body(Vec<Statement>),
     IfStatement(Expression, Box<Statement>, Option<Box<Statement>>),
+    WhileStatement(Expression, Box<Statement>),
 }
 
 #[derive(Debug)]

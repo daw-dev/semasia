@@ -13,5 +13,10 @@ int main() {
     print("b maggiore");
   }
 
+
+  while (a < 12) {
+    a = a + 1;
+  }
+
   return 0;
 }
