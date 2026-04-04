@@ -1,4 +1,8 @@
-use std::{fmt::Display, ops::Range};
+use std::{
+    error::Error,
+    fmt::{Debug, Display},
+    ops::Range,
+};
 
 use colored::Colorize;
 use itertools::Itertools;
@@ -24,6 +28,17 @@ pub enum ParseTokenErrorReason<NonTerminal, Token> {
     GotoNotFound { leftover_non_terminal: NonTerminal },
 }
 
+impl<NonTerminal, Token> Display for ParseTokenErrorReason<NonTerminal, Token> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseTokenErrorReason::ActionNotFound { .. } => write!(f, "action not found"),
+            ParseTokenErrorReason::GotoNotFound { .. } => write!(f, "goto action not found"),
+        }
+    }
+}
+
+impl<NonTerminal, Token> Error for ParseTokenErrorReason<NonTerminal, Token> where Self: Debug {}
+
 #[derive(Debug)]
 pub struct ParseTokenError<NonTerminal, Token, Span> {
     reason: ParseTokenErrorReason<NonTerminal, Token>,
@@ -36,11 +51,30 @@ impl<NonTerminal, Token, Span> ParseTokenError<NonTerminal, Token, Span> {
     }
 }
 
+impl<NonTerminal, Token, Span> Display for ParseTokenError<NonTerminal, Token, Span> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.reason)
+    }
+}
+
+impl<NonTerminal, Token, Span> Error for ParseTokenError<NonTerminal, Token, Span> where Self: Debug {}
+
 #[derive(Debug)]
 pub enum ParseEofErrorReason<NonTerminal> {
     ActionNotFound,
     GotoNotFound { leftover_non_terminal: NonTerminal },
 }
+
+impl<NonTerminal> Display for ParseEofErrorReason<NonTerminal> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseEofErrorReason::ActionNotFound => write!(f, "action not found"),
+            ParseEofErrorReason::GotoNotFound { .. } => write!(f, "goto not found"),
+        }
+    }
+}
+
+impl<NonTerminal> Error for ParseEofErrorReason<NonTerminal> where Self: Debug {}
 
 #[derive(Debug)]
 pub struct ParseEofError<NonTerminal> {
@@ -53,10 +87,23 @@ impl<NonTerminal> ParseEofError<NonTerminal> {
     }
 }
 
+impl<NonTerminal> Display for ParseEofError<NonTerminal> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.reason)
+    }
+}
+
+impl<NonTerminal> Error for ParseEofError<NonTerminal> where Self: Debug {}
+
 #[derive(Debug)]
 pub enum ParseOneError<NonTerminal, Token, Span> {
     ParseTokenError(ParseTokenError<NonTerminal, Token, Span>),
     ParseEofError(ParseEofError<NonTerminal>),
+}
+
+impl<NonTerminal, Token, Span> Error for ParseOneError<NonTerminal, Token, Span> where
+    Self: Display + Debug
+{
 }
 
 #[derive(Debug)]
@@ -184,6 +231,13 @@ where
     }
 }
 
+impl<Parser, NonTerminal, Token, Span, Source> Error
+    for ParseError<Parser, NonTerminal, Token, Span, Source>
+where
+    Self: Display + Debug,
+{
+}
+
 #[derive(Debug)]
 pub struct LexError<'source, Parser, Token: Logos<'source>> {
     pub parser: Parser,
@@ -260,6 +314,13 @@ fn last_line(source: &str) -> (&str, usize) {
         .unwrap()
 }
 
+impl<'source, Parser, Token> Error for LexError<'source, Parser, Token>
+where
+    Token: Logos<'source>,
+    Self: Display + Debug,
+{
+}
+
 #[derive(Debug)]
 pub enum LexParseError<LexError, ParseError> {
     LexError(LexError),
@@ -278,3 +339,5 @@ where
         }
     }
 }
+
+impl<LexError, ParseError> Error for LexParseError<LexError, ParseError> where Self: Display + Debug {}
