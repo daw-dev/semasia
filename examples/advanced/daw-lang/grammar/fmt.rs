@@ -99,7 +99,7 @@ impl Display for Indented<&Statement> {
                 Ok(())
             }
             Statement::WhileStatement(condition, body) => {
-                writeln!(f, "IfStatement:")?;
+                writeln!(f, "WhileStatement:")?;
 
                 write!(f, "{}  ", "    ".repeat(*indentation))?;
                 write!(f, "Condition: {condition}")?;

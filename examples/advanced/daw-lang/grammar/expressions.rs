@@ -34,7 +34,7 @@ impl Expression {
             Expression::FunctionCall(func) => ctx
                 .get_type(&func.function_ident)
                 .expect("such function does not exist"),
-            Expression::BinaryOperation(_left, _op, _right) => todo!(),
+            Expression::BinaryOperation(left, _op, _right) => left.get_type(ctx),
         }
     }
 }
@@ -67,6 +67,7 @@ pub enum Operator {
     Times,
     EqualsEquals,
     GreaterThan,
+    LessThan,
 }
 
 impl Display for Operator {
@@ -76,6 +77,7 @@ impl Display for Operator {
             Operator::Times => write!(f, "-"),
             Operator::EqualsEquals => write!(f, "=="),
             Operator::GreaterThan => write!(f, ">"),
+            Operator::LessThan => write!(f, "<"),
         }
     }
 }

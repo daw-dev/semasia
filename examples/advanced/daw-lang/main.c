@@ -16,6 +16,7 @@ int main() {
 
   while (a < 12) {
     a = a + 1;
+    print(a);
   }
 
   return 0;

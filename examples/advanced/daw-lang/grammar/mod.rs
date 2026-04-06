@@ -61,6 +61,7 @@ pub mod language {
     pub struct GreaterThan;
 
     #[token("<")]
+    #[left_associative]
     pub struct LessThan;
 
     #[token(";")]
@@ -152,6 +153,7 @@ pub mod language {
     production!(TimesOp, Operator -> Times, |_| Operator::Times);
     production!(EqualsEqualsOp, Operator -> EqualsEquals, |_| Operator::EqualsEquals);
     production!(GreaterThanOp, Operator -> GreaterThan, |_| Operator::GreaterThan);
+    production!(LessThanOp, Operator -> LessThan, |_| Operator::LessThan);
     ebnf!(
         ExpressionIsFunctionCall,
         Expression ->
@@ -169,7 +171,7 @@ pub mod language {
         match ctx.get_type(&ident) {
             Some(ty) => {
                 let expr_type = expr.get_type(ctx);
-                if ty.compatible_with(&expr_type) {
+                if !ty.compatible_with(&expr_type) {
                     panic!("cannot convert from {expr_type:?} to {ty:?}")
                 }
             },
