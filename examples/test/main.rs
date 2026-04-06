@@ -2,24 +2,27 @@ use semasia::grammar;
 
 #[grammar]
 mod abcs {
-    use semasia::*;
+    use semasia::production;
 
-    #[non_terminal]
     #[start_symbol]
+    #[non_terminal]
+    pub type S = Box<B>;
+
+    #[token("a")]
     #[derive(Debug)]
     pub struct A;
-    
-    #[non_terminal]
+
+    #[token("b")]
+    #[derive(Debug)]
     pub struct B;
 
-    production!(P0, A -> B, |_| A);
-    production!(P1, B -> A, |_| B);
+    production!(P: S -> B);
 }
 
 use abcs::Parser;
 
 fn main() {
-    let res = Parser::lex_parse("aaaaad");
+    let res = Parser::lex_parse("b");
     match res {
         Ok(res) => println!("{res:?}"),
         Err(err) => println!("{err}"),

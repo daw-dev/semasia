@@ -215,6 +215,8 @@ impl<'a> Analyzed<'a> {
 
             impl parser::Reduce<NonTerminal, Token, __CompilerContext> for ProductionName {
                 fn reduce(&self, ctx: &mut __CompilerContext, stacks: &mut parser::Stacks<NonTerminal, Token>) -> NonTerminal {
+                    use semasia::Production;
+
                     match self {
                         #(Self::#idents => #reductions,)*
                     }

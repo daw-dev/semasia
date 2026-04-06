@@ -12,7 +12,7 @@ mod scream {
     #[derive(Debug)]
     pub struct A;
 
-    ebnf!(LongScream, Scream -> A*);
+    ebnf!(LongScream: Scream -> A*);
 }
 
 use scream::Parser;

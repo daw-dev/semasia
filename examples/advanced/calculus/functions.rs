@@ -32,8 +32,8 @@ pub mod grammar {
     #[left_associative]
     pub struct Times;
 
-    production!(FunctionIsConstant, Function -> Constant, |c| Function::Constant(c));
-    production!(FunctionIsVariable, Function -> Variable, |var| Function::Variable(var));
-    production!(FunctionIsSum, Function -> (Function, Plus, Function), |(f1, _, f2)| Function::Sum(Box::new(f1), Box::new(f2)));
-    production!(FunctionIsProduct, Function -> (Function, Times, Function), |(f1, _, f2)| Function::Product(Box::new(f1), Box::new(f2)));
+    production!(FunctionIsConstant: Function -> Constant, |c| Function::Constant(c));
+    production!(FunctionIsVariable: Function -> Variable, |var| Function::Variable(var));
+    production!(FunctionIsSum: Function -> (Function, Plus, Function), |(f1, _, f2)| Function::Sum(Box::new(f1), Box::new(f2)));
+    production!(FunctionIsProduct: Function -> (Function, Times, Function), |(f1, _, f2)| Function::Product(Box::new(f1), Box::new(f2)));
 }

@@ -15,7 +15,7 @@ mod addition {
     #[regex(r"\d+", parse)]
     pub type Number = Expression;
 
-    ebnf!(Addition, Expression -> (Number * Plus), |numbers| numbers.into_iter().sum());
+    ebnf!(Addition: Expression -> (Number * Plus), |numbers| numbers.into_iter().sum());
 }
 
 fn main() {

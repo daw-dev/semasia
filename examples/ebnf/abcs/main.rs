@@ -25,7 +25,7 @@ mod abcs {
     #[derive(Debug)]
     pub struct D;
 
-    ebnf!(P0, S -> (A*, B?, CorD { C, D }), |(a, b, c_or_d)| {
+    ebnf!(P0: S -> (A*, B?, CorD { C, D }), |(a, b, c_or_d)| {
         S(a, b, match c_or_d { CorD::C(_) => 0, CorD::D(_) => 1})
     });
 }

@@ -15,7 +15,7 @@ mod addition {
     #[token("+")]
     pub struct Plus;
 
-    ebnf!(Addition, Expression -> (Number, (Plus, Number)*), |(first, others)| {
+    ebnf!(Addition: Expression -> (Number, (Plus, Number)*), |(first, others)| {
         others.into_iter().map(|(_, num)| num).fold(first, |acc, curr| acc + curr)
     });
 }
