@@ -118,11 +118,11 @@ pub mod language {
     #[token("return")]
     pub struct Return;
 
-    ebnf!(ProgramIsItems, Program -> Item*, |st| Program { root_items: st });
+    ebnf!(ProgramIsItems: Program -> Item*, |st| Program { root_items: st });
 
     // ITEMS
     ebnf!(
-        ItemIsFunction,
+        ItemIsFunction:
         Item ->
             (Ident, Ident, OpenPar, (Type, Ident)*, ClosePar, OpenCurly, Statement*, CloseCurly),
         |ctx, (return_type, ident, _, params, _, _, body, _)| {
@@ -144,18 +144,18 @@ pub mod language {
     );
 
     // EXPRESSIONS
-    production!(ExpressionIsIdent, Expression -> Ident, |id| Expression::Ident(id));
-    production!(ExpressionIsLitInt, Expression -> LitInt, |lit| Expression::LitInt(lit));
-    production!(ExpressionIsLitDecimal, Expression -> LitDecimal, |lit| Expression::LitDecimal(lit));
-    production!(ExpressionIsLitString, Expression -> LitString, |lit| Expression::LitString(lit));
-    production!(ExpressionIsOperation, Expression -> (Expression, Operator, Expression), |(left, op, right)| Expression::BinaryOperation(Box::new(left), op, Box::new(right)));
-    production!(PlusOp, Operator -> Plus, |_| Operator::Plus);
-    production!(TimesOp, Operator -> Times, |_| Operator::Times);
-    production!(EqualsEqualsOp, Operator -> EqualsEquals, |_| Operator::EqualsEquals);
-    production!(GreaterThanOp, Operator -> GreaterThan, |_| Operator::GreaterThan);
-    production!(LessThanOp, Operator -> LessThan, |_| Operator::LessThan);
+    production!(ExpressionIsIdent: Expression -> Ident, |id| Expression::Ident(id));
+    production!(ExpressionIsLitInt: Expression -> LitInt, |lit| Expression::LitInt(lit));
+    production!(ExpressionIsLitDecimal: Expression -> LitDecimal, |lit| Expression::LitDecimal(lit));
+    production!(ExpressionIsLitString: Expression -> LitString, |lit| Expression::LitString(lit));
+    production!(ExpressionIsOperation: Expression -> (Expression, Operator, Expression), |(left, op, right)| Expression::BinaryOperation(Box::new(left), op, Box::new(right)));
+    production!(PlusOp: Operator -> Plus, |_| Operator::Plus);
+    production!(TimesOp: Operator -> Times, |_| Operator::Times);
+    production!(EqualsEqualsOp: Operator -> EqualsEquals, |_| Operator::EqualsEquals);
+    production!(GreaterThanOp: Operator -> GreaterThan, |_| Operator::GreaterThan);
+    production!(LessThanOp: Operator -> LessThan, |_| Operator::LessThan);
     ebnf!(
-        ExpressionIsFunctionCall,
+        ExpressionIsFunctionCall:
         Expression ->
             (Ident, OpenPar, Expression * Comma, ClosePar),
         |(function_ident, _, arguments, _)| {
@@ -164,10 +164,10 @@ pub mod language {
     );
 
     // STATEMENTS
-    ebnf!(StatementIsBody, Statement -> (OpenCurly, Statement*, CloseCurly), |(_, statements, _)| {
+    ebnf!(StatementIsBody: Statement -> (OpenCurly, Statement*, CloseCurly), |(_, statements, _)| {
         Statement::Body(statements)
     });
-    production!(Assignment, Statement -> (Ident, Equals, Expression, SemiColumn), |ctx, (ident, _, expr, _)| {
+    production!(Assignment: Statement -> (Ident, Equals, Expression, SemiColumn), |ctx, (ident, _, expr, _)| {
         match ctx.get_type(&ident) {
             Some(ty) => {
                 let expr_type = expr.get_type(ctx);
@@ -179,7 +179,7 @@ pub mod language {
         }
         Statement::Assignment(ident, expr)
     });
-    ebnf!(Declaration, Statement -> (Ident, Ident, (Equals, Expression)?, SemiColumn), |ctx, (ty, id, val_opt, _)| {
+    ebnf!(Declaration: Statement -> (Ident, Ident, (Equals, Expression)?, SemiColumn), |ctx, (ty, id, val_opt, _)| {
         ctx.declare(id.clone(), Type::BaseType(ty.clone()));
         match val_opt {
             Some((_, val)) => {
@@ -190,9 +190,9 @@ pub mod language {
             }
         }
     });
-    ebnf!(ReturnStatement, Statement -> (Return, Expression?, SemiColumn), |(_, expr, _)| Statement::Return(expr));
+    ebnf!(ReturnStatement: Statement -> (Return, Expression?, SemiColumn), |(_, expr, _)| Statement::Return(expr));
     ebnf!(
-        IfStatement,
+        IfStatement:
         Statement ->
             (If, OpenPar, Expression, ClosePar, Statement, (Else, Statement)?),
         |(_, _, condition, _, statement, else_st)| {
@@ -204,12 +204,12 @@ pub mod language {
         }
     );
     production!(
-        WhileStatement,
+        WhileStatement:
         Statement -> (While, OpenPar, Expression, ClosePar, Statement),
         |(_, _, condition, _, stmt)| {
             Statement::WhileStatement(condition, Box::new(stmt))
         }
     );
 
-    production!(StatementIsExpression, Statement -> (Expression, SemiColumn), |(expr, _)| Statement::Expression(expr));
+    production!(StatementIsExpression: Statement -> (Expression, SemiColumn), |(expr, _)| Statement::Expression(expr));
 }

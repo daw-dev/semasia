@@ -531,7 +531,7 @@ impl EbnfProduction {
 impl Parse for EbnfProduction {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let ident = input.parse()?;
-        input.parse::<Token![,]>()?;
+        input.parse::<Token![:]>()?;
         let head = input.parse()?;
         input.parse::<Token![->]>()?;
         let body = input.parse()?;

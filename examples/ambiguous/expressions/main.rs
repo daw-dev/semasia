@@ -43,15 +43,15 @@ mod ambiguous {
     #[token(")")]
     pub struct ClosePar;
 
-    production!(Sum, Expression -> (Expression, Plus, Expression), |(e1, _, e2)| e1 + e2);
-    production!(Difference, Expression -> (Expression, Minus, Expression), |(e1, _, e2)| e1 - e2);
-    production!(Product, Expression -> (Expression, Times, Expression), |(e1, _, e2)| e1 * e2);
-    production!(Division, Expression -> (Expression, DivisionOp, Expression), |(e1, _, e2)| e1 * e2);
-    production!(Exponent, Expression -> (Expression, Power, Expression), |(e1, _, e2)| e1.powf(e2));
-    production!(Parethesis, Expression -> (OpenPar, Expression, ClosePar), |(_, e, _)| e);
+    production!(Sum: Expression -> (Expression, Plus, Expression), |(e1, _, e2)| e1 + e2);
+    production!(Difference: Expression -> (Expression, Minus, Expression), |(e1, _, e2)| e1 - e2);
+    production!(Product: Expression -> (Expression, Times, Expression), |(e1, _, e2)| e1 * e2);
+    production!(Division: Expression -> (Expression, DivisionOp, Expression), |(e1, _, e2)| e1 * e2);
+    production!(Exponent: Expression -> (Expression, Power, Expression), |(e1, _, e2)| e1.powf(e2));
+    production!(Parethesis: Expression -> (OpenPar, Expression, ClosePar), |(_, e, _)| e);
     #[priority(3)]
-    production!(Negation, Expression -> (Minus, Expression), |(_, e)| -e);
-    production!(ActualNumber, Expression -> Number);
+    production!(Negation: Expression -> (Minus, Expression), |(_, e)| -e);
+    production!(ActualNumber: Expression -> Number);
 }
 
 use ambiguous::*;

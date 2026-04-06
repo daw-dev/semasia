@@ -266,7 +266,7 @@ impl Constructor {
                 mac.mac
                     .parse_body_with(|input: syn::parse::ParseStream| {
                         let name = input.parse()?;
-                        input.parse::<syn::Token![,]>()?;
+                        input.parse::<syn::Token![:]>()?;
                         let head = input.parse()?;
                         input.parse::<syn::Token![->]>()?;
                         let body = input.parse()?;

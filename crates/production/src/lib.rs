@@ -8,7 +8,7 @@ pub trait Production {
 
 #[macro_export]
 macro_rules! production {
-    ($name:ident, $head:ident -> $body:ty, |$ctx:ident, $param:pat_param| $clos:expr) => {
+    ($name:ident: $head:ident -> $body:ty, |$ctx:ident, $param:pat_param| $clos:expr) => {
         #[doc = concat!("Production: `", stringify!($head), " -> ", stringify!($body), "`")]
         pub struct $name;
 
@@ -22,7 +22,7 @@ macro_rules! production {
             }
         }
     };
-    ($name:ident, $head:ident -> $body:ty, |$param:pat_param| $clos:expr) => {
+    ($name:ident: $head:ident -> $body:ty, |$param:pat_param| $clos:expr) => {
         #[doc = concat!("Production: `", stringify!($head), " -> ", stringify!($body), "`")]
         pub struct $name;
 
@@ -36,7 +36,7 @@ macro_rules! production {
             }
         }
     };
-    ($name:ident, $head:ident -> $body:ty) => {
+    ($name:ident: $head:ident -> $body:ty) => {
         #[doc = concat!("Production: `", stringify!($head), " -> ", stringify!($body), "`")]
         pub struct $name;
 

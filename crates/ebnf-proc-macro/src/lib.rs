@@ -81,7 +81,7 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
 
             let sem_action = sem_action.map(|act| quote!(, #act));
 
-            quote!(production!(#ident, #head -> #body #sem_action);)
+            quote!(production!(#ident: #head -> #body #sem_action);)
         }));
 
     quote! {

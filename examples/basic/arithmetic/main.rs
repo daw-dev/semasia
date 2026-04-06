@@ -30,12 +30,12 @@ mod expressions {
     #[token(")")]
     pub struct ClosedPar;
 
-    production!(Addition, Expression -> (Expression, Plus, Term), |(e, _ ,t)| e + t);
-    production!(NoAddition, Expression -> Term);
-    production!(Multiplication, Term -> (Term, Times, Factor), |(t, _, f)| t * f);
-    production!(NoMultiplication, Term -> Factor);
-    production!(Parenthesis, Factor -> (OpenPar, Expression, ClosedPar), |(_, e, _)| e);
-    production!(ActualNumber, Factor -> Number);
+    production!(Addition: Expression -> (Expression, Plus, Term), |(e, _ ,t)| e + t);
+    production!(NoAddition: Expression -> Term);
+    production!(Multiplication: Term -> (Term, Times, Factor), |(t, _, f)| t * f);
+    production!(NoMultiplication: Term -> Factor);
+    production!(Parenthesis: Factor -> (OpenPar, Expression, ClosedPar), |(_, e, _)| e);
+    production!(ActualNumber: Factor -> Number);
 }
 
 use expressions::*;
