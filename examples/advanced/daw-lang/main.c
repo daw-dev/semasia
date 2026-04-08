@@ -14,7 +14,7 @@ int main() {
   print(c);
 
   if (a == b) {
-    print("same value");
+    int print("same value");
   } else if (a > b) {
     print("a is bigger");
   } else {

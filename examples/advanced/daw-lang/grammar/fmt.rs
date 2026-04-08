@@ -213,19 +213,16 @@ impl Display for Indented<&Item> {
             Item::Function(function) => {
                 writeln!(f, "Function:")?;
 
-                // write!(f, "{}  ", "    ".repeat(*indentation))?;
                 write!(f, "{} ┣━", indentation_str)?;
                 write!(f, "Return type: {}", function.return_type)?;
 
                 writeln!(f)?;
 
-                // write!(f, "{}  ", "    ".repeat(*indentation))?;
                 write!(f, "{} ┣━", indentation_str)?;
                 write!(f, "Ident: {}", function.ident)?;
 
                 writeln!(f)?;
 
-                // write!(f, "{}  ", "    ".repeat(*indentation))?;
                 write!(f, "{} ┣━", indentation_str)?;
                 write!(
                     f,
@@ -239,7 +236,6 @@ impl Display for Indented<&Item> {
 
                 writeln!(f)?;
 
-                // write!(f, "{}  ", "    ".repeat(*indentation))?;
                 write!(f, "{} ┗━", indentation_str)?;
                 write!(f, "Body:")?;
 
