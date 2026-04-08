@@ -77,6 +77,7 @@ pub mod language {
     pub struct ClosePar;
 
     #[token("[")]
+    #[left_associative]
     pub struct OpenSquare;
 
     #[token("]")]
@@ -163,6 +164,7 @@ pub mod language {
             Expression::FunctionCall(ast::FunctionCall { function_ident, arguments })
         }
     );
+    production!(ExpressionIsIndexing: Expression -> (Expression, OpenSquare, Expression, CloseSquare), |(base, _, index, _)| Expression::Index(Box::new(base), Box::new(index)));
 
     // STATEMENTS
     ebnf!(StatementIsBody: Statement -> (OpenCurly, Statement*, CloseCurly), |(_, statements, _)| {

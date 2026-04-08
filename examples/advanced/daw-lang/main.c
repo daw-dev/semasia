@@ -11,7 +11,8 @@ int main() {
   int c = a + b;
   print(c);
 
-  /* *a; */
+  b[c + a];
+
 
   if (a == b) {
     print("same value");

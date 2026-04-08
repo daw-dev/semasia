@@ -63,8 +63,11 @@ impl Display for Indented<&Expression> {
                 writeln!(f)?;
                 write!(f, "{} ┗━", indentation_str)?;
                 write!(f, "Inner:")?;
+                writeln!(f)?;
+                indentation.borrow_mut().push(IndentationType::Space);
                 indentation.borrow_mut().push(IndentationType::Last);
                 write!(f, "{}", Indented(expr.as_ref(), indentation.clone()))?;
+                indentation.borrow_mut().pop();
                 indentation.borrow_mut().pop();
                 Ok(())
             }
@@ -73,18 +76,33 @@ impl Display for Indented<&Expression> {
                 writeln!(f)?;
                 write!(f, "{} ┗━", indentation_str)?;
                 write!(f, "Inner:")?;
+                writeln!(f)?;
+                indentation.borrow_mut().push(IndentationType::Space);
                 indentation.borrow_mut().push(IndentationType::Last);
                 write!(f, "{}", Indented(expr.as_ref(), indentation.clone()))?;
+                indentation.borrow_mut().pop();
                 indentation.borrow_mut().pop();
                 Ok(())
             },
             Expression::Index(expr, idx) => {
                 write!(f, "Indexing:")?;
                 writeln!(f)?;
-                write!(f, "{} ┗━", indentation_str)?;
-                write!(f, "Inner:")?;
+                write!(f, "{} ┣━", indentation_str)?;
+                write!(f, "Base:")?;
+                writeln!(f)?;
+                indentation.borrow_mut().push(IndentationType::Middle);
                 indentation.borrow_mut().push(IndentationType::Last);
                 write!(f, "{}", Indented(expr.as_ref(), indentation.clone()))?;
+                indentation.borrow_mut().pop();
+                indentation.borrow_mut().pop();
+                writeln!(f)?;
+                write!(f, "{} ┗━", indentation_str)?;
+                write!(f, "Index:")?;
+                writeln!(f)?;
+                indentation.borrow_mut().push(IndentationType::Space);
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(idx.as_ref(), indentation.clone()))?;
+                indentation.borrow_mut().pop();
                 indentation.borrow_mut().pop();
                 Ok(())
             },
