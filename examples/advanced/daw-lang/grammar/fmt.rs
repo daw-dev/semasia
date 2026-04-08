@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt::{Display, write}, rc::Rc};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use itertools::Itertools;
 
@@ -83,7 +83,7 @@ impl Display for Indented<&Expression> {
                 indentation.borrow_mut().pop();
                 indentation.borrow_mut().pop();
                 Ok(())
-            },
+            }
             Expression::Index(expr, idx) => {
                 write!(f, "Indexing:")?;
                 writeln!(f)?;
@@ -105,7 +105,7 @@ impl Display for Indented<&Expression> {
                 indentation.borrow_mut().pop();
                 indentation.borrow_mut().pop();
                 Ok(())
-            },
+            }
             Expression::FunctionCall(function_call) => {
                 write!(f, "FunctionCall:")?;
                 writeln!(f)?;
@@ -113,7 +113,7 @@ impl Display for Indented<&Expression> {
                 write!(f, "Ident: {}", function_call.function_ident)?;
                 writeln!(f)?;
                 write!(f, "{} ┗━", indentation_str)?;
-                write!(f, "Params:")?;
+                write!(f, "Arguments:")?;
                 for (i, expr) in function_call.arguments.iter().enumerate() {
                     if i == function_call.arguments.len() - 1 {
                         indentation.borrow_mut().push(IndentationType::Space);
@@ -128,10 +128,10 @@ impl Display for Indented<&Expression> {
                     indentation.borrow_mut().pop();
                 }
                 Ok(())
-            },
+            }
             Expression::BinaryOperation(left, op, right) => {
                 write!(f, "BinaryOperation:")?;
-                
+
                 writeln!(f)?;
 
                 write!(f, "{} ┣━", indentation_str)?;
@@ -161,7 +161,7 @@ impl Display for Indented<&Expression> {
                 indentation.borrow_mut().pop();
 
                 Ok(())
-            },
+            }
         }
     }
 }
@@ -257,7 +257,7 @@ impl Display for Indented<&Statement> {
                 indentation.borrow_mut().pop();
 
                 Ok(())
-            },
+            }
             Statement::Return(expr) => {
                 write!(f, "Return:")?;
                 if let Some(expr) = expr {
@@ -418,15 +418,16 @@ impl Display for Indented<&Item> {
                 writeln!(f)?;
 
                 write!(f, "{} ┣━", indentation_str)?;
-                write!(
-                    f,
-                    "Params: {}",
-                    function
-                        .params
-                        .iter()
-                        .map(|(ty, id)| format!("{ty} {id}"))
-                        .format(",")
-                )?;
+                write!(f, "Params:")?;
+                for (i, (ty, id)) in function.params.iter().enumerate() {
+                    writeln!(f)?;
+                    if i == function.params.len() - 1 {
+                        write!(f, "{} ┃  ┗━", indentation_str)?;
+                    } else {
+                        write!(f, "{} ┃  ┣━", indentation_str)?;
+                    }
+                    write!(f, "{ty} {id}")?;
+                }
 
                 writeln!(f)?;
 

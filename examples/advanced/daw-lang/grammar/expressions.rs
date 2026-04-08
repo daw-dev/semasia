@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use itertools::Itertools;
-
 use crate::grammar::{ast::FunctionCall, ctx::CompilationContext, tokens::*, types::Type};
 
 #[derive(Debug)]

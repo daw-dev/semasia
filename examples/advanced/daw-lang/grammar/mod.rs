@@ -97,13 +97,18 @@ pub mod language {
 
     #[token("+")]
     #[left_associative]
-    #[priority(4)]
+    #[priority(3)]
     pub struct Plus;
 
     #[token("*")]
     #[left_associative]
-    #[priority(3)]
+    #[priority(4)]
     pub struct Times;
+
+    #[token("&")]
+    #[right_associative]
+    #[priority(3)]
+    pub struct And;
 
     #[non_terminal]
     pub use expressions::Operator;
@@ -165,6 +170,7 @@ pub mod language {
     production!(GreaterThanOp: Operator -> GreaterThan, |_| Operator::GreaterThan);
     production!(LessThanOp: Operator -> LessThan, |_| Operator::LessThan);
     production!(ExpressionIsDeref: Expression -> (Times, Expression), |(_, expr)| Expression::Deref(Box::new(expr)));
+    production!(ExpressionIsParen: Expression -> (OpenPar, Expression, ClosePar), |(_, expr, _)| expr);
     ebnf!(
         ExpressionIsFunctionCall:
         Expression ->
@@ -174,6 +180,7 @@ pub mod language {
         }
     );
     production!(ExpressionIsIndexing: Expression -> (Expression, OpenSquare, Expression, CloseSquare), |(base, _, index, _)| Expression::Index(Box::new(base), Box::new(index)));
+    production!(ExpressionIsReference: Expression -> (And, Expression), |(_, expr)| Expression::Reference(Box::new(expr)));
 
     // STATEMENTS
     ebnf!(StatementIsBody: Statement -> (OpenCurly, Statement*, CloseCurly), |(_, statements, _)| {

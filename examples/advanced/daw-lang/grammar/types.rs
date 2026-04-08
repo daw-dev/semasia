@@ -20,14 +20,8 @@ impl Type {
     pub fn int() -> Self {
         Self::BaseType("int".into())
     }
-    pub fn long() -> Self {
-        Self::BaseType("long".into())
-    }
     pub fn float() -> Self {
         Self::BaseType("float".into())
-    }
-    pub fn double() -> Self {
-        Self::BaseType("double".into())
     }
     pub fn string() -> Self {
         Self::Pointer(Box::new(Self::char()))

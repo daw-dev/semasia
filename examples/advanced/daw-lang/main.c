@@ -8,11 +8,12 @@ int main() {
   // this is a comment
   int a = 5;
   int b = 2;
-  int c = a + b * 2;
+  int c = a * b + 2;
   print(c);
 
   b[c + a];
 
+  a = a * *&b;
 
   if (a == b) {
     print("same value");
