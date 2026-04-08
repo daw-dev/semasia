@@ -154,6 +154,7 @@ pub mod language {
     production!(EqualsEqualsOp: Operator -> EqualsEquals, |_| Operator::EqualsEquals);
     production!(GreaterThanOp: Operator -> GreaterThan, |_| Operator::GreaterThan);
     production!(LessThanOp: Operator -> LessThan, |_| Operator::LessThan);
+    production!(ExpressionIsDeref: Expression -> (Times, Expression), |(_, expr)| Expression::Deref(Box::new(expr)));
     ebnf!(
         ExpressionIsFunctionCall:
         Expression ->

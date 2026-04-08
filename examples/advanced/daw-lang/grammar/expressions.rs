@@ -13,7 +13,7 @@ pub enum Expression {
     Ident(Ident),
     Deref(Box<Expression>),
     Reference(Box<Expression>),
-    Index(Box<Expression>, usize),
+    Index(Box<Expression>, Box<Expression>),
     FunctionCall(FunctionCall),
     BinaryOperation(Box<Expression>, Operator, Box<Expression>),
 }
@@ -35,28 +35,6 @@ impl Expression {
                 .get_type(&func.function_ident)
                 .expect("such function does not exist"),
             Expression::BinaryOperation(left, _op, _right) => left.get_type(ctx),
-        }
-    }
-}
-
-impl Display for Expression {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Expression::LitInt(str)
-            | Expression::LitDecimal(str)
-            | Expression::LitChar(str)
-            | Expression::LitString(str)
-            | Expression::Ident(str) => write!(f, "{str}"),
-            Expression::Deref(expr) => write!(f, "*{expr}"),
-            Expression::Reference(expr) => write!(f, "&{expr}"),
-            Expression::Index(expr, idx) => write!(f, "{expr}[{idx}]"),
-            Expression::FunctionCall(func) => write!(
-                f,
-                "{}({})",
-                func.function_ident,
-                func.arguments.iter().format(", ")
-            ),
-            Expression::BinaryOperation(left, op, right) => write!(f, "{left} {op} {right}"),
         }
     }
 }

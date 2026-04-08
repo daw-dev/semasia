@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::{cell::RefCell, fmt::{Display, write}, rc::Rc};
 
 use itertools::Itertools;
 
@@ -61,15 +61,89 @@ impl Display for Indented<&Expression> {
             Expression::Deref(expr) => {
                 write!(f, "Deref:")?;
                 writeln!(f)?;
+                write!(f, "{} ┗━", indentation_str)?;
+                write!(f, "Inner:")?;
                 indentation.borrow_mut().push(IndentationType::Last);
                 write!(f, "{}", Indented(expr.as_ref(), indentation.clone()))?;
                 indentation.borrow_mut().pop();
                 Ok(())
             }
-            Expression::Reference(expression) => todo!(),
-            Expression::Index(expression, _) => todo!(),
-            Expression::FunctionCall(function_call) => todo!(),
-            Expression::BinaryOperation(expression, operator, expression1) => todo!(),
+            Expression::Reference(expr) => {
+                write!(f, "Reference:")?;
+                writeln!(f)?;
+                write!(f, "{} ┗━", indentation_str)?;
+                write!(f, "Inner:")?;
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(expr.as_ref(), indentation.clone()))?;
+                indentation.borrow_mut().pop();
+                Ok(())
+            },
+            Expression::Index(expr, idx) => {
+                write!(f, "Indexing:")?;
+                writeln!(f)?;
+                write!(f, "{} ┗━", indentation_str)?;
+                write!(f, "Inner:")?;
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(expr.as_ref(), indentation.clone()))?;
+                indentation.borrow_mut().pop();
+                Ok(())
+            },
+            Expression::FunctionCall(function_call) => {
+                write!(f, "FunctionCall:")?;
+                writeln!(f)?;
+                write!(f, "{} ┣━", indentation_str)?;
+                write!(f, "Ident: {}", function_call.function_ident)?;
+                writeln!(f)?;
+                write!(f, "{} ┗━", indentation_str)?;
+                write!(f, "Params:")?;
+                for (i, expr) in function_call.arguments.iter().enumerate() {
+                    if i == function_call.arguments.len() - 1 {
+                        indentation.borrow_mut().push(IndentationType::Space);
+                        indentation.borrow_mut().push(IndentationType::Last);
+                    } else {
+                        indentation.borrow_mut().push(IndentationType::Space);
+                        indentation.borrow_mut().push(IndentationType::Middle);
+                    }
+                    writeln!(f)?;
+                    write!(f, "{}", Indented(expr, indentation.clone()))?;
+                    indentation.borrow_mut().pop();
+                    indentation.borrow_mut().pop();
+                }
+                Ok(())
+            },
+            Expression::BinaryOperation(left, op, right) => {
+                write!(f, "BinaryOperation:")?;
+                
+                writeln!(f)?;
+
+                write!(f, "{} ┣━", indentation_str)?;
+                write!(f, "Left:")?;
+
+                writeln!(f)?;
+
+                indentation.borrow_mut().push(IndentationType::Middle);
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(left.as_ref(), indentation.clone()))?;
+                indentation.borrow_mut().pop();
+                indentation.borrow_mut().pop();
+
+                writeln!(f)?;
+
+                write!(f, "{} ┣━", indentation_str)?;
+                write!(f, "Operand: {op}")?;
+                writeln!(f)?;
+
+                write!(f, "{} ┗━", indentation_str)?;
+                write!(f, "Right:")?;
+                writeln!(f)?;
+                indentation.borrow_mut().push(IndentationType::Space);
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(right.as_ref(), indentation.clone()))?;
+                indentation.borrow_mut().pop();
+                indentation.borrow_mut().pop();
+
+                Ok(())
+            },
         }
     }
 }
@@ -130,7 +204,16 @@ impl Display for Indented<&Statement> {
                 writeln!(f)?;
 
                 write!(f, "{} ┗━", indentation_str)?;
-                write!(f, "Value: {expr}")
+                writeln!(f, "Value:")?;
+
+                indentation.borrow_mut().push(IndentationType::Space);
+                indentation.borrow_mut().push(IndentationType::Last);
+
+                write!(f, "{}", Indented(expr, indentation.clone()))?;
+
+                indentation.borrow_mut().pop();
+                indentation.borrow_mut().pop();
+                Ok(())
             }
             Statement::Assignment(id, expr) => {
                 writeln!(f, "Assignment:")?;
@@ -141,15 +224,34 @@ impl Display for Indented<&Statement> {
                 writeln!(f)?;
 
                 write!(f, "{} ┗━", indentation_str)?;
-                write!(f, "Value: {expr}")
+                writeln!(f, "Value:")?;
+
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(expr, indentation.clone()))?;
+                indentation.borrow_mut().pop();
+                Ok(())
             }
-            Statement::Expression(expr) => write!(f, "Expression: {expr};"),
+            Statement::Expression(expr) => {
+                writeln!(f, "Expression:")?;
+
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(expr, indentation.clone()))?;
+                indentation.borrow_mut().pop();
+
+                Ok(())
+            },
             Statement::Return(expr) => {
                 write!(f, "Return:")?;
                 if let Some(expr) = expr {
                     writeln!(f)?;
                     write!(f, "{} ┗━", indentation_str)?;
-                    write!(f, "Expression: {expr}")?;
+                    write!(f, "Expression:")?;
+                    writeln!(f)?;
+                    indentation.borrow_mut().push(IndentationType::Space);
+                    indentation.borrow_mut().push(IndentationType::Last);
+                    write!(f, "{}", Indented(expr, indentation.clone()))?;
+                    indentation.borrow_mut().pop();
+                    indentation.borrow_mut().pop();
                 }
                 Ok(())
             }
@@ -173,7 +275,13 @@ impl Display for Indented<&Statement> {
                 writeln!(f, "IfStatement:")?;
 
                 write!(f, "{} ┣━", indentation_str)?;
-                write!(f, "Condition: {condition}")?;
+                writeln!(f, "Condition:")?;
+
+                indentation.borrow_mut().push(IndentationType::Middle);
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(condition, indentation.clone()))?;
+                indentation.borrow_mut().pop();
+                indentation.borrow_mut().pop();
 
                 writeln!(f)?;
 
@@ -220,7 +328,13 @@ impl Display for Indented<&Statement> {
                 writeln!(f, "WhileStatement:")?;
 
                 write!(f, "{} ┣━", indentation_str)?;
-                write!(f, "Condition: {condition}")?;
+                writeln!(f, "Condition:")?;
+
+                indentation.borrow_mut().push(IndentationType::Middle);
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(condition, indentation.clone()))?;
+                indentation.borrow_mut().pop();
+                indentation.borrow_mut().pop();
 
                 writeln!(f)?;
 

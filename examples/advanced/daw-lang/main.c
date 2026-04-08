@@ -11,6 +11,8 @@ int main() {
   int c = a + b;
   print(c);
 
+  /* *a; */
+
   if (a == b) {
     print("same value");
   } else if (a > b) {
