@@ -1,3 +1,11 @@
+int max(int a, int b) {
+  if (a > b) {
+    return a;
+  } else {
+    return b;
+  }
+}
+
 int main() {
   // this is a comment
   int a = 5;
@@ -6,11 +14,11 @@ int main() {
   print(c);
 
   if (a == b) {
-    print("uguali");
+    print("same value");
   } else if (a > b) {
-    print("a maggiore");
+    print("a is bigger");
   } else {
-    print("b maggiore");
+    print("b is bigger");
   }
 
 

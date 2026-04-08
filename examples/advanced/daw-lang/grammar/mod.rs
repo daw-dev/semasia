@@ -1,9 +1,9 @@
 pub mod ast;
 pub mod ctx;
 pub mod expressions;
+pub mod fmt;
 pub mod tokens;
 pub mod types;
-pub mod fmt;
 
 use semasia::grammar;
 
@@ -124,7 +124,7 @@ pub mod language {
     ebnf!(
         ItemIsFunction:
         Item ->
-            (Ident, Ident, OpenPar, (Type, Ident)*, ClosePar, OpenCurly, Statement*, CloseCurly),
+            (Ident, Ident, OpenPar, (Ident, Ident)* Comma, ClosePar, OpenCurly, Statement*, CloseCurly),
         |ctx, (return_type, ident, _, params, _, _, body, _)| {
             ctx.declare(
                 ident.clone(),
@@ -132,12 +132,12 @@ pub mod language {
                     Box::new(Type::BaseType(return_type.clone())),
                     params
                         .iter()
-                        .map(|(ty, _)| ty.clone())
+                        .map(|(ty, _)| Type::BaseType(ty.clone()))
                         .collect()));
             Item::Function(ast::Function {
                 return_type: Type::BaseType(return_type),
                 ident,
-                params,
+                params: params.into_iter().map(|(ty, id)| (Type::BaseType(ty), id)).collect(),
                 body,
             })
         }
