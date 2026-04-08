@@ -2,7 +2,7 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use itertools::Itertools;
 
-use crate::grammar::ast::*;
+use crate::grammar::{ast::*, language::Expression};
 
 pub enum IndentationType {
     Space,
@@ -11,6 +11,68 @@ pub enum IndentationType {
 }
 
 pub struct Indented<T>(pub T, pub Rc<RefCell<Vec<IndentationType>>>);
+
+impl Display for Indented<&Expression> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Indented(expr, indentation) = self;
+        let indentation_str = indentation
+            .borrow()
+            .iter()
+            .map(|ty| match ty {
+                IndentationType::Middle => " ┃ ",
+                IndentationType::Space => "   ",
+                IndentationType::Last => "   ",
+            })
+            .format("")
+            .to_string();
+        write!(
+            f,
+            "{}",
+            indentation
+                .borrow()
+                .iter()
+                .enumerate()
+                .map(|(i, ty)| match ty {
+                    IndentationType::Middle if i == indentation.borrow().len() - 1 => " ┣━",
+                    IndentationType::Middle => " ┃ ",
+                    IndentationType::Space => "   ",
+                    IndentationType::Last if i == indentation.borrow().len() - 1 => " ┗━",
+                    IndentationType::Last => "   ",
+                })
+                .format("")
+                .to_string()
+        )?;
+        match expr {
+            Expression::LitInt(str) => {
+                write!(f, "LitInt: {str}")
+            }
+            Expression::LitDecimal(str) => {
+                write!(f, "LitDecimal: {str}")
+            }
+            Expression::LitChar(str) => {
+                write!(f, "LitChar: {str}")
+            }
+            Expression::LitString(str) => {
+                write!(f, "LitString: {str}")
+            }
+            Expression::Ident(id) => {
+                write!(f, "Ident: {id}")
+            }
+            Expression::Deref(expr) => {
+                write!(f, "Deref:")?;
+                writeln!(f)?;
+                indentation.borrow_mut().push(IndentationType::Last);
+                write!(f, "{}", Indented(expr.as_ref(), indentation.clone()))?;
+                indentation.borrow_mut().pop();
+                Ok(())
+            }
+            Expression::Reference(expression) => todo!(),
+            Expression::Index(expression, _) => todo!(),
+            Expression::FunctionCall(function_call) => todo!(),
+            Expression::BinaryOperation(expression, operator, expression1) => todo!(),
+        }
+    }
+}
 
 impl Display for Indented<&Statement> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -263,9 +325,17 @@ impl Display for Program {
         for (i, item) in self.root_items.iter().enumerate() {
             writeln!(f)?;
             if i == self.root_items.len() - 1 {
-                write!(f, "{}", Indented(item, Rc::new(RefCell::new(vec![IndentationType::Last]))))?;
+                write!(
+                    f,
+                    "{}",
+                    Indented(item, Rc::new(RefCell::new(vec![IndentationType::Last])))
+                )?;
             } else {
-                write!(f, "{}", Indented(item, Rc::new(RefCell::new(vec![IndentationType::Middle]))))?;
+                write!(
+                    f,
+                    "{}",
+                    Indented(item, Rc::new(RefCell::new(vec![IndentationType::Middle])))
+                )?;
             }
         }
         Ok(())
