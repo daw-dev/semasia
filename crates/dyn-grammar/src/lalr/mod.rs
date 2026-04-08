@@ -9,7 +9,7 @@ use crate::{
     symbolic_grammar::{SymbolicGrammar, SymbolicProduction, SymbolicSymbol, SymbolicToken},
 };
 use itertools::Itertools;
-use proc_macro_error::{abort_if_dirty, emit_error};
+use proc_macro_error::{abort_if_dirty, emit_error, emit_warning};
 use std::{cell::RefCell, cmp::Ordering, collections::HashSet, fmt::Display, hash::Hash, rc::Rc};
 
 #[derive(Clone)]
@@ -450,7 +450,9 @@ impl<'a> LalrAutomaton<'a> {
                 let entry = &mut token_table[(state_id, token_id)];
                 if let Some(TokenAction::Reduce(reduce)) = entry.take() {
                     let reduce_production = &self.grammar().productions()[reduce];
-                    let ord = match (reduce_production.extras().1, token.extras().extras().1) {
+                    let prod_priority = reduce_production.extras().1;
+                    let token_priority = token.extras().extras().1;
+                    let ord = match (prod_priority, token_priority) {
                         (ProductionPriority::None, None) => Ordering::Equal,
                         (ProductionPriority::Inherited(_), None) => Ordering::Greater,
                         (ProductionPriority::Explicit(_), None) => Ordering::Greater,
@@ -472,9 +474,24 @@ impl<'a> LalrAutomaton<'a> {
                                 );
                             }
                             Associativity::Left => {
+                                if matches!((prod_priority, token_priority), (ProductionPriority::None, None)) {
+                                    emit_warning!(
+                                        reduce_production.extras().0,
+                                        "shift/reduce conflict resolved with left associativity";
+                                        note = token.extras().id().span() => "this token has the same priority";
+                                    )
+                                }
                                 action = TokenAction::Reduce(reduce);
                             }
-                            Associativity::Right => {}
+                            Associativity::Right => {
+                                if matches!((prod_priority, token_priority), (ProductionPriority::None, None)) {
+                                    emit_warning!(
+                                        reduce_production.extras().0,
+                                        "shift/reduce conflict resolved with left associativity";
+                                        note = token.extras().id().span() => "this token has the same priority";
+                                    )
+                                }
+                            }
                         },
                         Ordering::Greater => action = TokenAction::Reduce(reduce),
                     }
