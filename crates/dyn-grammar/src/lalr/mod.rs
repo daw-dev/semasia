@@ -474,24 +474,9 @@ impl<'a> LalrAutomaton<'a> {
                                 );
                             }
                             Associativity::Left => {
-                                if matches!((prod_priority, token_priority), (ProductionPriority::None, None)) {
-                                    emit_warning!(
-                                        reduce_production.extras().0,
-                                        "shift/reduce conflict resolved with left associativity";
-                                        note = token.extras().id().span() => "this token has the same priority";
-                                    )
-                                }
                                 action = TokenAction::Reduce(reduce);
                             }
-                            Associativity::Right => {
-                                if matches!((prod_priority, token_priority), (ProductionPriority::None, None)) {
-                                    emit_warning!(
-                                        reduce_production.extras().0,
-                                        "shift/reduce conflict resolved with left associativity";
-                                        note = token.extras().id().span() => "this token has the same priority";
-                                    )
-                                }
-                            }
+                            Associativity::Right => {}
                         },
                         Ordering::Greater => action = TokenAction::Reduce(reduce),
                     }

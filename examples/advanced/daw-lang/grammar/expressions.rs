@@ -52,7 +52,7 @@ impl Display for Operator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Operator::Plus => write!(f, "+"),
-            Operator::Times => write!(f, "-"),
+            Operator::Times => write!(f, "*"),
             Operator::EqualsEquals => write!(f, "=="),
             Operator::GreaterThan => write!(f, ">"),
             Operator::LessThan => write!(f, "<"),

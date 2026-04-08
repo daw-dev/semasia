@@ -50,24 +50,29 @@ pub mod language {
     pub use tokens::LitString;
 
     #[token("=")]
+    #[priority(14)]
     pub struct Equals;
 
     #[token("==")]
     #[left_associative]
+    #[priority(7)]
     pub struct EqualsEquals;
 
     #[token(">")]
     #[left_associative]
+    #[priority(6)]
     pub struct GreaterThan;
 
     #[token("<")]
     #[left_associative]
+    #[priority(6)]
     pub struct LessThan;
 
     #[token(";")]
     pub struct SemiColumn;
 
     #[token(",")]
+    #[priority(15)]
     pub struct Comma;
 
     #[token("(")]
@@ -78,6 +83,7 @@ pub mod language {
 
     #[token("[")]
     #[left_associative]
+    #[priority(1)]
     pub struct OpenSquare;
 
     #[token("]")]
@@ -91,10 +97,12 @@ pub mod language {
 
     #[token("+")]
     #[left_associative]
+    #[priority(4)]
     pub struct Plus;
 
     #[token("*")]
     #[left_associative]
+    #[priority(3)]
     pub struct Times;
 
     #[non_terminal]
@@ -149,6 +157,7 @@ pub mod language {
     production!(ExpressionIsLitInt: Expression -> LitInt, |lit| Expression::LitInt(lit));
     production!(ExpressionIsLitDecimal: Expression -> LitDecimal, |lit| Expression::LitDecimal(lit));
     production!(ExpressionIsLitString: Expression -> LitString, |lit| Expression::LitString(lit));
+    production!(ExpressionIsLitChar: Expression -> LitChar, |lit| Expression::LitChar(lit));
     production!(ExpressionIsOperation: Expression -> (Expression, Operator, Expression), |(left, op, right)| Expression::BinaryOperation(Box::new(left), op, Box::new(right)));
     production!(PlusOp: Operator -> Plus, |_| Operator::Plus);
     production!(TimesOp: Operator -> Times, |_| Operator::Times);

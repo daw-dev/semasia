@@ -8,7 +8,7 @@ int main() {
   // this is a comment
   int a = 5;
   int b = 2;
-  int c = a + b;
+  int c = a + b * 2;
   print(c);
 
   b[c + a];
@@ -22,11 +22,12 @@ int main() {
     print("b is bigger");
   }
 
-
   while (a < 12) {
     a = a + 1;
     print(a);
   }
+
+  print(max(2, 3));
 
   return 0;
 }
