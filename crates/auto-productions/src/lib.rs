@@ -9,13 +9,9 @@ pub fn auto_productions(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let item: proc_macro2::TokenStream = item.into();
 
-    let res = quote! {
+    quote! {
         #item
         #auto_productions_enum
     }
-    .into();
-
-    eprintln!("{res}");
-
-    res
+    .into()
 }
