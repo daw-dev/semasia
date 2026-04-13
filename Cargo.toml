@@ -12,6 +12,7 @@ grammar = { path = "crates/grammar" }
 production = { path = "crates/production" }
 from-inherited = { path = "crates/from-inherited" }
 ebnf-proc-macro = { path = "crates/ebnf-proc-macro" }
+auto-productions = { path = "crates/auto-productions" }
 parser = { path = "crates/parser" }
 logos = "0.16.0"
 

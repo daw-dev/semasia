@@ -1,3 +1,4 @@
+use auto_productions_parser::AutoProductionsEnum;
 use dyn_grammar::{
     EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedToken,
     conflicts::Associativity, grammar::Body, lalr::LalrAutomaton,
@@ -35,7 +36,9 @@ impl Constructor {
                 compiler_ctx = Some(ctx);
             } else if let Some(token) = Self::extract_token(item) {
                 tokens.push(token);
-            } else if let Some((non_terminal, is_start)) = Self::extract_non_terminal(item) {
+            } else if let Some((non_terminal, is_start, is_auto_productions)) =
+                Self::extract_non_terminal(item)
+            {
                 if is_start {
                     if let Some(cur_start) = start_symbol {
                         let start_nt: &EnrichedNonTerminal = &non_terminals[cur_start];
@@ -46,6 +49,11 @@ impl Constructor {
                         );
                     }
                     start_symbol = Some(non_terminals.len());
+                }
+                if is_auto_productions {
+                    let auto_productions_enum =
+                        AutoProductionsEnum::try_from(item.clone()).unwrap();
+                    productions.extend(auto_productions_enum.compile());
                 }
                 non_terminals.push(non_terminal);
             } else if let Some(production) = Self::extract_production(item) {
@@ -215,7 +223,7 @@ impl Constructor {
         })
     }
 
-    fn extract_non_terminal(item: &mut Item) -> Option<(EnrichedNonTerminal, bool)> {
+    fn extract_non_terminal(item: &mut Item) -> Option<(EnrichedNonTerminal, bool, bool)> {
         let (attrs, ident) = Self::extract_info(item)?;
         let id = attrs.iter().enumerate().find_map(|(i, attr)| {
             if let Meta::Path(path) = &attr.meta
@@ -238,7 +246,18 @@ impl Constructor {
             attrs.remove(id);
             is_start = true;
         }
-        Some((EnrichedNonTerminal::new(ident, ()), is_start))
+        let mut is_auto_productions = false;
+        if attrs
+            .iter()
+            .any(|attr| matches!(&attr.meta, Meta::Path(path) if path.is_ident("auto_productions")))
+        {
+            is_auto_productions = true;
+        }
+        Some((
+            EnrichedNonTerminal::new(ident, ()),
+            is_start,
+            is_auto_productions,
+        ))
     }
 
     fn extract_production(item: &mut Item) -> Option<EnrichedBaseProduction> {

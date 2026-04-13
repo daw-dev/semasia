@@ -2,9 +2,9 @@ use semasia::grammar;
 
 #[grammar]
 mod abcs {
+    use auto_productions::auto_productions;
     use semasia::production;
 
-    #[start_symbol]
     #[non_terminal]
     pub type S = Box<B>;
 
@@ -17,12 +17,21 @@ mod abcs {
     pub struct B;
 
     production!(P: S -> B);
+
+    #[auto_productions]
+    #[non_terminal]
+    #[start_symbol]
+    #[derive(Debug)]
+    pub enum Test {
+        First(A, B, Box<B>),
+        Second(S, A, B),
+    }
 }
 
 use abcs::Parser;
 
 fn main() {
-    let res = Parser::lex_parse("b");
+    let res = Parser::lex_parse("bab");
     match res {
         Ok(res) => println!("{res:?}"),
         Err(err) => println!("{err}"),

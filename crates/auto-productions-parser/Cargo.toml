@@ -1,0 +1,11 @@
+[package]
+name = "auto-productions-parser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+itertools = "0.14.0"
+syn = { version = "2.0.117", features = ["full"] }
+dyn-grammar = { path = "../dyn-grammar" }
+quote = "1.0.45"
+proc-macro2 = "1.0.106"
