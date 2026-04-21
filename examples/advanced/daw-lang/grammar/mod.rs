@@ -49,6 +49,15 @@ pub mod language {
     #[regex("\"[^\"]*\"", to_string)]
     pub use tokens::LitString;
 
+    // #[non_terminal]
+    // #[auto_productions]
+    // pub enum Lit {
+    //     Int(LitInt),
+    //     Decimal(LitDecimal),
+    //     Char(LitChar),
+    //     String(LitString),
+    // }
+
     #[token("=")]
     #[priority(14)]
     pub struct Equals;
@@ -105,13 +114,18 @@ pub mod language {
     #[priority(4)]
     pub struct Times;
 
+    #[auto_productions]
+    #[non_terminal]
+    #[derive(Debug)]
+    pub enum BinaryOperation {
+        Sum(Box<Expression>, #[skip] Plus, Box<Expression>),
+        Product(Box<Expression>, #[skip] Times, Box<Expression>),
+    }
+
     #[token("&")]
     #[right_associative]
     #[priority(3)]
     pub struct And;
-
-    #[non_terminal]
-    pub use expressions::Operator;
 
     #[token("if")]
     pub struct If;
@@ -163,12 +177,6 @@ pub mod language {
     production!(ExpressionIsLitDecimal: Expression -> LitDecimal, |lit| Expression::LitDecimal(lit));
     production!(ExpressionIsLitString: Expression -> LitString, |lit| Expression::LitString(lit));
     production!(ExpressionIsLitChar: Expression -> LitChar, |lit| Expression::LitChar(lit));
-    production!(ExpressionIsOperation: Expression -> (Expression, Operator, Expression), |(left, op, right)| Expression::BinaryOperation(Box::new(left), op, Box::new(right)));
-    production!(PlusOp: Operator -> Plus, |_| Operator::Plus);
-    production!(TimesOp: Operator -> Times, |_| Operator::Times);
-    production!(EqualsEqualsOp: Operator -> EqualsEquals, |_| Operator::EqualsEquals);
-    production!(GreaterThanOp: Operator -> GreaterThan, |_| Operator::GreaterThan);
-    production!(LessThanOp: Operator -> LessThan, |_| Operator::LessThan);
     production!(ExpressionIsDeref: Expression -> (Times, Expression), |(_, expr)| Expression::Deref(Box::new(expr)));
     production!(ExpressionIsParen: Expression -> (OpenPar, Expression, ClosePar), |(_, expr, _)| expr);
     ebnf!(

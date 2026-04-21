@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-use crate::grammar::{ast::FunctionCall, ctx::CompilationContext, tokens::*, types::Type};
+use crate::grammar::{
+    ast::FunctionCall, ctx::CompilationContext, language::BinaryOperation, tokens::*, types::Type,
+};
 
 #[derive(Debug)]
 pub enum Expression {
@@ -13,7 +15,7 @@ pub enum Expression {
     Reference(Box<Expression>),
     Index(Box<Expression>, Box<Expression>),
     FunctionCall(FunctionCall),
-    BinaryOperation(Box<Expression>, Operator, Box<Expression>),
+    BinaryOperation(BinaryOperation),
 }
 
 impl Expression {
@@ -32,7 +34,17 @@ impl Expression {
             Expression::FunctionCall(func) => ctx
                 .get_type(&func.function_ident)
                 .expect("such function does not exist"),
-            Expression::BinaryOperation(left, _op, _right) => left.get_type(ctx),
+            Expression::BinaryOperation(binop) => binop.get_type(ctx),
+        }
+    }
+}
+
+impl BinaryOperation {
+    pub fn get_type(&self, ctx: &CompilationContext) -> Type {
+        match self {
+            BinaryOperation::Sum(left, _, _) | BinaryOperation::Product(left, _, _) => {
+                left.get_type(ctx)
+            }
         }
     }
 }

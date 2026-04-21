@@ -4,13 +4,15 @@ use quote::quote;
 
 #[proc_macro_attribute]
 pub fn auto_productions(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let auto_productions_enum: AutoProductionsEnum =
-        syn::parse(item.clone()).expect("couldn't parse the item");
+    let mut syn_item: syn::Item = 
+        syn::parse(item).expect("couldn't parse the item");
+    let auto_productions_enum: AutoProductionsEnum = (&mut syn_item).try_into().expect("wrong");
 
-    let item: proc_macro2::TokenStream = item.into();
+    eprintln!("{}", quote!(#syn_item));
+    eprintln!("{}", quote!(#auto_productions_enum));
 
     quote! {
-        #item
+        #syn_item
         #auto_productions_enum
     }
     .into()

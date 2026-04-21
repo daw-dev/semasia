@@ -4,16 +4,17 @@ use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
 use syn::{Ident, Type, parse::Parse, spanned::Spanned};
 
+#[derive(Debug)]
 pub struct AutoProductionsEnumVariant {
     pub ident: Ident,
-    pub ty: Vec<Type>,
+    pub ty: Vec<(Type, bool)>,
 }
 
-impl TryFrom<syn::Variant> for AutoProductionsEnumVariant {
+impl TryFrom<&mut syn::Variant> for AutoProductionsEnumVariant {
     type Error = syn::Error;
 
-    fn try_from(value: syn::Variant) -> Result<Self, Self::Error> {
-        let ident = value.ident;
+    fn try_from(value: &mut syn::Variant) -> Result<Self, Self::Error> {
+        let ident = value.ident.clone();
 
         let syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed, .. }) = value.fields else {
             return Err(syn::Error::new(
@@ -22,26 +23,64 @@ impl TryFrom<syn::Variant> for AutoProductionsEnumVariant {
             ));
         };
 
-        let ty = unnamed.into_iter().map(|field| field.ty).collect();
+        let ty = unnamed
+            .into_iter()
+            .map(|field| {
+                (field.ty.clone(), field.)
+            })
+            .collect_vec();
+
+        value.fields = todo!();
+
+        eprintln!("{}", ty.iter().map(|(_, skip)| skip).format(", "));
+
+        Ok(Self { ident, ty })
+    }
+}
+
+impl TryFrom<&syn::Variant> for AutoProductionsEnumVariant {
+    type Error = syn::Error;
+
+    fn try_from(value: &syn::Variant) -> Result<Self, Self::Error> {
+        let ident = value.ident.clone();
+
+        let syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed, .. }) = &value.fields else {
+            return Err(syn::Error::new(
+                value.fields.span(),
+                "auto production works only for unnamed fields",
+            ));
+        };
+
+        let ty = unnamed
+            .into_iter()
+            .map(|field| {
+                (
+                    field.ty.clone(),
+                    field.attrs.iter().any(|attr| attr.path().is_ident("skip")),
+                )
+            })
+            .collect_vec();
+
+        eprintln!("{}", ty.iter().map(|(_, skip)| skip).format(", "));
 
         Ok(Self { ident, ty })
     }
 }
 
 impl AutoProductionsEnumVariant {
-    fn ident_from_type(ty: Type) -> Ident {
+    fn ident_from_type((ty, skip): (Type, bool)) -> (Ident, bool) {
         match ty {
             Type::Path(type_path) => {
                 let last_segment = type_path.path.segments.into_iter().last().unwrap();
                 match last_segment.arguments {
-                    syn::PathArguments::None => last_segment.ident,
+                    syn::PathArguments::None => (last_segment.ident, skip),
                     syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
                         args,
                         ..
                     }) if args.len() == 1 => {
                         let inner = args.into_iter().next().unwrap();
                         match inner {
-                            syn::GenericArgument::Type(ty) => Self::ident_from_type(ty),
+                            syn::GenericArgument::Type(ty) => Self::ident_from_type((ty, skip)),
                             _ => panic!("generic argument must be a type"),
                         }
                     }
@@ -70,7 +109,7 @@ impl AutoProductionsEnumVariant {
         )
     }
 
-    fn compile_type(ty: Vec<Type>) -> Vec<Ident> {
+    fn compile_type(ty: Vec<(Type, bool)>) -> Vec<(Ident, bool)> {
         ty.into_iter().map(Self::ident_from_type).collect()
     }
 
@@ -78,21 +117,27 @@ impl AutoProductionsEnumVariant {
         EnrichedBaseProduction::new(
             self.production_ident(enum_ident),
             enum_ident.clone(),
-            Body::new(Self::compile_type(self.ty)),
+            Body::new(
+                Self::compile_type(self.ty)
+                    .into_iter()
+                    .map(|(ty, _)| ty)
+                    .collect(),
+            ),
             None,
         )
     }
 }
 
+#[derive(Debug)]
 pub struct AutoProductionsEnum {
     pub ident: Ident,
     pub variants: Vec<AutoProductionsEnumVariant>,
 }
 
-impl TryFrom<syn::Item> for AutoProductionsEnum {
+impl TryFrom<&mut syn::Item> for AutoProductionsEnum {
     type Error = syn::Error;
 
-    fn try_from(value: syn::Item) -> Result<Self, Self::Error> {
+    fn try_from(value: &mut syn::Item) -> Result<Self, Self::Error> {
         let syn::Item::Enum(enum_input) = value else {
             return Err(syn::Error::new(
                 value.span(),
@@ -101,10 +146,32 @@ impl TryFrom<syn::Item> for AutoProductionsEnum {
         };
 
         Ok(AutoProductionsEnum {
-            ident: enum_input.ident,
+            ident: enum_input.ident.clone(),
             variants: enum_input
                 .variants
-                .into_iter()
+                .iter_mut()
+                .map(TryFrom::try_from)
+                .process_results(|vars| vars.collect())?,
+        })
+    }
+}
+
+impl TryFrom<&syn::Item> for AutoProductionsEnum {
+    type Error = syn::Error;
+
+    fn try_from(value: &syn::Item) -> Result<Self, Self::Error> {
+        let syn::Item::Enum(enum_input) = value else {
+            return Err(syn::Error::new(
+                value.span(),
+                "auto production only works with enums",
+            ));
+        };
+
+        Ok(AutoProductionsEnum {
+            ident: enum_input.ident.clone(),
+            variants: enum_input
+                .variants
+                .iter()
                 .map(TryFrom::try_from)
                 .process_results(|vars| vars.collect())?,
         })
@@ -113,7 +180,7 @@ impl TryFrom<syn::Item> for AutoProductionsEnum {
 
 impl Parse for AutoProductionsEnum {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        AutoProductionsEnum::try_from(input.parse::<syn::Item>()?)
+        AutoProductionsEnum::try_from(&mut input.parse::<syn::Item>()?)
     }
 }
 
@@ -125,11 +192,25 @@ impl ToTokens for AutoProductionsEnum {
             let variant_ty = &variant.ty;
             let prod_ident = variant.production_ident(ident);
             let compiled_type = AutoProductionsEnumVariant::compile_type(variant_ty.clone());
-            let temps = (0..compiled_type.len())
-                .map(|i| format_ident!("t{i}"))
-                .collect_vec();
+            let prod_body = compiled_type.iter().map(|(ty, _)| ty);
+            let mut temp_counter = 0;
+            let patt = compiled_type.iter().map(|(_, skip)| {
+                if *skip {
+                    format_ident!("_")
+                } else {
+                    let res = format_ident!("t{temp_counter}");
+                    temp_counter += 1;
+                    res
+                }
+            });
+            let temps = compiled_type
+                .iter()
+                .filter_map(|(_, skip)| (!skip).then_some(()))
+                .enumerate()
+                .map(|(i, _)| format_ident!("t{i}"));
+
             let production = quote!(
-                production!(#prod_ident: #ident -> (#(#compiled_type),*), |(#(#temps),*)| #ident::#variant_ident(#(#temps.into()),*));
+                production!(#prod_ident: #ident -> (#(#prod_body),*), |(#(#patt),*)| #ident::#variant_ident(#(#temps.into()),*));
             );
             tokens.extend(production);
         }

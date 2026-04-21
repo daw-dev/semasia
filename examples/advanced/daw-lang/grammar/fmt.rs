@@ -2,7 +2,7 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use itertools::Itertools;
 
-use crate::grammar::{ast::*, language::Expression};
+use crate::grammar::{ast::*, language::{BinaryOperation, Expression}};
 
 pub enum IndentationType {
     Space,
@@ -129,39 +129,63 @@ impl Display for Indented<&Expression> {
                 }
                 Ok(())
             }
-            Expression::BinaryOperation(left, op, right) => {
+            Expression::BinaryOperation(binop) => {
                 write!(f, "BinaryOperation:")?;
-
-                writeln!(f)?;
-
-                write!(f, "{} ┣━", indentation_str)?;
-                write!(f, "Left:")?;
-
-                writeln!(f)?;
-
-                indentation.borrow_mut().push(IndentationType::Middle);
                 indentation.borrow_mut().push(IndentationType::Last);
-                write!(f, "{}", Indented(left.as_ref(), indentation.clone()))?;
+                write!(f, "{}", Indented(binop, indentation.clone()))?;
                 indentation.borrow_mut().pop();
-                indentation.borrow_mut().pop();
-
-                writeln!(f)?;
-
-                write!(f, "{} ┣━", indentation_str)?;
-                write!(f, "Operand: {op}")?;
-                writeln!(f)?;
-
-                write!(f, "{} ┗━", indentation_str)?;
-                write!(f, "Right:")?;
-                writeln!(f)?;
-                indentation.borrow_mut().push(IndentationType::Space);
-                indentation.borrow_mut().push(IndentationType::Last);
-                write!(f, "{}", Indented(right.as_ref(), indentation.clone()))?;
-                indentation.borrow_mut().pop();
-                indentation.borrow_mut().pop();
-
                 Ok(())
             }
+        }
+    }
+}
+
+impl Display for Indented<&BinaryOperation> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Indented(expr, indentation) = self;
+        let indentation_str = indentation
+            .borrow()
+            .iter()
+            .map(|ty| match ty {
+                IndentationType::Middle => " ┃ ",
+                IndentationType::Space => "   ",
+                IndentationType::Last => "   ",
+            })
+            .format("")
+            .to_string();
+                // write!(f, "BinaryOperation:")?;
+                //
+                // writeln!(f)?;
+                //
+                // write!(f, "{} ┣━", indentation_str)?;
+                // write!(f, "Left:")?;
+                //
+                // writeln!(f)?;
+                //
+                // indentation.borrow_mut().push(IndentationType::Middle);
+                // indentation.borrow_mut().push(IndentationType::Last);
+                // write!(f, "{}", Indented(left.as_ref(), indentation.clone()))?;
+                // indentation.borrow_mut().pop();
+                // indentation.borrow_mut().pop();
+                //
+                // writeln!(f)?;
+                //
+                // write!(f, "{} ┣━", indentation_str)?;
+                // write!(f, "Operand: {op}")?;
+                // writeln!(f)?;
+                //
+                // write!(f, "{} ┗━", indentation_str)?;
+                // write!(f, "Right:")?;
+                // writeln!(f)?;
+                // indentation.borrow_mut().push(IndentationType::Space);
+                // indentation.borrow_mut().push(IndentationType::Last);
+                // write!(f, "{}", Indented(right.as_ref(), indentation.clone()))?;
+                // indentation.borrow_mut().pop();
+                // indentation.borrow_mut().pop();
+                //
+                // Ok(())
+        match self {
+            
         }
     }
 }

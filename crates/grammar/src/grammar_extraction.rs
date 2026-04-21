@@ -52,7 +52,7 @@ impl Constructor {
                 }
                 if is_auto_productions {
                     let auto_productions_enum =
-                        AutoProductionsEnum::try_from(item.clone()).unwrap();
+                        AutoProductionsEnum::try_from(&*item).unwrap();
                     productions.extend(auto_productions_enum.compile());
                 }
                 non_terminals.push(non_terminal);
