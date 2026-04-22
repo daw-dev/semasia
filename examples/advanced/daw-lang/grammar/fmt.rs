@@ -131,6 +131,7 @@ impl Display for Indented<&Expression> {
             }
             Expression::BinaryOperation(binop) => {
                 write!(f, "BinaryOperation:")?;
+                writeln!(f)?;
                 indentation.borrow_mut().push(IndentationType::Last);
                 write!(f, "{}", Indented(binop, indentation.clone()))?;
                 indentation.borrow_mut().pop();
@@ -153,39 +154,18 @@ impl Display for Indented<&BinaryOperation> {
             })
             .format("")
             .to_string();
-                // write!(f, "BinaryOperation:")?;
-                //
-                // writeln!(f)?;
-                //
-                // write!(f, "{} ┣━", indentation_str)?;
-                // write!(f, "Left:")?;
-                //
-                // writeln!(f)?;
-                //
-                // indentation.borrow_mut().push(IndentationType::Middle);
-                // indentation.borrow_mut().push(IndentationType::Last);
-                // write!(f, "{}", Indented(left.as_ref(), indentation.clone()))?;
-                // indentation.borrow_mut().pop();
-                // indentation.borrow_mut().pop();
-                //
-                // writeln!(f)?;
-                //
-                // write!(f, "{} ┣━", indentation_str)?;
-                // write!(f, "Operand: {op}")?;
-                // writeln!(f)?;
-                //
-                // write!(f, "{} ┗━", indentation_str)?;
-                // write!(f, "Right:")?;
-                // writeln!(f)?;
-                // indentation.borrow_mut().push(IndentationType::Space);
-                // indentation.borrow_mut().push(IndentationType::Last);
-                // write!(f, "{}", Indented(right.as_ref(), indentation.clone()))?;
-                // indentation.borrow_mut().pop();
-                // indentation.borrow_mut().pop();
-                //
-                // Ok(())
-        match self {
-            
+        match expr {
+            BinaryOperation::Sum(left, right) => {
+                write!(f, "{indentation_str}")?;
+                write!(f, "Sum")
+            },
+            BinaryOperation::Product(left, right) => {
+                write!(f, "{indentation_str}")?;
+                write!(f, "Product")
+            },
+            BinaryOperation::LessThan(expression, expression1) => todo!(),
+            BinaryOperation::GreaterThan(expression, expression1) => todo!(),
+            BinaryOperation::EqualityCheck(expression, expression1) => todo!(),
         }
     }
 }

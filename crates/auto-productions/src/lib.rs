@@ -8,9 +8,6 @@ pub fn auto_productions(_attr: TokenStream, item: TokenStream) -> TokenStream {
         syn::parse(item).expect("couldn't parse the item");
     let auto_productions_enum: AutoProductionsEnum = (&mut syn_item).try_into().expect("wrong");
 
-    eprintln!("{}", quote!(#syn_item));
-    eprintln!("{}", quote!(#auto_productions_enum));
-
     quote! {
         #syn_item
         #auto_productions_enum

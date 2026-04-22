@@ -42,9 +42,10 @@ impl Expression {
 impl BinaryOperation {
     pub fn get_type(&self, ctx: &CompilationContext) -> Type {
         match self {
-            BinaryOperation::Sum(left, _, _) | BinaryOperation::Product(left, _, _) => {
+            BinaryOperation::Sum(left, _) | BinaryOperation::Product(left, _) => {
                 left.get_type(ctx)
             }
+            _ => todo!(),
         }
     }
 }

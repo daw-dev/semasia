@@ -53,7 +53,8 @@ impl Constructor {
                 if is_auto_productions {
                     let auto_productions_enum =
                         AutoProductionsEnum::try_from(&*item).unwrap();
-                    productions.extend(auto_productions_enum.compile());
+                    let new_productions = auto_productions_enum.compile();
+                    productions.extend(new_productions);
                 }
                 non_terminals.push(non_terminal);
             } else if let Some(production) = Self::extract_production(item) {

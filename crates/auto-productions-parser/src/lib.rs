@@ -43,8 +43,6 @@ impl TryFrom<&mut syn::Variant> for AutoProductionsEnumVariant {
             unnamed: fields,
         });
 
-        eprintln!("{}", ty.iter().map(|(_, hide)| hide).format(", "));
-
         Ok(Self { ident, ty })
     }
 }
@@ -71,8 +69,6 @@ impl TryFrom<&syn::Variant> for AutoProductionsEnumVariant {
                 )
             })
             .collect_vec();
-
-        eprintln!("{}", ty.iter().map(|(_, hide)| hide).format(", "));
 
         Ok(Self { ident, ty })
     }

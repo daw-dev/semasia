@@ -49,14 +49,14 @@ pub mod language {
     #[regex("\"[^\"]*\"", to_string)]
     pub use tokens::LitString;
 
-    // #[non_terminal]
-    // #[auto_productions]
-    // pub enum Lit {
-    //     Int(LitInt),
-    //     Decimal(LitDecimal),
-    //     Char(LitChar),
-    //     String(LitString),
-    // }
+    #[non_terminal]
+    #[auto_productions]
+    pub enum Lit {
+        Int(LitInt),
+        Decimal(LitDecimal),
+        Char(LitChar),
+        String(LitString),
+    }
 
     #[token("=")]
     #[priority(14)]
@@ -118,8 +118,11 @@ pub mod language {
     #[non_terminal]
     #[derive(Debug)]
     pub enum BinaryOperation {
-        Sum(Box<Expression>, #[skip] Plus, Box<Expression>),
-        Product(Box<Expression>, #[skip] Times, Box<Expression>),
+        Sum(Box<Expression>, #[hide] Plus, Box<Expression>),
+        Product(Box<Expression>, #[hide] Times, Box<Expression>),
+        LessThan(Box<Expression>, #[hide] LessThan, Box<Expression>),
+        GreaterThan(Box<Expression>, #[hide] GreaterThan, Box<Expression>),
+        EqualityCheck(Box<Expression>, #[hide] EqualsEquals, Box<Expression>),
     }
 
     #[token("&")]
@@ -189,6 +192,7 @@ pub mod language {
     );
     production!(ExpressionIsIndexing: Expression -> (Expression, OpenSquare, Expression, CloseSquare), |(base, _, index, _)| Expression::Index(Box::new(base), Box::new(index)));
     production!(ExpressionIsReference: Expression -> (And, Expression), |(_, expr)| Expression::Reference(Box::new(expr)));
+    production!(ExpressionIsBinOp: Expression -> BinaryOperation, |op| Expression::BinaryOperation(op));
 
     // STATEMENTS
     ebnf!(StatementIsBody: Statement -> (OpenCurly, Statement*, CloseCurly), |(_, statements, _)| {
