@@ -23,7 +23,7 @@ mod abcs {
     #[start_symbol]
     #[derive(Debug)]
     pub enum Test {
-        First(A, B, Box<B>),
+        First(A, #[hide] B, Box<B>),
         Second(S, A, B),
     }
 }
@@ -31,7 +31,7 @@ mod abcs {
 use abcs::Parser;
 
 fn main() {
-    let res = Parser::lex_parse("bab");
+    let res = Parser::lex_parse("abb");
     match res {
         Ok(res) => println!("{res:?}"),
         Err(err) => println!("{err}"),

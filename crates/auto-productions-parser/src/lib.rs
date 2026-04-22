@@ -16,23 +16,34 @@ impl TryFrom<&mut syn::Variant> for AutoProductionsEnumVariant {
     fn try_from(value: &mut syn::Variant) -> Result<Self, Self::Error> {
         let ident = value.ident.clone();
 
-        let syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed, .. }) = value.fields else {
+        let syn::Fields::Unnamed(syn::FieldsUnnamed { unnamed, .. }) =
+            std::mem::replace(&mut value.fields, syn::Fields::Unit)
+        else {
             return Err(syn::Error::new(
                 value.fields.span(),
                 "auto production works only for unnamed fields",
             ));
         };
 
+        let mut fields = syn::punctuated::Punctuated::new();
+
         let ty = unnamed
             .into_iter()
             .map(|field| {
-                (field.ty.clone(), field.)
+                let hide = field.attrs.iter().any(|attr| attr.path().is_ident("hide"));
+                if !hide {
+                    fields.push(field.clone());
+                }
+                (field.ty, hide)
             })
             .collect_vec();
 
-        value.fields = todo!();
+        value.fields = syn::Fields::Unnamed(syn::FieldsUnnamed {
+            paren_token: Default::default(),
+            unnamed: fields,
+        });
 
-        eprintln!("{}", ty.iter().map(|(_, skip)| skip).format(", "));
+        eprintln!("{}", ty.iter().map(|(_, hide)| hide).format(", "));
 
         Ok(Self { ident, ty })
     }
@@ -56,31 +67,31 @@ impl TryFrom<&syn::Variant> for AutoProductionsEnumVariant {
             .map(|field| {
                 (
                     field.ty.clone(),
-                    field.attrs.iter().any(|attr| attr.path().is_ident("skip")),
+                    field.attrs.iter().any(|attr| attr.path().is_ident("hide")),
                 )
             })
             .collect_vec();
 
-        eprintln!("{}", ty.iter().map(|(_, skip)| skip).format(", "));
+        eprintln!("{}", ty.iter().map(|(_, hide)| hide).format(", "));
 
         Ok(Self { ident, ty })
     }
 }
 
 impl AutoProductionsEnumVariant {
-    fn ident_from_type((ty, skip): (Type, bool)) -> (Ident, bool) {
+    fn ident_from_type((ty, hide): (Type, bool)) -> (Ident, bool) {
         match ty {
             Type::Path(type_path) => {
                 let last_segment = type_path.path.segments.into_iter().last().unwrap();
                 match last_segment.arguments {
-                    syn::PathArguments::None => (last_segment.ident, skip),
+                    syn::PathArguments::None => (last_segment.ident, hide),
                     syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
                         args,
                         ..
                     }) if args.len() == 1 => {
                         let inner = args.into_iter().next().unwrap();
                         match inner {
-                            syn::GenericArgument::Type(ty) => Self::ident_from_type((ty, skip)),
+                            syn::GenericArgument::Type(ty) => Self::ident_from_type((ty, hide)),
                             _ => panic!("generic argument must be a type"),
                         }
                     }
@@ -194,8 +205,8 @@ impl ToTokens for AutoProductionsEnum {
             let compiled_type = AutoProductionsEnumVariant::compile_type(variant_ty.clone());
             let prod_body = compiled_type.iter().map(|(ty, _)| ty);
             let mut temp_counter = 0;
-            let patt = compiled_type.iter().map(|(_, skip)| {
-                if *skip {
+            let patt = compiled_type.iter().map(|(_, hide)| {
+                if *hide {
                     format_ident!("_")
                 } else {
                     let res = format_ident!("t{temp_counter}");
@@ -205,7 +216,7 @@ impl ToTokens for AutoProductionsEnum {
             });
             let temps = compiled_type
                 .iter()
-                .filter_map(|(_, skip)| (!skip).then_some(()))
+                .filter_map(|(_, hide)| (!hide).then_some(()))
                 .enumerate()
                 .map(|(i, _)| format_ident!("t{i}"));
 
