@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::grammar::{
     ast::FunctionCall, ctx::CompilationContext, language::{BinaryOperation, Lit}, tokens::*, types::Type,
 };
@@ -51,27 +49,6 @@ impl BinaryOperation {
                 left.get_type(ctx)
             }
             _ => todo!(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Operator {
-    Plus,
-    Times,
-    EqualsEquals,
-    GreaterThan,
-    LessThan,
-}
-
-impl Display for Operator {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Operator::Plus => write!(f, "+"),
-            Operator::Times => write!(f, "*"),
-            Operator::EqualsEquals => write!(f, "=="),
-            Operator::GreaterThan => write!(f, ">"),
-            Operator::LessThan => write!(f, "<"),
         }
     }
 }
