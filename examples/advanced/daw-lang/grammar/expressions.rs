@@ -1,15 +1,23 @@
 use std::fmt::Display;
 
 use crate::grammar::{
-    ast::FunctionCall, ctx::CompilationContext, language::BinaryOperation, tokens::*, types::Type,
+    ast::FunctionCall, ctx::CompilationContext, language::{BinaryOperation, Lit}, tokens::*, types::Type,
 };
+
+impl Lit {
+    pub fn get_type(&self) -> Type {
+        match self {
+            Lit::Int(_) => Type::int(),
+            Lit::Decimal(_) => Type::float(),
+            Lit::Char(_) => Type::char(),
+            Lit::String(_) => Type::string(),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum Expression {
-    LitInt(LitInt),
-    LitDecimal(LitDecimal),
-    LitChar(LitChar),
-    LitString(LitString),
+    Lit(Lit),
     Ident(Ident),
     Deref(Box<Expression>),
     Reference(Box<Expression>),
@@ -21,10 +29,7 @@ pub enum Expression {
 impl Expression {
     pub fn get_type(&self, ctx: &CompilationContext) -> Type {
         match self {
-            Expression::LitInt(_) => Type::int(),
-            Expression::LitDecimal(_) => Type::float(),
-            Expression::LitChar(_) => Type::char(),
-            Expression::LitString(_) => Type::string(),
+            Expression::Lit(lit) => lit.get_type(),
             Expression::Ident(id) => ctx
                 .get_type(id)
                 .expect("ident refers to a undeclared variable"),

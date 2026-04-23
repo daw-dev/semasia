@@ -2,7 +2,10 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use itertools::Itertools;
 
-use crate::grammar::{ast::*, language::{BinaryOperation, Expression}};
+use crate::grammar::{
+    ast::*,
+    language::{BinaryOperation, Expression, Lit},
+};
 
 pub enum IndentationType {
     Space,
@@ -43,16 +46,16 @@ impl Display for Indented<&Expression> {
                 .to_string()
         )?;
         match expr {
-            Expression::LitInt(str) => {
+            Expression::Lit(Lit::Int(str)) => {
                 write!(f, "LitInt: {str}")
             }
-            Expression::LitDecimal(str) => {
+            Expression::Lit(Lit::Decimal(str)) => {
                 write!(f, "LitDecimal: {str}")
             }
-            Expression::LitChar(str) => {
+            Expression::Lit(Lit::Char(str)) => {
                 write!(f, "LitChar: {str}")
             }
-            Expression::LitString(str) => {
+            Expression::Lit(Lit::String(str)) => {
                 write!(f, "LitString: {str}")
             }
             Expression::Ident(id) => {
@@ -158,11 +161,11 @@ impl Display for Indented<&BinaryOperation> {
             BinaryOperation::Sum(left, right) => {
                 write!(f, "{indentation_str}")?;
                 write!(f, "Sum")
-            },
+            }
             BinaryOperation::Product(left, right) => {
                 write!(f, "{indentation_str}")?;
                 write!(f, "Product")
-            },
+            }
             BinaryOperation::LessThan(expression, expression1) => todo!(),
             BinaryOperation::GreaterThan(expression, expression1) => todo!(),
             BinaryOperation::EqualityCheck(expression, expression1) => todo!(),

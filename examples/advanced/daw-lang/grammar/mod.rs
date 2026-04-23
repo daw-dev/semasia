@@ -51,6 +51,7 @@ pub mod language {
 
     #[non_terminal]
     #[auto_productions]
+    #[derive(Debug)]
     pub enum Lit {
         Int(LitInt),
         Decimal(LitDecimal),
@@ -176,10 +177,7 @@ pub mod language {
 
     // EXPRESSIONS
     production!(ExpressionIsIdent: Expression -> Ident, |id| Expression::Ident(id));
-    production!(ExpressionIsLitInt: Expression -> LitInt, |lit| Expression::LitInt(lit));
-    production!(ExpressionIsLitDecimal: Expression -> LitDecimal, |lit| Expression::LitDecimal(lit));
-    production!(ExpressionIsLitString: Expression -> LitString, |lit| Expression::LitString(lit));
-    production!(ExpressionIsLitChar: Expression -> LitChar, |lit| Expression::LitChar(lit));
+    production!(ExpressionIsLit: Expression -> Lit, |lit| Expression::Lit(lit));
     production!(ExpressionIsDeref: Expression -> (Times, Expression), |(_, expr)| Expression::Deref(Box::new(expr)));
     production!(ExpressionIsParen: Expression -> (OpenPar, Expression, ClosePar), |(_, expr, _)| expr);
     ebnf!(
