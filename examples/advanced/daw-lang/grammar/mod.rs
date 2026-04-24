@@ -1,7 +1,6 @@
 pub mod ast;
 pub mod ctx;
 pub mod expressions;
-pub mod fmt;
 pub mod tokens;
 pub mod types;
 
@@ -194,7 +193,7 @@ pub mod language {
 
     // STATEMENTS
     ebnf!(StatementIsBody: Statement -> (OpenCurly, Statement*, CloseCurly), |(_, statements, _)| {
-        Statement::Body(statements)
+        Statement::Braces(statements)
     });
     production!(Assignment: Statement -> (Ident, Equals, Expression, SemiColumn), |ctx, (ident, _, expr, _)| {
         match ctx.get_type(&ident) {

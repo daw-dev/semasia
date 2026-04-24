@@ -18,6 +18,7 @@ logos = "0.16.0"
 
 [dev-dependencies]
 itertools = "0.14.0"
+ptree = "0.5.2"
 
 [[example]]
 name = "arithmetic-ast"

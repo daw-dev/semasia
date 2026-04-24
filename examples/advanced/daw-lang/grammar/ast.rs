@@ -15,7 +15,7 @@ pub enum Statement {
     Return(Option<Expression>),
     Break,
     Continue,
-    Body(Vec<Statement>),
+    Braces(Vec<Statement>),
     IfStatement(Expression, Box<Statement>, Option<Box<Statement>>),
     WhileStatement(Expression, Box<Statement>),
 }

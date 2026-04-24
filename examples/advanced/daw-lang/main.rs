@@ -1,7 +1,9 @@
 mod grammar;
+mod display_tree;
 
 use grammar::language;
 use parser::{results::LexParseError};
+use ptree::print_tree;
 
 fn main() {
     let file = include_str!("main.c");
@@ -10,7 +12,7 @@ fn main() {
     let result = language::Parser::lex_parse_default_ctx(file);
     match result {
         Ok((program, ctx)) => {
-            println!("{program}");
+            print_tree(&program.build_tree());
             println!("ctx is {ctx:?}");
         }
         Err(err) => {
