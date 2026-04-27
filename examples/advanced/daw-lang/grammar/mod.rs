@@ -149,13 +149,13 @@ pub mod language {
     #[token("return")]
     pub struct Return;
 
-    ebnf!(ProgramIsItems: Program -> Item*, |st| Program { root_items: st });
+    ebnf!(ProgramIsItems: Program -> Vec<Item>, |st| Program { root_items: st });
 
     // ITEMS
     ebnf!(
         ItemIsFunction:
         Item ->
-            (Ident, Ident, OpenPar, (Ident, Ident)* Comma, ClosePar, OpenCurly, Statement*, CloseCurly),
+            (Ident, Ident, OpenPar, #[separator(Comma)] Vec<(Ident, Ident)>, ClosePar, OpenCurly, Vec<Statement>, CloseCurly),
         |ctx, (return_type, ident, _, params, _, _, body, _)| {
             ctx.declare(
                 ident.clone(),
@@ -182,7 +182,7 @@ pub mod language {
     ebnf!(
         ExpressionIsFunctionCall:
         Expression ->
-            (Ident, OpenPar, Expression * Comma, ClosePar),
+            (Ident, OpenPar, #[separator(Comma)] Vec<Expression>, ClosePar),
         |(function_ident, _, arguments, _)| {
             Expression::FunctionCall(ast::FunctionCall { function_ident, arguments })
         }
@@ -192,7 +192,7 @@ pub mod language {
     production!(ExpressionIsBinOp: Expression -> BinaryOperation, |op| Expression::BinaryOperation(op));
 
     // STATEMENTS
-    ebnf!(StatementIsBody: Statement -> (OpenCurly, Statement*, CloseCurly), |(_, statements, _)| {
+    ebnf!(StatementIsBody: Statement -> (OpenCurly, Vec<Statement>, CloseCurly), |(_, statements, _)| {
         Statement::Braces(statements)
     });
     production!(Assignment: Statement -> (Ident, Equals, Expression, SemiColumn), |ctx, (ident, _, expr, _)| {
@@ -207,7 +207,7 @@ pub mod language {
         }
         Statement::Assignment(ident, expr)
     });
-    ebnf!(Declaration: Statement -> (Ident, Ident, (Equals, Expression)?, SemiColumn), |ctx, (ty, id, val_opt, _)| {
+    ebnf!(Declaration: Statement -> (Ident, Ident, Option<(Equals, Expression)>, SemiColumn), |ctx, (ty, id, val_opt, _)| {
         ctx.declare(id.clone(), Type::BaseType(ty.clone()));
         match val_opt {
             Some((_, val)) => {
@@ -218,11 +218,11 @@ pub mod language {
             }
         }
     });
-    ebnf!(ReturnStatement: Statement -> (Return, Expression?, SemiColumn), |(_, expr, _)| Statement::Return(expr));
+    ebnf!(ReturnStatement: Statement -> (Return, Option<Expression>, SemiColumn), |(_, expr, _)| Statement::Return(expr));
     ebnf!(
         IfStatement:
         Statement ->
-            (If, OpenPar, Expression, ClosePar, Statement, (Else, Statement)?),
+            (If, OpenPar, Expression, ClosePar, Statement, Option<(Else, Statement)>),
         |(_, _, condition, _, statement, else_st)| {
             Statement::IfStatement(
                 condition,

@@ -318,16 +318,15 @@ impl Function {
         }
 
         tree.end_child();
+        tree.end_child();
     }
 }
 
 impl Item {
     pub fn build_tree(&self, tree: &mut TreeBuilder) {
-        tree.begin_child(String::from("Item:"));
         match self {
             Item::Function(function) => function.build_tree(tree),
         }
-        tree.end_child();
     }
 }
 
