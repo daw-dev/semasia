@@ -1,5 +1,3 @@
-use std::iter::Product;
-
 use dyn_grammar::grammar::{Body, Production};
 use itertools::Itertools;
 use proc_macro2::Span;

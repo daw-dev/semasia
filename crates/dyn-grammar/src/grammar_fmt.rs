@@ -3,8 +3,7 @@ use std::fmt::Display;
 use syn::Ident;
 
 use crate::{
-    EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedProduction,
-    EnrichedToken,
+    EnrichedGrammar, EnrichedNonTerminal, EnrichedProduction, EnrichedToken,
     grammar::Production,
     symbolic_grammar::{SymbolicGrammar, SymbolicNonTerminal, SymbolicProduction, SymbolicToken},
 };
