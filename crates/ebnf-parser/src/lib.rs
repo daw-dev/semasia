@@ -1,79 +1,9 @@
-use dyn_grammar::{EnrichedBaseProduction, grammar::Body};
+use dyn_grammar::grammar::{Body, Production};
 use itertools::Itertools;
-use proc_macro2::{self, Span};
-use std::fmt::Display;
-use syn::{ExprClosure, Ident, Token, braced, parenthesized, parse::Parse};
-
-#[derive(Debug)]
-pub struct EbnfAlternativeVariant {
-    ident: Ident,
-    v_type: EbnfBody,
-}
-
-impl Parse for EbnfAlternativeVariant {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let ident: Ident = input.parse()?;
-        let body = if input.peek(syn::token::Paren) {
-            input.parse()?
-        } else {
-            EbnfBody {
-                items: vec![EbnfBodyItem::Ident(ident.clone())],
-            }
-        };
-
-        Ok(EbnfAlternativeVariant {
-            ident,
-            v_type: body,
-        })
-    }
-}
-
-impl Display for EbnfAlternativeVariant {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}->{}", self.ident, self.v_type)
-    }
-}
-
-impl EbnfAlternativeVariant {
-    fn compile_helper(
-        self,
-        enum_ident: Ident,
-        productions: &mut Vec<EbnfCompiledProduction>,
-        types: &mut Vec<EbnfCompiledType>,
-        id_stack: &mut Vec<String>,
-        span: Span,
-    ) -> Vec<Ident> {
-        id_stack.push(self.ident.to_string());
-
-        let compiled_body = self
-            .v_type
-            .compile_helper(productions, types, id_stack, span);
-
-        productions.push(EbnfCompiledProduction {
-            ident: EbnfBodyItem::compose_name(id_stack, Span::call_site()),
-            head: enum_ident,
-            body: compiled_body.clone(),
-            sem_action: CompiledSemAction::Alternative,
-        });
-
-        id_stack.pop();
-
-        compiled_body
-    }
-}
-
-#[derive(Debug)]
-pub enum EbnfBodyItem {
-    Ident(Ident),
-    Alternatives {
-        enum_ident: Ident,
-        variants_types: Vec<EbnfAlternativeVariant>,
-    },
-    Repetition(EbnfBody, Option<EbnfBody>),
-    Optional(EbnfBody),
-    // TODO: add "constant" repetition
-    // like ebnf!(..., -> (..., [Token; 5], ...));
-}
+use proc_macro_error::{emit_error, emit_warning};
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
+use syn::{ExprClosure, Ident, Token, Type, TypeTuple, parse::Parse};
 
 impl EbnfBodyItem {
     fn compile_helper(
@@ -289,242 +219,232 @@ impl EbnfBodyItem {
     }
 }
 
-impl Parse for EbnfBodyItem {
+pub type EbnfCompiledType = TokenStream;
+pub type CompiledSemAction = TokenStream;
+pub type EbnfCompiledProduction = Production<Ident, Ident, Ident, Option<ExprClosure>>;
+
+struct RestrictedTypeArray {
+
+}
+
+struct RestrictedTypePath {
+
+}
+
+enum RestrictedType {
+    Array(RestrictedTypeArray),
+    Tuple(RestrictedTypeTuple),
+    Path(RestrictedTypePath),
+}
+
+struct RestrictedTypeWrapper {
+    attrs: Vec<syn::Attribute>,
+    ty: RestrictedType,
+}
+
+struct RestrictedTypeTuple {
+    paren_token: syn::token::Paren,
+    elems: syn::punctuated::Punctuated<RestrictedTypeWrapper, syn::token::Comma>
+}
+
+impl Parse for RestrictedTypeTuple {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        if input.peek(syn::token::Paren) {
-            let elements: EbnfBody = input.parse()?;
-
-            if elements.items.is_empty() {
-                Err(syn::Error::new(
-                    Span::call_site(),
-                    "cannot use empty parenthesis",
-                ))
-            } else if input.peek(Token![?]) {
-                input.parse::<Token![?]>()?;
-                Ok(Self::Optional(elements))
-            } else if input.peek(Token![*]) {
-                input.parse::<Token![*]>()?;
-                let separator = input.parse::<EbnfBody>().ok();
-                Ok(Self::Repetition(elements, separator))
-            } else {
-                Err(syn::Error::new(
-                    Span::call_site(),
-                    "cannot use parenthesis without * or ?",
-                ))
-            }
-        } else {
-            let ident: Ident = input.parse()?;
-            if input.peek(syn::token::Brace) {
-                let variants_content;
-                braced!(variants_content in input);
-                let variants =
-                    variants_content.parse_terminated(EbnfAlternativeVariant::parse, Token![,])?;
-                let variants_types = variants.into_iter().collect();
-                Ok(Self::Alternatives {
-                    enum_ident: ident,
-                    variants_types,
-                })
-            } else if input.peek(Token![?]) {
-                input.parse::<Token![?]>()?;
-                Ok(Self::Optional(EbnfBody {
-                    items: vec![EbnfBodyItem::Ident(ident)],
-                }))
-            } else if input.peek(Token![*]) {
-                input.parse::<Token![*]>()?;
-                let separator = input.parse::<EbnfBody>().ok();
-                Ok(Self::Repetition(
-                    EbnfBody {
-                        items: vec![EbnfBodyItem::Ident(ident)],
-                    },
-                    separator,
-                ))
-            } else {
-                Ok(Self::Ident(ident))
-            }
-        }
+        todo!()
     }
 }
 
-impl Display for EbnfBodyItem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            EbnfBodyItem::Ident(ident) => write!(f, "{ident}"),
-            EbnfBodyItem::Alternatives {
-                enum_ident,
-                variants_types,
-            } => write!(
-                f,
-                "{enum_ident} {{ {} }}",
-                variants_types.iter().format(", ")
-            ),
-            EbnfBodyItem::Repetition(body, None) => {
-                write!(f, "{body}*")
-            }
-            EbnfBodyItem::Repetition(body, Some(separator)) => {
-                write!(f, "{body}*{separator}")
-            }
-            EbnfBodyItem::Optional(body) => {
-                write!(f, "{body}?")
-            }
-        }
-    }
+pub struct EbnfProduction {
+    ident: Ident,
+    head: Ident,
+    body: RestrictedTypeTuple,
+    sem_action: Option<ExprClosure>,
 }
 
-#[derive(Debug)]
-pub struct EbnfBody {
-    items: Vec<EbnfBodyItem>,
-}
-
-impl EbnfBody {
-    fn compile_helper(
-        self,
+impl EbnfProduction {
+    fn compile_tuple(
+        tuple: RestrictedTypeTuple,
         productions: &mut Vec<EbnfCompiledProduction>,
         types: &mut Vec<EbnfCompiledType>,
         id_stack: &mut Vec<String>,
         span: Span,
     ) -> Vec<Ident> {
-        self.items
-            .into_iter()
-            .enumerate()
-            .map(|(item_index, item)| {
-                id_stack.push(item_index.to_string());
-                let ident = item.compile_helper(productions, types, id_stack, span);
-                id_stack.pop();
-                ident
-            })
-            .collect()
+        todo!()
     }
-}
 
-impl Parse for EbnfBody {
-    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let items = if input.peek(syn::token::Paren) {
-            let body_content;
-            parenthesized!(body_content in input);
-            let body = body_content.parse_terminated(EbnfBodyItem::parse, Token![,])?;
-            body.into_iter().collect()
-        } else {
-            vec![input.parse()?]
-        };
-
-        Ok(EbnfBody { items })
-    }
-}
-
-impl Display for EbnfBody {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.items.as_slice() {
-            [only_item] => write!(f, "{only_item}"),
-            other => write!(f, "({})", other.iter().format(", ")),
-        }
-    }
-}
-
-pub enum EbnfCompiledType {
-    Enum {
-        enum_ident: Ident,
-        enum_variants: Vec<(Ident, Vec<Ident>)>,
-    },
-    Repetition {
-        alias_ident: Ident,
-        alias_vec_types: Vec<Ident>,
-    },
-    Optional {
-        alias_ident: Ident,
-        alias_opt_types: Vec<Ident>,
-    },
-}
-
-#[derive(Debug)]
-pub enum CompiledSemAction {
-    Alternative,
-    RepetitionSepMore(usize),
-    RepetitionSepDone,
-    RepetitionEmpty,
-    RepetitionNonEmpty,
-    SimpleRepetitionMore,
-    SimpleRepetitionDone,
-    OptionalSome,
-    OptionalNone,
-    Compiled(Option<ExprClosure>),
-}
-
-#[derive(Debug)]
-pub struct EbnfCompiledProduction {
-    pub ident: Ident,
-    pub head: Ident,
-    pub body: Vec<Ident>,
-    pub sem_action: CompiledSemAction,
-}
-
-impl Display for EbnfCompiledProduction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}: {} -> ({})",
-            self.ident,
-            self.head,
-            self.body.iter().format(", ")
-        )
-    }
-}
-
-impl EbnfCompiledProduction {
-    pub fn new(ident: Ident, head: Ident, body: Vec<Ident>, sem_action: CompiledSemAction) -> Self {
-        Self {
-            ident,
-            head,
-            body,
-            sem_action,
-        }
-    }
-}
-
-impl From<EbnfCompiledProduction> for EnrichedBaseProduction {
-    fn from(val: EbnfCompiledProduction) -> EnrichedBaseProduction {
-        EnrichedBaseProduction::new(val.ident, val.head, Body::new(val.body), None)
-    }
-}
-
-#[derive(Debug)]
-pub struct EbnfProduction {
-    pub ident: Ident,
-    pub head: Ident,
-    pub body: EbnfBody,
-    pub sem_action: Option<ExprClosure>,
-}
-
-impl EbnfProduction {
-    fn new(ident: Ident, head: Ident, body: EbnfBody, sem_action: Option<ExprClosure>) -> Self {
-        EbnfProduction {
-            ident,
-            head,
-            body,
-            sem_action,
+    fn compile_type(
+        ty: RestrictedType,
+        productions: &mut Vec<EbnfCompiledProduction>,
+        types: &mut Vec<EbnfCompiledType>,
+        id_stack: &mut Vec<String>,
+        span: Span,
+    ) -> Ident {
+        match ty {
+            RestrictedType::Path(type_path) => {
+                let last_segment = type_path.path.segments.pop().unwrap().into_value();
+                let ident = last_segment.ident;
+                match last_segment.arguments {
+                    syn::PathArguments::None => {
+                        ident
+                    }
+                    syn::PathArguments::AngleBracketed(args) if args.args.len() == 1 => {
+                        let arg = args.args.pop().unwrap().into_value();
+                        let syn::GenericArgument::Type(arg) = arg else {
+                            emit_error!(arg, "argument has to be a type");
+                            return ident;
+                        };
+                        if ident == "Vec" {
+                            let alias = Self::repetition_alias(id_stack, span);
+                            let inner_ident = match arg {
+                                Type::Path(type_path) => {
+                                    let Some(inner_ident) = type_path.path.get_ident() else {
+                                        emit_error!(
+                                            type_path,
+                                            "argument of vec has to be either an ident or a tuple"
+                                        );
+                                        return ident;
+                                    };
+                                    inner_ident.clone()
+                                }
+                                Type::Tuple(type_tuple) => {
+                                    let inner_ident = Self::compile_tuple(
+                                        type_tuple,
+                                        productions,
+                                        types,
+                                        id_stack,
+                                        span,
+                                    );
+                                    inner_ident
+                                }
+                                _ => {
+                                    emit_error!(
+                                        arg,
+                                        "argument of vec has to be either an ident or a tuple"
+                                    );
+                                    return ident;
+                                }
+                            };
+                            
+                            alias
+                        } else if ident == "Option" {
+                            let alias = Self::optional_alias(id_stack, span);
+                            alias
+                        // } else if args.args.len() == 1 {
+                        //     emit_warning!(
+                        //         ident,
+                        //         "ident is neither Vec nor Option, so {arg} is used as symbol"
+                        //     );
+                        //     ident
+                        } else {
+                            emit_error!(args, "cannot have multiple generic arguments");
+                            ident
+                        }
+                    }
+                    syn::PathArguments::AngleBracketed(args) => {
+                        emit_error!(
+                            args,
+                            "generic arguments different from <Type> are not valid in an ebnf item"
+                        );
+                        ident
+                    }
+                    syn::PathArguments::Parenthesized(args) => {
+                        emit_error!(
+                            args,
+                            "parenthesized arguments are not valid in an ebnf item"
+                        );
+                        ident
+                    }
+                }
+            }
+            RestrictedType::Array(type_array) => todo!(),
+            RestrictedType::Tuple(type_tuple) => todo!(),
+            _ => todo!(),
         }
     }
 
     pub fn compile(self) -> (Vec<EbnfCompiledProduction>, Vec<EbnfCompiledType>) {
         let ident = self.ident;
-        let mut productions = Vec::with_capacity(self.body.items.len());
-        let mut types = Vec::with_capacity(self.body.items.len());
+        let mut productions = Vec::with_capacity(self.body.elems.len());
+        let mut types = Vec::with_capacity(self.body.elems.len());
         let head = self.head;
 
-        let compiled_body = self.body.compile_helper(
+        let compiled_body = Self::compile_tuple(
+            self.body,
             &mut productions,
             &mut types,
             &mut vec!["__Ebnf".to_string(), ident.to_string()],
             ident.span().clone(),
         );
 
-        productions.push(EbnfCompiledProduction {
-            ident,
-            head,
-            body: compiled_body,
-            sem_action: CompiledSemAction::Compiled(self.sem_action),
-        });
+        productions.push(Production::new(ident, head, Body::new(compiled_body), self.sem_action));
 
         (productions, types)
+    }
+
+    fn compose_name(id_stack: &[String], span: Span) -> Ident {
+        Ident::new(&id_stack.iter().format("").to_string(), span)
+    }
+
+    fn repetition_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("Rep".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn non_empty_repetition_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("NonEmptyRep".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn repetition_more_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("More".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn repetition_done_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("Done".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn repetition_empty_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("Empty".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn repetition_non_empty_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("NonEmpty".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn optional_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("Opt".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn optional_some_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("Some".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn optional_none_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("None".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
     }
 }
 
@@ -537,18 +457,22 @@ impl Parse for EbnfProduction {
         let body = input.parse()?;
 
         if input.is_empty() {
-            return Ok(EbnfProduction::new(ident, head, body, None));
+            return Ok(EbnfProduction {
+                ident,
+                head,
+                body,
+                sem_action: None,
+            });
         }
 
         input.parse::<Token![,]>()?;
-        let sem_action = input.parse::<ExprClosure>()?;
+        let sem_action = input.parse()?;
 
-        Ok(EbnfProduction::new(ident, head, body, Some(sem_action)))
-    }
-}
-
-impl Display for EbnfProduction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}, {} -> {}", self.ident, self.head, self.body,)
+        Ok(EbnfProduction {
+            ident,
+            head,
+            body,
+            sem_action: Some(sem_action),
+        })
     }
 }
