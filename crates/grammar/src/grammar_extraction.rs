@@ -60,11 +60,7 @@ impl Constructor {
             } else if let Some(production) = Self::extract_production(item) {
                 productions.push(production);
             } else if let Some(ebnf) = Self::extract_ebnf_production(item) {
-                // eprintln!("found {ebnf}");
                 let extra_prods = ebnf.compile().0.into_iter().map(Into::into).collect_vec();
-                // for prod in extra_prods.iter() {
-                //     eprintln!("{prod}");
-                // }
                 let extra_nts = extra_prods
                     .iter()
                     .map(EnrichedBaseProduction::head)

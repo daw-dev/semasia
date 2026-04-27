@@ -18,3 +18,9 @@ pub type EnrichedProduction =
     Production<Ident, EnrichedNonTerminal, EnrichedSymbol, ProductionPriority>;
 
 pub type EnrichedGrammar = Grammar<EnrichedToken, EnrichedNonTerminal, EnrichedProduction, Context>;
+
+impl From<Production<Ident, Ident, Ident, Option<syn::ExprClosure>>> for EnrichedBaseProduction {
+    fn from(value: Production<Ident, Ident, Ident, Option<syn::ExprClosure>>) -> Self {
+        Production::new(value.id, value.head, value.body, None)
+    }
+}

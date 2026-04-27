@@ -1,9 +1,11 @@
 use itertools::Itertools;
 use std::fmt::Display;
+use syn::Ident;
 
 use crate::{
     EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedProduction,
     EnrichedToken,
+    grammar::Production,
     symbolic_grammar::{SymbolicGrammar, SymbolicNonTerminal, SymbolicProduction, SymbolicToken},
 };
 
@@ -31,7 +33,7 @@ impl Display for SymbolicNonTerminal {
     }
 }
 
-impl Display for EnrichedBaseProduction {
+impl<Extras> Display for Production<Ident, Ident, Ident, Extras> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

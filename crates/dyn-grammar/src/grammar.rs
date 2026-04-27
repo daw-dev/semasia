@@ -232,11 +232,12 @@ impl<SymbolType> IntoIterator for Body<SymbolType> {
     }
 }
 
+#[derive(Debug)]
 pub struct Production<ProductionId, HeadType, BodySymbol, Extras = ()> {
-    id: ProductionId,
-    head: HeadType,
-    body: Body<BodySymbol>,
-    extras: Extras,
+    pub(crate) id: ProductionId,
+    pub(crate) head: HeadType,
+    pub(crate) body: Body<BodySymbol>,
+    pub(crate) extras: Extras,
 }
 
 impl<ProductionId: PartialEq, HeadType, BodySymbol, Extras> PartialEq
