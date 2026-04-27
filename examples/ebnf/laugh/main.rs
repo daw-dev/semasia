@@ -6,7 +6,8 @@ mod laugh {
 
     #[non_terminal]
     #[start_symbol]
-    pub struct Laugh;
+    #[derive(Debug)]
+    pub struct Laugh(Vec<A>);
 
     #[derive(Debug)]
     #[token("a")]
@@ -17,7 +18,10 @@ mod laugh {
     #[token("H")]
     pub struct H;
 
-    ebnf!(LaughProd: Laugh -> A * H, |_as| todo!());
+    ebnf!(LaughProd: Laugh -> #[separator(H)] Vec<A>, |aa| Laugh(aa));
 }
 
-fn main() {}
+fn main() {
+    let result = laugh::Parser::lex_parse("ahahaha").expect("couldn't parse");
+    println!("{result:?}");
+}

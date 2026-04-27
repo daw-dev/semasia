@@ -9,9 +9,13 @@ pub fn ebnf(input: TokenStream) -> TokenStream {
 
     let (productions, types) = ebnf_production.compile();
 
-    quote! {
+    let res = quote! {
         #(#types)*
         #(production!(#productions);)*
     }
-    .into()
+    .into();
+
+    // eprintln!("{res}");
+
+    res
 }

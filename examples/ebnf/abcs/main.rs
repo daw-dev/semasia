@@ -7,7 +7,7 @@ mod abcs {
     #[non_terminal]
     #[start_symbol]
     #[derive(Debug)]
-    pub struct S(Vec<A>, Option<B>, usize);
+    pub struct S(Vec<A>, Option<B>, C);
 
     #[token("a")]
     #[derive(Debug)]
@@ -21,19 +21,15 @@ mod abcs {
     #[derive(Debug)]
     pub struct C;
 
-    #[token("d")]
-    #[derive(Debug)]
-    pub struct D;
-
-    ebnf!(P0: S -> (A*, B?, CorD { C, D }), |(a, b, c_or_d)| {
-        S(a, b, match c_or_d { CorD::C(_) => 0, CorD::D(_) => 1})
+    ebnf!(P0: S -> (Vec<A>, Option<B>, C), |(a, b, c)| {
+        S(a, b, c)
     });
 }
 
 use abcs::Parser;
 
 fn main() {
-    let res = Parser::lex_parse("aaaaad");
+    let res = Parser::lex_parse("aaaaabc");
     match res {
         Ok(res) => println!("{res:?}"),
         Err(err) => println!("{err}"),

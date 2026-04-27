@@ -171,7 +171,7 @@ impl EbnfBodyItem {
                                     .collect::<Vec<_>>();
                                 let fillers = std::iter::repeat_n(
                                     format_ident!("_"),
-                                    body_len - compiled_body_len,
+                                    body_len - compiled_body_len + 1,
                                 );
                                 parse_quote!(|(mut acc, #(#fillers,)* #(#vars),*)| {
                                     acc.push((#(#vars),*));
@@ -195,7 +195,7 @@ impl EbnfBodyItem {
                                 .chain(compiled_body)
                                 .collect(),
                             Some({
-                                let vars = (0..compiled_body_len - 1)
+                                let vars = (0..compiled_body_len)
                                     .map(|i| format_ident!("t{i}"))
                                     .collect::<Vec<_>>();
 
@@ -250,7 +250,7 @@ impl EbnfBodyItem {
     }
 
     fn compose_name(id_stack: &[String], span: Span) -> Ident {
-        Ident::new(&id_stack.iter().format("_").to_string(), span)
+        Ident::new(&id_stack.iter().format("At").to_string(), span)
     }
 
     fn repetition_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
