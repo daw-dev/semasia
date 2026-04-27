@@ -144,7 +144,7 @@ impl EbnfBodyItem {
                             Self::repetition_more_ident(id_stack, span),
                             non_empty_rep_alias.clone(),
                             std::iter::once(non_empty_rep_alias.clone())
-                                .chain(separator_body.into_iter())
+                                .chain(separator_body)
                                 .chain(compiled_body.clone())
                                 .collect(),
                             Some({
@@ -460,7 +460,7 @@ impl EbnfProduction {
             &mut productions,
             &mut types,
             &mut vec!["__Ebnf".to_string(), ident.to_string()],
-            ident.span().clone(),
+            ident.span(),
         );
 
         productions.push(Production::new(

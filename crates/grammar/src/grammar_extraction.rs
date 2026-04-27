@@ -164,7 +164,7 @@ impl Constructor {
                 if let Meta::List(raw_list) = &mut attr.meta {
                     let parser =
                         syn::punctuated::Punctuated::<syn::Expr, syn::Token![,]>::parse_terminated;
-                    if let Ok(mut list) = parser.parse2(raw_list.tokens.clone().into()) {
+                    if let Ok(mut list) = parser.parse2(raw_list.tokens.clone()) {
                         list.insert(1, parse_quote!(|_| #ident));
                         raw_list.tokens = quote!(#list);
                     }

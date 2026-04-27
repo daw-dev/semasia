@@ -378,3 +378,18 @@ impl<
         Self::new().do_lex_parse(source).map(|ok| ok.0)
     }
 }
+impl<
+    NonTerminal,
+    Token,
+    StartSymbol: From<NonTerminal>,
+    Prod: Reduce<NonTerminal, Token, Ctx>,
+    Tab: Tables<NonTerminal, Token, Prod>,
+    Ctx,
+> Default for Parser<NonTerminal, Token, StartSymbol, Prod, Tab, Ctx>
+where
+    Ctx: Default,
+{
+    fn default() -> Self {
+        Self::default_ctx()
+    }
+}
