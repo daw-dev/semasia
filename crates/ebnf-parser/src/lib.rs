@@ -1,3 +1,5 @@
+use std::iter::Product;
+
 use dyn_grammar::grammar::{Body, Production};
 use itertools::Itertools;
 use proc_macro2::Span;
@@ -52,30 +54,7 @@ impl Parse for EbnfBodyItem {
                 let body = input.parse::<EbnfBody>()?;
                 input.parse::<Token![>]>()?;
                 if ident == "Vec" {
-                    let separator = match attr {
-                        Some(attr) => {
-                            if attr.path().is_ident("separator") {
-                                match attr.meta {
-                                    syn::Meta::List(meta_list) => {
-                                        let body = syn::parse2(meta_list.tokens)?;
-                                        Some(body)
-                                    }
-                                    _ => {
-                                        return Err(syn::Error::new(
-                                            attr.meta.span(),
-                                            "attribute has to have a meta list",
-                                        ));
-                                    }
-                                }
-                            } else {
-                                return Err(syn::Error::new(
-                                    attr.path().span(),
-                                    "#[separator(Sep)] is the only valid attribute",
-                                ));
-                            }
-                        }
-                        None => None,
-                    };
+                    let separator = Self::extract_separator(attr)?;
                     Ok(Self::Vec { separator, body })
                 } else if ident == "Option" {
                     Ok(Self::Option { body })
@@ -101,8 +80,9 @@ impl Parse for EbnfBodyItem {
             inner.parse::<Token![;]>()?;
             let size = inner.parse::<LitInt>()?;
             let size = size.base10_parse::<usize>()?;
+            let separator = Self::extract_separator(attr)?;
             Ok(Self::Array {
-                separator: None,
+                separator,
                 body,
                 size,
             })
@@ -141,8 +121,12 @@ impl EbnfBodyItem {
 
                         types.push(parse_quote!(pub type #non_empty_rep_alias = #alias;));
 
+                        id_stack.push(String::from("Sep"));
+
                         let separator_body =
                             separator.compile_helper(productions, types, id_stack, span);
+
+                        id_stack.pop();
 
                         productions.push(Production::new(
                             Self::repetition_non_empty_ident(id_stack, span),
@@ -221,7 +205,67 @@ impl EbnfBodyItem {
                 separator,
                 body,
                 size,
-            } => todo!(),
+            } => {
+                let alias = Self::array_alias(id_stack, span);
+
+                let compiled_body = body.compile_helper(productions, types, id_stack, span);
+
+                let compiled_body_len = compiled_body.len();
+
+                id_stack.push(String::from("Sep"));
+
+                let compiled_separator =
+                    separator.map(|sep| sep.compile_helper(productions, types, id_stack, span));
+
+                id_stack.pop();
+
+                let compiled_separator_len = compiled_separator
+                    .as_ref()
+                    .map(Vec::len)
+                    .unwrap_or_default();
+
+                types.push(parse_quote!(pub type #alias = [(#(#compiled_body),*); #size];));
+
+                let final_body = std::iter::repeat(std::iter::chain(
+                    compiled_body,
+                    compiled_separator.into_iter().flatten(),
+                ))
+                .flatten()
+                .take(size * compiled_body_len + (size - 1) * compiled_separator_len)
+                .collect();
+
+                let mut params = (0..compiled_body_len)
+                    .map(|i| format_ident!("t0_{i}"))
+                    .collect_vec();
+
+                for i in 1..size {
+                    params.extend(std::iter::repeat_n(
+                        format_ident!("_"),
+                        compiled_separator_len,
+                    ));
+                    params.extend((0..compiled_body_len).map(|j| format_ident!("t{i}_{j}")));
+                }
+
+                let groupings = (0..size).map(|i| {
+                    let group_ident = format_ident!("t{i}");
+                    let vars = (0..compiled_body_len).map(|j| format_ident!("t{i}_{j}"));
+                    quote::quote!(let #group_ident = (#(#vars),*);)
+                });
+
+                let groups = (0..size).map(|i| format_ident!("t{i}"));
+
+                productions.push(Production::new(
+                    Self::array_construct_ident(id_stack, span),
+                    alias.clone(),
+                    final_body,
+                    Some(parse_quote!(|(#(#params),*)| {
+                        #(#groupings)*
+                        [#(#groups),*]
+                    })),
+                ));
+
+                alias
+            }
             EbnfBodyItem::Option { body } => {
                 let alias = Self::optional_alias(id_stack, span);
 
@@ -314,6 +358,47 @@ impl EbnfBodyItem {
         let res = Self::compose_name(id_stack, span);
         id_stack.pop();
         res
+    }
+
+    fn array_alias(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("Arr".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn array_construct_ident(id_stack: &mut Vec<String>, span: Span) -> Ident {
+        id_stack.push("Construct".to_string());
+        let res = Self::compose_name(id_stack, span);
+        id_stack.pop();
+        res
+    }
+
+    fn extract_separator(attr: Option<Attribute>) -> Result<Option<EbnfBody>, syn::Error> {
+        Ok(match attr {
+            Some(attr) => {
+                if attr.path().is_ident("separator") {
+                    match attr.meta {
+                        syn::Meta::List(meta_list) => {
+                            let body = syn::parse2(meta_list.tokens)?;
+                            Some(body)
+                        }
+                        _ => {
+                            return Err(syn::Error::new(
+                                attr.meta.span(),
+                                "attribute has to have a meta list",
+                            ));
+                        }
+                    }
+                } else {
+                    return Err(syn::Error::new(
+                        attr.path().span(),
+                        "#[separator(Sep)] is the only valid attribute",
+                    ));
+                }
+            }
+            None => None,
+        })
     }
 }
 
