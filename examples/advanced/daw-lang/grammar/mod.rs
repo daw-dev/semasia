@@ -50,7 +50,7 @@ pub mod language {
 
     #[non_terminal]
     #[auto_productions]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum Lit {
         Int(LitInt),
         Decimal(LitDecimal),
@@ -116,7 +116,7 @@ pub mod language {
 
     #[auto_productions]
     #[non_terminal]
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum BinaryOperation {
         Sum(Box<Expression>, #[hide] Plus, Box<Expression>),
         Product(Box<Expression>, #[hide] Times, Box<Expression>),
@@ -149,30 +149,87 @@ pub mod language {
     #[token("return")]
     pub struct Return;
 
+    #[token("struct")]
+    pub struct Struct;
+
+    #[token("int")]
+    pub struct Int;
+
+    #[token("float")]
+    pub struct Float;
+
+    #[token("char")]
+    pub struct Char;
+
+    #[token("void")]
+    pub struct Void;
+
+    #[non_terminal]
+    #[auto_productions]
+    #[derive(Debug, PartialEq, Eq, Clone)]
+    pub enum BaseType {
+        Int(#[hide] Int),
+        Float(#[hide] Float),
+        Char(#[hide] Char),
+        Void(#[hide] Void),
+        Ident(Ident),
+    }
+
+    #[non_terminal]
+    #[auto_productions]
+    #[derive(Debug, PartialEq, Eq, Clone)]
+    pub enum NonArrayType {
+        Pointer(#[hide] Times, Box<NonArrayType>),
+        BaseType(BaseType),
+    }
+
+    #[non_terminal]
+    pub use types::TypedIdent;
+
     ebnf!(ProgramIsItems: Program -> Vec<Item>, |st| Program { root_items: st });
+
+    #[non_terminal]
+    pub use ast::StructDefinition;
+
+    // STRUCTS
+    ebnf!(StructCreation:
+        StructDefinition -> (Struct, Ident, OpenCurly, Vec<(TypedIdent, SemiColumn)>, CloseCurly, SemiColumn),
+        |(_, ident, _, fields, _, _)| {
+            StructDefinition {
+                ident,
+                ty: types::StructType {
+                    fields: fields.into_iter().map(|(ty_id, _)| (ty_id.ident, ty_id.ty)).collect()
+                },
+            }
+        }
+    );
+
+    // TYPED IDENTS
+    production!(TypedIdentIsNonArray: TypedIdent -> (NonArrayType, Ident), |(ty, ident)| TypedIdent { ty: ty.into(), ident });
+    ebnf!(TypedIdentIsArray: TypedIdent -> (TypedIdent, OpenSquare, Option<LitInt>, CloseSquare),
+        |(ty, _, _size, _)| {
+            TypedIdent {
+                ty: Type::Array(Box::new(ty.ty)),
+                ident: ty.ident,
+            }
+        }
+    );
 
     // ITEMS
     ebnf!(
         ItemIsFunction:
         Item ->
-            (Ident, Ident, OpenPar, #[separator(Comma)] Vec<(Ident, Ident)>, ClosePar, OpenCurly, Vec<Statement>, CloseCurly),
+            (NonArrayType, Ident, OpenPar, #[separator(Comma)] Vec<TypedIdent>, ClosePar, OpenCurly, Vec<Statement>, CloseCurly),
         |ctx, (return_type, ident, _, params, _, _, body, _)| {
-            ctx.declare(
-                ident.clone(),
-                Type::Function(
-                    Box::new(Type::BaseType(return_type.clone())),
-                    params
-                        .iter()
-                        .map(|(ty, _)| Type::BaseType(ty.clone()))
-                        .collect()));
             Item::Function(ast::Function {
-                return_type: Type::BaseType(return_type),
+                return_type: return_type.into(),
                 ident,
-                params: params.into_iter().map(|(ty, id)| (Type::BaseType(ty), id)).collect(),
+                params,
                 body,
             })
         }
     );
+    production!(ItemIsStruct: Item -> StructDefinition, |ty| Item::StructDefinition(ty));
 
     // EXPRESSIONS
     production!(ExpressionIsIdent: Expression -> Ident, |id| Expression::Ident(id));
@@ -207,17 +264,19 @@ pub mod language {
         }
         Statement::Assignment(ident, expr)
     });
-    ebnf!(Declaration: Statement -> (Ident, Ident, Option<(Equals, Expression)>, SemiColumn), |ctx, (ty, id, val_opt, _)| {
-        ctx.declare(id.clone(), Type::BaseType(ty.clone()));
-        match val_opt {
-            Some((_, val)) => {
-                Statement::Initialization(Type::BaseType(ty), id, val)
-            }
-            None => {
-                Statement::Declaration(Type::BaseType(ty), id)
+    ebnf!(DeclarationStatement: Statement -> (TypedIdent, Option<(Equals, Expression)>, SemiColumn),
+        |ctx, (TypedIdent { ty, ident }, val_opt, _)| {
+            ctx.declare(ident.clone(), ty.clone());
+            match val_opt {
+                Some((_, val)) => {
+                    Statement::Initialization(ty, ident, val)
+                }
+                None => {
+                    Statement::Declaration(ty, ident)
+                }
             }
         }
-    });
+    );
     ebnf!(ReturnStatement: Statement -> (Return, Option<Expression>, SemiColumn), |(_, expr, _)| Statement::Return(expr));
     ebnf!(
         IfStatement:
@@ -238,6 +297,12 @@ pub mod language {
             Statement::WhileStatement(condition, Box::new(stmt))
         }
     );
-
+    ebnf!(
+        ForStatement:
+        Statement -> (For, OpenPar, Option<Expression>, SemiColumn, Option<Expression>, SemiColumn, Option<Expression>, ClosePar, Statement),
+        |(_, _, init, _, condition, _, step, _, stmt)| {
+            Statement::ForStatement(init, condition, step, Box::new(stmt))
+        }
+    );
     production!(StatementIsExpression: Statement -> (Expression, SemiColumn), |(expr, _)| Statement::Expression(expr));
 }

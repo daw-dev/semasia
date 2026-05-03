@@ -38,10 +38,14 @@ impl TryFrom<&mut syn::Variant> for AutoProductionsEnumVariant {
             })
             .collect_vec();
 
-        value.fields = syn::Fields::Unnamed(syn::FieldsUnnamed {
-            paren_token: Default::default(),
-            unnamed: fields,
-        });
+        value.fields = if fields.is_empty() {
+            syn::Fields::Unit
+        } else {
+            syn::Fields::Unnamed(syn::FieldsUnnamed {
+                paren_token: Default::default(),
+                unnamed: fields,
+            })
+        };
 
         Ok(Self { ident, ty })
     }
@@ -214,11 +218,18 @@ impl ToTokens for AutoProductionsEnum {
                 .iter()
                 .filter_map(|(_, hide)| (!hide).then_some(()))
                 .enumerate()
-                .map(|(i, _)| format_ident!("t{i}"));
+                .map(|(i, _)| format_ident!("t{i}"))
+                .collect_vec();
 
-            let production = quote!(
-                production!(#prod_ident: #ident -> (#(#prod_body),*), |(#(#patt),*)| #ident::#variant_ident(#(#temps.into()),*));
-            );
+            let production = if temps.is_empty() {
+                quote!(
+                    production!(#prod_ident: #ident -> (#(#prod_body),*), |(#(#patt),*)| #ident::#variant_ident);
+                )
+            } else {
+                quote!(
+                    production!(#prod_ident: #ident -> (#(#prod_body),*), |(#(#patt),*)| #ident::#variant_ident(#(#temps.into()),*));
+                )
+            };
             tokens.extend(production);
         }
     }

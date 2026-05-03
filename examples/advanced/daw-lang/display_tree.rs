@@ -1,8 +1,8 @@
 use ptree::{TreeBuilder, item::StringItem};
 
 use crate::grammar::{
-    ast::{Function, FunctionCall, Item, Program, Statement},
-    language::{BinaryOperation, Expression, Lit},
+    ast::{Function, FunctionCall, Item, Program, Statement, StructDefinition},
+    language::{BinaryOperation, Expression, Lit}, types::{StructType, TypedIdent},
 };
 
 impl FunctionCall {
@@ -274,13 +274,42 @@ impl Statement {
             Statement::WhileStatement(condition, body) => {
                 tree.begin_child(String::from("While Statement:"));
 
-                tree.begin_child(String::from("Body:"));
+                tree.begin_child(String::from("Condition:"));
 
                 condition.build_tree(tree);
 
                 tree.end_child();
 
-                tree.begin_child(String::from("True:"));
+                tree.begin_child(String::from("Body:"));
+
+                body.build_tree(tree);
+
+                tree.end_child();
+
+                tree.end_child();
+            }
+            Statement::ForStatement(init, condition, step, body) => {
+                tree.begin_child(String::from("While Statement:"));
+
+                tree.begin_child(String::from("Initialization:"));
+
+                init.as_ref().inspect(|init| init.build_tree(tree));
+
+                tree.end_child();
+
+                tree.begin_child(String::from("Condition:"));
+
+                condition.as_ref().inspect(|condition| condition.build_tree(tree));
+
+                tree.begin_child(String::from("Step:"));
+
+                step.as_ref().inspect(|step| step.build_tree(tree));
+
+                tree.end_child();
+
+                tree.end_child();
+
+                tree.begin_child(String::from("Body:"));
 
                 body.build_tree(tree);
 
@@ -301,8 +330,8 @@ impl Function {
 
         tree.begin_child(String::from("Params:"));
 
-        for (ty, id) in self.params.iter() {
-            tree.add_empty_child(format!("{ty} {id}"));
+        for param in self.params.iter() {
+            tree.add_empty_child(param.to_string());
         }
 
         if self.params.is_empty() {
@@ -322,10 +351,29 @@ impl Function {
     }
 }
 
+impl StructDefinition {
+    pub fn build_tree(&self, tree: &mut TreeBuilder) {
+        tree.begin_child(String::from("Struct Definition:"));
+
+        tree.add_empty_child(format!("Ident: {}", self.ident));
+
+        tree.begin_child(String::from("Fields:"));
+
+        for (id, ty) in self.ty.fields.iter() {
+            tree.add_empty_child(format!("({ty}) {id}"));
+        }
+
+        tree.end_child();
+
+        tree.end_child();
+    }
+}
+
 impl Item {
     pub fn build_tree(&self, tree: &mut TreeBuilder) {
         match self {
             Item::Function(function) => function.build_tree(tree),
+            Item::StructDefinition(ty) => ty.build_tree(tree),
         }
     }
 }

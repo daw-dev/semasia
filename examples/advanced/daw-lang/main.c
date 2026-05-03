@@ -4,11 +4,18 @@ int max(int a, int b) {
   return b;
 }
 
+struct test_struct {
+  int a;
+  float b[];
+};
+
 int main() {
   // this is a comment
   int a = 5;
   int b = 2;
-  int c = a * b + 2;
+  int c = a + b * 2;
+  int d = a * b + 2;
+
   print(c);
 
   b[c + a];

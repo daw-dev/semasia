@@ -20,7 +20,7 @@ impl CompilationContext {
         }
     }
 
-    pub fn get_type(&self, ident: &Ident) -> Option<Type> {
-        self.symbol_table.get(ident).cloned()
+    pub fn get_type(&self, ident: &Ident) -> Option<&Type> {
+        self.symbol_table.get(ident)
     }
 }

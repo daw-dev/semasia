@@ -1,65 +1,93 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use itertools::Itertools;
 
-use crate::grammar::tokens::Ident;
+use crate::grammar::{
+    language::NonArrayType,
+    tokens::Ident,
+};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+use super::language::BaseType;
+
+#[derive(Debug, Clone)]
+pub struct StructType {
+    pub fields: HashMap<Ident, Type>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Type {
+    Array(Box<Type>),
     Pointer(Box<Type>),
-    Array(Box<Type>, usize),
-    BaseType(Ident),
-    Void,
-    Function(Box<Type>, Vec<Type>),
+    Base(BaseType),
+    Struct(StructType),
+    // Function(Box<Type>, Vec<Type>),
+}
+
+impl From<NonArrayType> for Type {
+    fn from(value: NonArrayType) -> Self {
+        match value {
+            NonArrayType::Pointer(inner) => Self::Pointer(Box::new((*inner).into())),
+            NonArrayType::BaseType(base) => Self::Base(base),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TypedIdent {
+    pub ident: Ident,
+    pub ty: Type,
+}
+
+impl Display for TypedIdent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}) {}", self.ty, self.ident)
+    }
 }
 
 impl Type {
-    pub fn char() -> Self {
-        Self::BaseType("char".into())
-    }
-    pub fn int() -> Self {
-        Self::BaseType("int".into())
-    }
-    pub fn float() -> Self {
-        Self::BaseType("float".into())
-    }
-    pub fn string() -> Self {
-        Self::Pointer(Box::new(Self::char()))
-    }
-
     pub fn deref(self) -> Self {
         match self {
-            Self::Pointer(ty) | Self::Array(ty, _) => *ty,
+            Self::Pointer(ty) | Self::Array(ty) => *ty,
             _ => panic!("type cannot be deferenced"),
         }
     }
 
-    fn is_integer(ident: &Ident) -> bool {
-        ident == "char" || ident == "int" || ident == "long"
-    }
-
-    fn is_decimal(ident: &Ident) -> bool {
-        ident == "float" || ident == "double"
-    }
-
-    fn is_base_compatible(left: &Ident, right: &Ident) -> bool {
-        Self::is_integer(left) && Self::is_integer(right)
-            || Self::is_decimal(left) && (Self::is_decimal(right) || Self::is_integer(right))
-    }
-
     pub fn compatible_with(&self, other: &Self) -> bool {
-        self == other
-            || match (self, other) {
-                (Type::Pointer(left), Type::Pointer(right))
-                | (Type::Pointer(left), Type::Array(right, _))
-                | (Type::Array(left, _), Type::Pointer(right))
-                | (Type::Array(left, _), Type::Array(right, _)) => left.compatible_with(right),
-                (Type::BaseType(left), Type::BaseType(right)) => {
-                    Self::is_base_compatible(left, right)
-                }
-                (Type::Void, _) => true,
-                _ => false,
-            }
+        match (self, other) {
+            (Type::Pointer(left), Type::Pointer(right))
+            | (Type::Pointer(left), Type::Array(right))
+            | (Type::Array(left), Type::Pointer(right))
+            | (Type::Array(left), Type::Array(right)) => left.compatible_with(right),
+            (Type::Base(left), Type::Base(right)) => left.compatible_with(right),
+            _ => false,
+        }
+    }
+}
+
+impl BaseType {
+    pub fn compatible_with(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BaseType::Void, _) => true,
+            (BaseType::Int, BaseType::Float) => true,
+            (BaseType::Int, BaseType::Int) => true,
+            (BaseType::Int, _) => false,
+            (BaseType::Float, BaseType::Float) => true,
+            (BaseType::Float, _) => false,
+            (BaseType::Ident(left), BaseType::Ident(right)) => left == right,
+            _ => false,
+        }
+    }
+}
+
+impl Display for BaseType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BaseType::Int => write!(f, "int"),
+            BaseType::Float => write!(f, "float"),
+            BaseType::Char => write!(f, "char"),
+            BaseType::Void => write!(f, "void"),
+            BaseType::Ident(ty) => write!(f, "{ty}"),
+        }
     }
 }
 
@@ -67,10 +95,16 @@ impl Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Type::Pointer(ty) => write!(f, "{ty}*"),
-            Type::Array(ty, size) => write!(f, "{ty}[{size}]"),
-            Type::BaseType(base) => write!(f, "{base}"),
-            Type::Void => write!(f, "void"),
-            Type::Function(ret, params) => write!(f, "{ret}->({})", params.iter().format(",")),
+            Type::Array(ty) => write!(f, "{ty}[]"),
+            Type::Base(base) => write!(f, "{base}"),
+            Type::Struct(ty) => write!(
+                f,
+                "{{ {} }}",
+                ty.fields
+                    .iter()
+                    .map(|(id, ty)| format!("({ty}) {id};"))
+                    .format(" ")
+            ),
         }
     }
 }
