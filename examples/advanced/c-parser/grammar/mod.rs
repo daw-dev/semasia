@@ -149,6 +149,12 @@ pub mod language {
     #[token("do")]
     pub struct Do;
 
+    #[token("break")]
+    pub struct Break;
+
+    #[token("continue")]
+    pub struct Continue;
+
     #[token("return")]
     pub struct Return;
 
@@ -316,4 +322,6 @@ pub mod language {
         }
     );
     production!(StatementIsExpression: Statement -> (Expression, SemiColumn), |(expr, _)| Statement::Expression(expr));
+    production!(BreakStatement: Statement -> (Break, SemiColumn), |_| Statement::Break);
+    production!(ContinueStatement: Statement -> (Continue, SemiColumn), |_| Statement::Continue);
 }
