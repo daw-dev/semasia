@@ -81,8 +81,8 @@ name = "calculus"
 path = "./examples/advanced/calculus/main.rs"
 
 [[example]]
-name = "daw-lang"
-path = "./examples/advanced/daw-lang/main.rs"
+name = "c-parser"
+path = "./examples/advanced/c-parser/main.rs"
 
 [[example]]
 name = "test"
