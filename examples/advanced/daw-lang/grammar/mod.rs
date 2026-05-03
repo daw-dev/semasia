@@ -9,7 +9,7 @@ use semasia::grammar;
 #[grammar]
 #[logos(skip r"\s+")]
 #[logos(skip r"\/\/.*")]
-#[logos(skip r"\/\*(?m).*\*\/")]
+#[logos(skip r"/\*(?s).*?\*/")]
 pub mod language {
     use super::*;
     use semasia::*;
@@ -83,6 +83,9 @@ pub mod language {
     #[token(",")]
     #[priority(15)]
     pub struct Comma;
+
+    #[token(".")]
+    pub struct Dot;
 
     #[token("(")]
     pub struct OpenPar;
@@ -194,12 +197,13 @@ pub mod language {
     // STRUCTS
     ebnf!(StructCreation:
         StructDefinition -> (Struct, Ident, OpenCurly, Vec<(TypedIdent, SemiColumn)>, CloseCurly, SemiColumn),
-        |(_, ident, _, fields, _, _)| {
+        |ctx, (_, ident, _, fields, _, _)| {
+            let ty = types::StructType {
+                fields: fields.into_iter().map(|(ty_id, _)| (ty_id.ident, ty_id.ty)).collect()
+            };
             StructDefinition {
                 ident,
-                ty: types::StructType {
-                    fields: fields.into_iter().map(|(ty_id, _)| (ty_id.ident, ty_id.ty)).collect()
-                },
+                ty,
             }
         }
     );
@@ -244,24 +248,31 @@ pub mod language {
             Expression::FunctionCall(ast::FunctionCall { function_ident, arguments })
         }
     );
-    production!(ExpressionIsIndexing: Expression -> (Expression, OpenSquare, Expression, CloseSquare), |(base, _, index, _)| Expression::Index(Box::new(base), Box::new(index)));
+    production!(
+        ExpressionIsIndexing: Expression -> (Expression, OpenSquare, Expression, CloseSquare),
+        |(base, _, index, _)| Expression::Index(Box::new(base), Box::new(index))
+    );
     production!(ExpressionIsReference: Expression -> (And, Expression), |(_, expr)| Expression::Reference(Box::new(expr)));
     production!(ExpressionIsBinOp: Expression -> BinaryOperation, |op| Expression::BinaryOperation(op));
+    production!(
+        ExpressionIsFieldAccess: Expression -> (Expression, Dot, Ident),
+        |(expr, _, id)| Expression::FieldAccess(Box::new(expr), id)
+    );
 
     // STATEMENTS
     ebnf!(StatementIsBody: Statement -> (OpenCurly, Vec<Statement>, CloseCurly), |(_, statements, _)| {
         Statement::Braces(statements)
     });
-    production!(Assignment: Statement -> (Ident, Equals, Expression, SemiColumn), |ctx, (ident, _, expr, _)| {
-        match ctx.get_type(&ident) {
-            Some(ty) => {
-                let expr_type = expr.get_type(ctx);
-                if !ty.compatible_with(&expr_type) {
-                    panic!("cannot convert from {expr_type:?} to {ty:?}")
-                }
-            },
-            None => {},
-        }
+    production!(Assignment: Statement -> (Expression, Equals, Expression, SemiColumn), |ctx, (ident, _, expr, _)| {
+        // match ctx.get_type(&ident) {
+        //     Some(ty) => {
+        //         let expr_type = expr.get_type(ctx);
+        //         if !ty.compatible_with(&expr_type) {
+        //             panic!("cannot convert from {expr_type:?} to {ty:?}")
+        //         }
+        //     },
+        //     None => {},
+        // }
         Statement::Assignment(ident, expr)
     });
     ebnf!(DeclarationStatement: Statement -> (TypedIdent, Option<(Equals, Expression)>, SemiColumn),

@@ -29,7 +29,7 @@ impl Display for FunctionCall {
 pub enum Statement {
     Declaration(Type, Ident),
     Initialization(Type, Ident, Expression),
-    Assignment(Ident, Expression),
+    Assignment(Expression, Expression),
     Expression(Expression),
     Return(Option<Expression>),
     Break,

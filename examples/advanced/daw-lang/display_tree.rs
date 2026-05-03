@@ -2,7 +2,7 @@ use ptree::{TreeBuilder, item::StringItem};
 
 use crate::grammar::{
     ast::{Function, FunctionCall, Item, Program, Statement, StructDefinition},
-    language::{BinaryOperation, Expression, Lit}, types::{StructType, TypedIdent},
+    language::{BinaryOperation, Expression, Lit},
 };
 
 impl FunctionCall {
@@ -174,6 +174,19 @@ impl Expression {
                 function_call.build_tree(tree);
             }
             Expression::BinaryOperation(binop) => binop.build_tree(tree),
+            Expression::FieldAccess(expr, id) => {
+                tree.begin_child(String::from("Field Access:"));
+
+                tree.begin_child(String::from("Struct:"));
+
+                expr.build_tree(tree);
+
+                tree.end_child();
+
+                tree.add_empty_child(format!("Field: {id}"));
+
+                tree.end_child();
+            }
         }
     }
 }

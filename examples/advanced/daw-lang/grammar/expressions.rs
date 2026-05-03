@@ -38,6 +38,7 @@ pub enum Expression {
     Index(Box<Expression>, Box<Expression>),
     FunctionCall(FunctionCall),
     BinaryOperation(BinaryOperation),
+    FieldAccess(Box<Expression>, Ident),
 }
 
 impl Display for Expression {
@@ -50,6 +51,7 @@ impl Display for Expression {
             Expression::Index(base, index) => write!(f, "{base}[{index}]"),
             Expression::FunctionCall(func) => write!(f, "{func}"),
             Expression::BinaryOperation(binop) => write!(f, "{binop}"),
+            Expression::FieldAccess(expr, id) => write!(f, "({expr}).{id}"),
         }
     }
 }
@@ -70,6 +72,11 @@ impl Expression {
                 .cloned()
                 .expect("such function does not exist"),
             Expression::BinaryOperation(binop) => binop.get_type(ctx),
+            Expression::FieldAccess(expr, id) => {
+                let expr_ty = expr.get_type(ctx);
+                let Type::Struct(ty) = expr_ty else { panic!("{expr} is not a struct!") };
+                ty.fields[id].clone()
+            }
         }
     }
 }

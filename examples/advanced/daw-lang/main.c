@@ -16,6 +16,9 @@ int main() {
   int c = a + b * 2;
   int d = a * b + 2;
 
+  test_struct t;
+  t.a = 10;
+
   print(c);
 
   b[c + a];
