@@ -58,8 +58,12 @@ pub mod language {
         String(LitString),
     }
 
+    #[token(",")]
+    #[priority(0)]
+    pub struct Comma;
+
     #[token("=")]
-    #[priority(14)]
+    #[priority(1)]
     pub struct Equals;
 
     #[token("==")]
@@ -69,23 +73,30 @@ pub mod language {
 
     #[token(">")]
     #[left_associative]
-    #[priority(6)]
+    #[priority(9)]
     pub struct GreaterThan;
 
     #[token("<")]
     #[left_associative]
-    #[priority(6)]
+    #[priority(9)]
     pub struct LessThan;
+
+    #[token("+")]
+    #[left_associative]
+    #[priority(11)]
+    pub struct Plus;
+
+    #[token("*")]
+    #[left_associative]
+    #[priority(12)]
+    pub struct Times;
+
+    #[token(".")]
+    #[priority(15)]
+    pub struct Dot;
 
     #[token(";")]
     pub struct SemiColumn;
-
-    #[token(",")]
-    #[priority(15)]
-    pub struct Comma;
-
-    #[token(".")]
-    pub struct Dot;
 
     #[token("(")]
     pub struct OpenPar;
@@ -106,16 +117,6 @@ pub mod language {
 
     #[token("}")]
     pub struct CloseCurly;
-
-    #[token("+")]
-    #[left_associative]
-    #[priority(3)]
-    pub struct Plus;
-
-    #[token("*")]
-    #[left_associative]
-    #[priority(4)]
-    pub struct Times;
 
     #[auto_productions]
     #[non_terminal]
