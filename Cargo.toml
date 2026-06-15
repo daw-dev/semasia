@@ -2,6 +2,9 @@
 name = "semasia"
 version = "0.1.0"
 edition = "2024"
+description = "a compile-time in-place parser generator in rust"
+licence = "MIT OR Apache-2.0"
+repository = "https://github.com/daw-dev/semasia"
 
 [workspace]
 resolver = "3"
