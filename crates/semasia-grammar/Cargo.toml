@@ -14,6 +14,6 @@ proc-macro2 = "1.0.103"
 quote = "1.0.42"
 syn = { version = "2.0.110", features = ["full", "extra-traits"] }
 itertools = "0.14.0"
-semasia-dyn-grammar = {path = "../semasia-dyn-grammar"}
-semasia-ebnf-parser = { path = "../semasia-ebnf-parser" }
-semasia-auto-productions-parser = { path = "../semasia-auto-productions-parser/" }
+semasia-dyn-grammar = { path = "../semasia-dyn-grammar", version = "0.1.0" }
+semasia-ebnf-parser = { path = "../semasia-ebnf-parser", version = "0.1.0" }
+semasia-auto-productions-parser = { path = "../semasia-auto-productions-parser/", version = "0.1.0" }

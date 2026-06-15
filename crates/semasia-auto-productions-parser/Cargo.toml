@@ -8,6 +8,6 @@ license = "MIT or Apache-2.0"
 [dependencies]
 itertools = "0.14.0"
 syn = { version = "2.0.117", features = ["full"] }
-semasia-dyn-grammar = { path = "../semasia-dyn-grammar" }
+semasia-dyn-grammar = { path = "../semasia-dyn-grammar", version = "0.1.0" }
 quote = "1.0.45"
 proc-macro2 = "1.0.106"
