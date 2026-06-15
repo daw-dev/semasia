@@ -1,4 +1,4 @@
-use dyn_grammar::{
+use semasia_dyn_grammar::{
     EnrichedGrammar,
     lalr::LalrAutomaton,
     parsing::tables::{EofTable, NonTerminalTable, TokenTable},

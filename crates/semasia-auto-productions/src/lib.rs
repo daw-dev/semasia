@@ -1,4 +1,4 @@
-use auto_productions_parser::AutoProductionsEnum;
+use semasia_auto_productions_parser::AutoProductionsEnum;
 use proc_macro::TokenStream;
 use quote::quote;
 

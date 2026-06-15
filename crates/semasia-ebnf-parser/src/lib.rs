@@ -1,4 +1,4 @@
-use dyn_grammar::grammar::{Body, Production};
+use semasia_dyn_grammar::grammar::{Body, Production};
 use itertools::Itertools;
 use proc_macro2::Span;
 use quote::format_ident;

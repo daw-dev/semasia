@@ -1,5 +1,5 @@
 [package]
-name = "ebnf-proc-macro"
+name = "semasia-ebnf-proc-macro"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,6 +7,6 @@ edition = "2024"
 proc-macro = true
 
 [dependencies]
-ebnf-parser = { path = "../ebnf-parser" }
+semasia-ebnf-parser = { path = "../semasia-ebnf-parser" }
 quote = "1.0.43"
 syn = "2.0.114"

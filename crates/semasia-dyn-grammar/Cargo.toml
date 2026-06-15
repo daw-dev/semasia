@@ -1,12 +1,11 @@
 [package]
-name = "ebnf-parser"
+name = "semasia-dyn-grammar"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-syn = "2.0.114"
-dyn-grammar = { path = "../dyn-grammar" }
 itertools = "0.14.0"
-proc-macro2 = "1.0.106"
 proc-macro-error = "1.0.4"
+proc-macro2 = "1.0.106"
 quote = "1.0.45"
+syn = { version = "2.0.110", features = ["full", "extra-traits"] }

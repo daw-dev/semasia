@@ -1,4 +1,4 @@
-use dyn_grammar::{
+use semasia_dyn_grammar::{
     Context, EnrichedGrammar,
     parsing::tables::{EofTable, NonTerminalTable, TokenTable},
     symbolic_grammar::SymbolicSymbol,
@@ -254,10 +254,10 @@ impl<'a> Analyzed<'a> {
         let token_actions = token_table.table.into_iter().map::<syn::Expr, _>(|row| {
             let row = row.into_iter().map::<syn::Expr, _>(|action| {
                 match action.map::<syn::Expr, _>(|action| match action {
-                    dyn_grammar::parsing::action::TokenAction::Shift(state) => {
+                    semasia_dyn_grammar::parsing::action::TokenAction::Shift(state) => {
                         parse_quote!(parser::TokenAction::Shift(#state))
                     }
-                    dyn_grammar::parsing::action::TokenAction::Reduce(prod_id) => {
+                    semasia_dyn_grammar::parsing::action::TokenAction::Reduce(prod_id) => {
                         let actual_production = enriched_grammar
                             .productions()
                             .get(prod_id)
@@ -278,7 +278,7 @@ impl<'a> Analyzed<'a> {
         let eof_actions =
             eof_table.table.into_iter().map::<syn::Expr, _>(|action| {
                 match action.map::<syn::Expr, _>(|action| match action {
-                    dyn_grammar::parsing::action::EofAction::Reduce(prod_id) => {
+                    semasia_dyn_grammar::parsing::action::EofAction::Reduce(prod_id) => {
                         let actual_production = enriched_grammar
                             .productions()
                             .get(prod_id)
@@ -286,7 +286,7 @@ impl<'a> Analyzed<'a> {
                         let prod_name = actual_production.id();
                         parse_quote!(parser::EofAction::Reduce(ProductionName::#prod_name))
                     }
-                    dyn_grammar::parsing::action::EofAction::Accept => {
+                    semasia_dyn_grammar::parsing::action::EofAction::Accept => {
                         parse_quote!(parser::EofAction::Accept)
                     }
                 }) {
@@ -357,10 +357,10 @@ impl<'a> Analyzed<'a> {
             .flatten()
             .map(|(state, token_id, action)| {
                 let action = match action {
-                    dyn_grammar::parsing::action::TokenAction::Shift(state) => {
+                    semasia_dyn_grammar::parsing::action::TokenAction::Shift(state) => {
                         quote!(parser::TokenAction::Shift(#state))
                     }
-                    dyn_grammar::parsing::action::TokenAction::Reduce(production) => {
+                    semasia_dyn_grammar::parsing::action::TokenAction::Reduce(production) => {
                         let production = &self
                             .automaton
                             .grammar()
@@ -415,7 +415,7 @@ impl<'a> Analyzed<'a> {
                 .flat_map(|(state, opt_action)| {
                     opt_action.as_ref().map(move |action| {
                         let action = match action {
-                            dyn_grammar::parsing::action::EofAction::Reduce(production) => {
+                            semasia_dyn_grammar::parsing::action::EofAction::Reduce(production) => {
                                 let production = &self
                                     .automaton
                                     .grammar()
@@ -426,7 +426,7 @@ impl<'a> Analyzed<'a> {
                                     .0;
                                 quote!(parser::EofAction::Reduce(ProductionName::#production))
                             }
-                            dyn_grammar::parsing::action::EofAction::Accept => {
+                            semasia_dyn_grammar::parsing::action::EofAction::Accept => {
                                 quote!(parser::EofAction::Accept)
                             }
                         };

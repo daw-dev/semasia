@@ -1,4 +1,4 @@
-use ebnf_parser::EbnfProduction;
+use semasia_ebnf_parser::EbnfProduction;
 use proc_macro::TokenStream;
 use quote::quote;
 

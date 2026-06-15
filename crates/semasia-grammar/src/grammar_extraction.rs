@@ -1,10 +1,10 @@
-use auto_productions_parser::AutoProductionsEnum;
-use dyn_grammar::{
+use semasia_auto_productions_parser::AutoProductionsEnum;
+use semasia_dyn_grammar::{
     EnrichedBaseProduction, EnrichedGrammar, EnrichedNonTerminal, EnrichedToken,
     conflicts::Associativity, grammar::Body, lalr::LalrAutomaton,
     symbolic_grammar::SymbolicGrammar,
 };
-use ebnf_parser::EbnfProduction;
+use semasia_ebnf_parser::EbnfProduction;
 use itertools::Itertools;
 use proc_macro_error::{abort_if_dirty, emit_call_site_error, emit_call_site_warning, emit_error};
 use quote::quote;
@@ -102,7 +102,7 @@ impl Constructor {
             non_terminals.into_iter().unique().collect(),
             start_symbol,
             productions,
-            dyn_grammar::Context(compiler_ctx),
+            semasia_dyn_grammar::Context(compiler_ctx),
         );
 
         Extracted { grammar }

@@ -1,4 +1,4 @@
-use dyn_grammar::{EnrichedBaseProduction, grammar::Body};
+use semasia_dyn_grammar::{EnrichedBaseProduction, grammar::Body};
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};

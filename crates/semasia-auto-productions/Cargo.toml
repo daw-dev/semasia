@@ -1,5 +1,5 @@
 [package]
-name = "auto-productions"
+name = "semasia-auto-productions"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,7 +7,7 @@ edition = "2024"
 proc-macro = true
 
 [dependencies]
-auto-productions-parser = { path = "../auto-productions-parser" }
+semasia-auto-productions-parser = { path = "../semasia-auto-productions-parser", version = "0.1.0" }
 proc-macro2 = "1.0.106"
 quote = "1.0.45"
 syn = "2.0.117"

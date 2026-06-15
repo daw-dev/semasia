@@ -11,12 +11,12 @@ resolver = "3"
 members = ["crates/*"]
 
 [dependencies]
-grammar = { path = "crates/grammar" }
-production = { path = "crates/production" }
-from-inherited = { path = "crates/from-inherited" }
-ebnf-proc-macro = { path = "crates/ebnf-proc-macro" }
-auto-productions = { path = "crates/auto-productions" }
-parser = { path = "crates/parser" }
+semasia-grammar = { path = "crates/semasia-grammar", version = "0.1.0" }
+semasia-production = { path = "crates/semasia-production", version = "0.1.0" }
+semasia-from-inherited = { path = "crates/semasia-from-inherited", version = "0.1.0" }
+semasia-ebnf-proc-macro = { path = "crates/semasia-ebnf-proc-macro", version = "0.1.0" }
+semasia-auto-productions = { path = "crates/semasia-auto-productions", version = "0.1.0" }
+semasia-parser = { path = "crates/semasia-parser", version = "0.1.0" }
 logos = "0.16.0"
 
 [dev-dependencies]

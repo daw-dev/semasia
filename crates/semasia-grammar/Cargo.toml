@@ -1,5 +1,5 @@
 [package]
-name = "grammar"
+name = "semasia-grammar"
 version = "0.1.0"
 edition = "2024"
 
@@ -12,6 +12,6 @@ proc-macro2 = "1.0.103"
 quote = "1.0.42"
 syn = { version = "2.0.110", features = ["full", "extra-traits"] }
 itertools = "0.14.0"
-dyn-grammar = {path = "../dyn-grammar"}
-ebnf-parser = { path = "../ebnf-parser" }
-auto-productions-parser = { path = "../auto-productions-parser/" }
+semasia-dyn-grammar = {path = "../semasia-dyn-grammar"}
+semasia-ebnf-parser = { path = "../semasia-ebnf-parser" }
+semasia-auto-productions-parser = { path = "../semasia-auto-productions-parser/" }
