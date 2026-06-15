@@ -3,7 +3,7 @@ name = "semasia-dyn-grammar"
 version = "0.1.0"
 edition = "2024"
 description = "dynamic grammar backend for semasia"
-licence = "MIT or Apache-2.0"
+license = "MIT or Apache-2.0"
 
 [dependencies]
 itertools = "0.14.0"
