@@ -2,11 +2,13 @@
 name = "semasia-ebnf-proc-macro"
 version = "0.1.0"
 edition = "2024"
+description = "procedural macro for ebnf production in semasia"
+license = "MIT or Apache-2.0"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-semasia-ebnf-parser = { path = "../semasia-ebnf-parser" }
+semasia-ebnf-parser = { path = "../semasia-ebnf-parser", version = "0.1.0" }
 quote = "1.0.43"
 syn = "2.0.114"

@@ -2,6 +2,8 @@
 name = "semasia-auto-productions"
 version = "0.1.0"
 edition = "2024"
+description = "attribute for auto productions in semasia"
+license = "MIT or Apache-2.0"
 
 [lib]
 proc-macro = true
