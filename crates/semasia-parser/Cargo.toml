@@ -2,6 +2,8 @@
 name = "semasia-parser"
 version = "0.1.0"
 edition = "2024"
+description = "generic parser of a semasia grammar"
+license = "MIT or Apache-2.0"
 
 [dependencies]
 colored = "3.1.1"

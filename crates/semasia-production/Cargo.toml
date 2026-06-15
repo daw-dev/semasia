@@ -2,5 +2,7 @@
 name = "semasia-production"
 version = "0.1.0"
 edition = "2024"
+description = "macro to create a semasia production"
+license = "MIT or Apache-2.0"
 
 [dependencies]

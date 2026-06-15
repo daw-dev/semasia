@@ -2,5 +2,7 @@
 name = "semasia-from-inherited"
 version = "0.1.0"
 edition = "2024"
+description = "helper type for inherited attributes in semasia"
+license = "MIT or Apache-2.0"
 
 [dependencies]
