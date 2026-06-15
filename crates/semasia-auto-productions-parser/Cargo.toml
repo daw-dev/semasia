@@ -2,6 +2,8 @@
 name = "semasia-auto-productions-parser"
 version = "0.1.0"
 edition = "2024"
+description = "parser for the auto production attribute in semasia"
+license = "MIT or Apache-2.0"
 
 [dependencies]
 itertools = "0.14.0"
