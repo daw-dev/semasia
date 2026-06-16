@@ -5,6 +5,8 @@ edition = "2024"
 description = "a compile-time in-place parser generator in rust"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/daw-dev/semasia"
+keywords = ["generator", "grammar", "parser"]
+category = ["parsing"]
 
 [workspace]
 resolver = "3"
