@@ -1,12 +1,13 @@
 [package]
 name = "semasia"
-version = "0.1.1"
+version = "0.1.1-b"
 edition = "2024"
 description = "a compile-time in-place parser generator in rust"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/daw-dev/semasia"
 keywords = ["generator", "grammar", "parser"]
 category = ["parsing"]
+readme = true
 
 [workspace]
 resolver = "3"
