@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 pub use semasia_ebnf_proc_macro::*;
 pub use semasia_from_inherited::*;
 pub use semasia_grammar::*;
