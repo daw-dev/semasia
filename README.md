@@ -80,8 +80,12 @@ the parse tree (like scoping). Each `production!` instance has a mutable referen
 If no context is provided, `()` is used.
 
 ```rust
+use semasia::*;
+
 #[grammar]
 mod my_grammar {
+    use super::*;
+
     #[context]
     pub struct MyCompilationContext {
         scope_id: usize,
@@ -243,7 +247,7 @@ Ideally, this would also speed-up parsing because each grammar uses different an
 I'm not sure it's possible, but it would be cool to allow something like the following:
 
 ```rust
-use static_sdd::*;
+use semasia::*;
 
 #[grammar]
 mod addition {
@@ -259,16 +263,16 @@ mod addition {
     #[token = "+"]
     pub struct Plus;
 
-    production!(P0<T>, E<T> -> (E<T>, Plus, Num<T>), |(e, _, num)| e + num);
+    production!(P0<T>: E<T> -> (E<T>, Plus, Num<T>), |(e, _, num)| e + num);
 
-    production!(P1<T>, E<T> -> Num<T>);
+    production!(P1<T>: E<T> -> Num<T>);
 }
 
 fn main() {
-    let res = addition::parse::<usize>("10+3+9");
+    let res = addition::Parser::<usize>::lex_parse("10+3+9");
     assert_eq!(res, Ok(22));
     
-    let res = addition::parse::<f32>("1.3+5.2");
+    let res = addition::Parser::<f32>::lex_parse("1.3+5.2");
     assert_eq!(res, Ok(6.5))
 }
 ```
