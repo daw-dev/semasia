@@ -60,10 +60,10 @@ mod division {
     #[non_terminal]
     pub type Term = Number;
 
-    #[token(regex = r"\d+")]
+    #[regex(r"\d+", parse)]
     pub type Integer = isize;
 
-    #[token(regex = r"\d+\.\d+")]
+    #[regex(r"\d+\.\d+", parse)]
     pub type Decimal = f32;
 
     #[token("*")]
@@ -72,9 +72,9 @@ mod division {
     #[token("/")]
     pub struct Division;
 
-    production!(P0, S -> Expr, |e| e.decimal.resolve(e.use_decimal));
+    production!(P0: S -> Expr, |e| e.decimal.resolve(e.use_decimal));
 
-    production!(P1, Expr -> (Expr, Times, Term), |(e, _, t)| {
+    production!(P1: Expr -> (Expr, Times, Term), |(e, _, t)| {
         Expr {
             use_decimal: e.use_decimal || t.is_decimal(),
             decimal: e.decimal.synthesize(|use_decimal, e_result| {
@@ -87,7 +87,7 @@ mod division {
         }
     });
 
-    production!(P11, Expr -> (Expr, Division, Term), |(e, _, t)| {
+    production!(P11: Expr -> (Expr, Division, Term), |(e, _, t)| {
         Expr {
             use_decimal: e.use_decimal || t.is_decimal(),
             decimal: e.decimal.synthesize(|use_decimal, e_result| {
@@ -105,7 +105,7 @@ mod division {
         }
     });
 
-    production!(P2, Expr -> Term, |t| Expr {
+    production!(P2: Expr -> Term, |t| Expr {
         use_decimal: t.is_decimal(),
         decimal: FromInherited::new(|use_decimal|
             if use_decimal {
@@ -116,8 +116,8 @@ mod division {
         )
     });
 
-    production!(P3, Term -> Integer, |i| Number::Integer(i));
-    production!(P4, Term -> Decimal, |f| Number::Decimal(f));
+    production!(P3: Term -> Integer, |i| Number::Integer(i));
+    production!(P4: Term -> Decimal, |f| Number::Decimal(f));
 }
 
 fn main() {

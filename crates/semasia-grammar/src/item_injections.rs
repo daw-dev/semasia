@@ -44,7 +44,7 @@ impl<'a> Analyzed<'a> {
     fn uses() -> Vec<Item> {
         let file: syn::File = parse_quote! {
             use logos::Logos;
-            use parser::Symbol;
+            use semasia_parser::Symbol;
         };
         file.items
     }
@@ -213,8 +213,8 @@ impl<'a> Analyzed<'a> {
                 }
             }
 
-            impl parser::Reduce<NonTerminal, Token, __CompilerContext> for ProductionName {
-                fn reduce(&self, ctx: &mut __CompilerContext, stacks: &mut parser::Stacks<NonTerminal, Token>) -> NonTerminal {
+            impl semasia_parser::Reduce<NonTerminal, Token, __CompilerContext> for ProductionName {
+                fn reduce(&self, ctx: &mut __CompilerContext, stacks: &mut semasia_parser::Stacks<NonTerminal, Token>) -> NonTerminal {
                     use semasia::Production;
 
                     match self {
@@ -255,7 +255,7 @@ impl<'a> Analyzed<'a> {
             let row = row.into_iter().map::<syn::Expr, _>(|action| {
                 match action.map::<syn::Expr, _>(|action| match action {
                     semasia_dyn_grammar::parsing::action::TokenAction::Shift(state) => {
-                        parse_quote!(parser::TokenAction::Shift(#state))
+                        parse_quote!(semasia_parser::TokenAction::Shift(#state))
                     }
                     semasia_dyn_grammar::parsing::action::TokenAction::Reduce(prod_id) => {
                         let actual_production = enriched_grammar
@@ -263,7 +263,7 @@ impl<'a> Analyzed<'a> {
                             .get(prod_id)
                             .expect("production not found");
                         let prod_name = actual_production.id();
-                        parse_quote!(parser::TokenAction::Reduce(ProductionName::#prod_name))
+                        parse_quote!(semasia_parser::TokenAction::Reduce(ProductionName::#prod_name))
                     }
                 }) {
                     Some(expr) => parse_quote!(Some(#expr)),
@@ -284,10 +284,10 @@ impl<'a> Analyzed<'a> {
                             .get(prod_id)
                             .expect("production not found");
                         let prod_name = actual_production.id();
-                        parse_quote!(parser::EofAction::Reduce(ProductionName::#prod_name))
+                        parse_quote!(semasia_parser::EofAction::Reduce(ProductionName::#prod_name))
                     }
                     semasia_dyn_grammar::parsing::action::EofAction::Accept => {
-                        parse_quote!(parser::EofAction::Accept)
+                        parse_quote!(semasia_parser::EofAction::Accept)
                     }
                 }) {
                     Some(expr) => parse_quote!(Some(#expr)),
@@ -313,11 +313,11 @@ impl<'a> Analyzed<'a> {
             pub struct Tables;
 
             impl Tables {
-                pub const TOKEN_TABLE: [[Option<parser::TokenAction<ProductionName>>; #token_count]; #state_count] = [
+                pub const TOKEN_TABLE: [[Option<semasia_parser::TokenAction<ProductionName>>; #token_count]; #state_count] = [
                     #(#token_actions,)*
                 ];
 
-                pub const EOF_TABLE: [Option<parser::EofAction<ProductionName>>; #state_count] = [
+                pub const EOF_TABLE: [Option<semasia_parser::EofAction<ProductionName>>; #state_count] = [
                     #(#eof_actions,)*
                 ];
 
@@ -326,11 +326,11 @@ impl<'a> Analyzed<'a> {
                 ];
             }
 
-            impl parser::Tables<NonTerminal, Token, ProductionName> for Tables {
-                fn query_token_table(current_state: usize, current_token: &Token) -> Option<parser::TokenAction<ProductionName>> {
+            impl semasia_parser::Tables<NonTerminal, Token, ProductionName> for Tables {
+                fn query_token_table(current_state: usize, current_token: &Token) -> Option<semasia_parser::TokenAction<ProductionName>> {
                     Tables::TOKEN_TABLE[current_state][current_token.id()].clone()
                 }
-                fn query_eof_table(current_state: usize) -> Option<parser::EofAction<ProductionName>> {
+                fn query_eof_table(current_state: usize) -> Option<semasia_parser::EofAction<ProductionName>> {
                     Tables::EOF_TABLE[current_state].clone()
                 }
                 fn query_goto_table(current_state: usize, non_terminal: &NonTerminal) -> Option<usize> {
@@ -358,7 +358,7 @@ impl<'a> Analyzed<'a> {
             .map(|(state, token_id, action)| {
                 let action = match action {
                     semasia_dyn_grammar::parsing::action::TokenAction::Shift(state) => {
-                        quote!(parser::TokenAction::Shift(#state))
+                        quote!(semasia_parser::TokenAction::Shift(#state))
                     }
                     semasia_dyn_grammar::parsing::action::TokenAction::Reduce(production) => {
                         let production = &self
@@ -369,7 +369,7 @@ impl<'a> Analyzed<'a> {
                             .expect("production not found")
                             .extras()
                             .0;
-                        quote!(parser::TokenAction::Reduce(ProductionName::#production))
+                        quote!(semasia_parser::TokenAction::Reduce(ProductionName::#production))
                     }
                 };
                 quote!((#state, #token_id) => Some(#action))
@@ -424,10 +424,10 @@ impl<'a> Analyzed<'a> {
                                     .expect("production not found")
                                     .extras()
                                     .0;
-                                quote!(parser::EofAction::Reduce(ProductionName::#production))
+                                quote!(semasia_parser::EofAction::Reduce(ProductionName::#production))
                             }
                             semasia_dyn_grammar::parsing::action::EofAction::Accept => {
-                                quote!(parser::EofAction::Accept)
+                                quote!(semasia_parser::EofAction::Accept)
                             }
                         };
                         quote!(#state => Some(#action))
@@ -451,14 +451,14 @@ impl<'a> Analyzed<'a> {
             #[derive(Debug)]
             pub struct Tables;
 
-            impl parser::Tables<NonTerminal, Token, ProductionName> for Tables {
-                fn query_token_table(current_state: usize, current_token: &Token) -> Option<parser::TokenAction<ProductionName>> {
+            impl semasia_parser::Tables<NonTerminal, Token, ProductionName> for Tables {
+                fn query_token_table(current_state: usize, current_token: &Token) -> Option<semasia_parser::TokenAction<ProductionName>> {
                     match (current_state, current_token.id()) {
                         #(#token_table_patts,)*
                         _ => None,
                     }
                 }
-                fn query_eof_table(current_state: usize) -> Option<parser::EofAction<ProductionName>> {
+                fn query_eof_table(current_state: usize) -> Option<semasia_parser::EofAction<ProductionName>> {
                     match current_state {
                         #(#eof_table_patts,)*
                         _ => None,
@@ -484,6 +484,6 @@ impl<'a> Analyzed<'a> {
 
     fn parser(&self) -> Item {
         let start_symbol = self.automaton.grammar().start_symbol().extras().id();
-        parse_quote!(pub type Parser = parser::Parser<NonTerminal, Token, #start_symbol, ProductionName, Tables, __CompilerContext>;)
+        parse_quote!(pub type Parser = semasia_parser::Parser<NonTerminal, Token, #start_symbol, ProductionName, Tables, __CompilerContext>;)
     }
 }
