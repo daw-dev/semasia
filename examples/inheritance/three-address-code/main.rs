@@ -117,12 +117,12 @@ mod compiler {
     #[left_associative]
     pub struct If;
 
-    production!(ProgramIsStatement, Program -> FutureStatement, |ctx, s| {
+    production!(ProgramIsStatement: Program -> FutureStatement, |ctx, s| {
         println!("a statement is a program");
         s.resolve(ctx.new_label())
     });
 
-    production!(StatementIsStatements, FutureStatement -> (FutureStatement, FutureStatement), |ctx, (s1, s2)| {
+    production!(StatementIsStatements: FutureStatement -> (FutureStatement, FutureStatement), |ctx, (s1, s2)| {
         println!("two statements are a statement");
         let s1_next = ctx.new_label();
         FromInherited::new(|s_next| {
@@ -131,14 +131,14 @@ mod compiler {
     });
 
     #[priority(1)]
-    production!(IfStatement, FutureStatement -> (If, Condition, FutureStatement), |(_, b, s)| {
+    production!(IfStatement: FutureStatement -> (If, Condition, FutureStatement), |(_, b, s)| {
         println!("if statement is a statement");
         FromInherited::new(|s_next: String| {
             b.resolve(ConditionLabels { t: None, f: Some(s_next.clone()) }) << s.resolve(s_next)
         })
     });
 
-    production!(OrCondition, Condition -> (Condition, OrOp, Condition), |ctx, (b1, _, b2)| {
+    production!(OrCondition: Condition -> (Condition, OrOp, Condition), |ctx, (b1, _, b2)| {
         println!("or condition is a condition");
         let b1_true = ctx.new_label();
         FromInherited::new(|b_labels: ConditionLabels| {
@@ -153,19 +153,19 @@ mod compiler {
         })
     });
 
-    production!(SkipStatement, FutureStatement -> Skip, |_| {
+    production!(SkipStatement: FutureStatement -> Skip, |_| {
         println!("skip becomes statement");
         FromInherited::new(|_| Code::new())
     });
 
-    production!(TrueCondition, Condition -> True, |_| {
+    production!(TrueCondition: Condition -> True, |_| {
         println!("true is a condition");
         FromInherited::new(|b_labels: ConditionLabels| {
             b_labels.t.map(Statement::GoTo).into_iter().collect()
         })
     });
 
-    production!(FalseCondition, Condition -> False, |_| {
+    production!(FalseCondition: Condition -> False, |_| {
         println!("false is a condition");
         FromInherited::new(|b_labels: ConditionLabels| {
             b_labels.f.map(Statement::GoTo).into_iter().collect()

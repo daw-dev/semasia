@@ -2,7 +2,7 @@ mod display_tree;
 mod grammar;
 
 use grammar::language;
-use parser::results::LexParseError;
+use semasia_parser::results::LexParseError;
 use ptree::print_tree;
 
 fn main() {
