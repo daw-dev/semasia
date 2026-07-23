@@ -32,20 +32,20 @@ mod arrays {
     #[token("]")]
     pub struct RightSquarePar;
 
-    #[token(regex = r"\d+")]
+    #[regex(r"\d+", parse)]
     pub type Size = usize;
 
-    production!(FinalType, T -> (Base, Computed), |(b, c)| c.resolve(b));
+    production!(FinalType: T -> (Base, Computed), |(b, c)| c.resolve(b));
 
-    production!(ArrayType, Computed -> (LeftSquarePar, Size, RightSquarePar, Computed), |(_, size, _, c)|
+    production!(ArrayType: Computed -> (LeftSquarePar, Size, RightSquarePar, Computed), |(_, size, _, c)|
         c.map(move |val| ComputedType::Array(size, Box::new(val)))
     );
 
-    production!(NoArray, Computed -> (), |_| FromInherited::new(ComputedType::BaseType));
+    production!(NoArray: Computed -> (), |_| FromInherited::new(ComputedType::BaseType));
 
-    production!(BaseIsInt, Base -> Int, |_| "int".to_string());
+    production!(BaseIsInt: Base -> Int, |_| "int".to_string());
 
-    production!(BaseIsFloat, Base -> Float, |_| "int".to_string());
+    production!(BaseIsFloat: Base -> Float, |_| "int".to_string());
 }
 
 #[test]
