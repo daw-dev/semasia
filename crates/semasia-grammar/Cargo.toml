@@ -1,6 +1,6 @@
 [package]
 name = "semasia-grammar"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "grammar attribute for semasia"
 license = "MIT or Apache-2.0"

@@ -14,7 +14,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [dependencies]
-semasia-grammar = { path = "crates/semasia-grammar", version = "0.1.0" }
+semasia-grammar = { path = "crates/semasia-grammar", version = "0.1.1" }
 semasia-production = { path = "crates/semasia-production", version = "0.1.0" }
 semasia-from-inherited = { path = "crates/semasia-from-inherited", version = "0.1.0" }
 semasia-ebnf-proc-macro = { path = "crates/semasia-ebnf-proc-macro", version = "0.1.0" }
