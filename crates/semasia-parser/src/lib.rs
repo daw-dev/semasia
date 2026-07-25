@@ -4,6 +4,7 @@ use crate::results::{
 };
 use logos::Logos;
 use std::{
+    convert::Infallible,
     fmt::{Debug, Display},
     marker::PhantomData,
     ops::Range,
@@ -204,10 +205,7 @@ impl<
         }
     }
 
-    pub fn consume_eof(&mut self) -> Result<StartSymbol, ParseEofError<NonTerminal>>
-    where
-        StartSymbol: From<NonTerminal>,
-    {
+    pub fn consume_eof(&mut self) -> Result<StartSymbol, ParseEofError<NonTerminal>> {
         loop {
             match self.parse_eof() {
                 Ok(ParseEof::Accepted) => {
@@ -229,24 +227,39 @@ impl<
         Ok(non_terminal.into())
     }
 
-    pub fn do_parse(
+    fn shift_reduce<E, Span, OutErr>(
         mut self,
-        tokens: impl IntoIterator<Item = Token>,
-    ) -> ParseResult<Self, NonTerminal, Token, (StartSymbol, Ctx)> {
-        for (span, token) in tokens.into_iter().enumerate() {
-            if let Err(err) = self
-                .consume_token(token)
-                .map_err(|err| ParseTokenError::new(err, span))
-                .map_err(ParseOneError::ParseTokenError)
-            {
-                return Err(ParseError::new(self, err, ()));
+        tokens: impl IntoIterator<Item = (Result<Token, E>, Span)>,
+        make_lex_err: impl Fn(Self, E, Span) -> OutErr,
+        make_parse_err: impl Fn(Self, ParseOneError<NonTerminal, Token, Span>) -> OutErr,
+    ) -> Result<(StartSymbol, Ctx), OutErr> {
+        for (res, span) in tokens {
+            let token = match res {
+                Ok(t) => t,
+                Err(e) => return Err(make_lex_err(self, e, span)),
+            };
+
+            if let Err(err) = self.consume_token(token) {
+                let err = ParseOneError::ParseTokenError(ParseTokenError::new(err, span));
+                return Err(make_parse_err(self, err));
             }
         }
 
         match self.consume_eof().map_err(ParseOneError::ParseEofError) {
-            Err(err) => Err(ParseError::new(self, err, ())),
+            Err(err) => Err(make_parse_err(self, err)),
             Ok(res) => Ok((res, self.ctx)),
         }
+    }
+
+    pub fn do_parse(
+        self,
+        tokens: impl IntoIterator<Item = Token>,
+    ) -> ParseResult<Self, NonTerminal, Token, (StartSymbol, Ctx)> {
+        self.shift_reduce(
+            tokens.into_iter().enumerate().map(|(span, tok)| (Ok::<_, Infallible>(tok), span)),
+            |_, _, _| unreachable!(),
+            |parser, err| ParseError::new(parser, err, ()),
+        )
     }
 
     pub fn parse_with_ctx(
@@ -266,65 +279,18 @@ impl<
     }
 
     pub fn do_lex_parse<'source>(
-        mut self,
+        self,
         source: &'source Token::Source,
     ) -> LexParseResult<'source, Self, NonTerminal, Token, (StartSymbol, Ctx)>
     where
         Token: Logos<'source>,
         Token::Extras: Default,
     {
-        for (token, span) in Token::lexer(source).spanned() {
-            let mut token = match token {
-                Ok(token) => token,
-                Err(err) => {
-                    return Err(LexParseError::LexError(LexError::new(
-                        self, err, span, source,
-                    )));
-                }
-            };
-
-            loop {
-                match self.parse_token(token) {
-                    Ok(ParseToken::Shifted) => {
-                        break;
-                    }
-                    Ok(ParseToken::Reduced { leftover_token }) => {
-                        token = leftover_token;
-                    }
-                    Err(err) => {
-                        return Err(LexParseError::ParseError(ParseError::new(
-                            self,
-                            ParseOneError::ParseTokenError(ParseTokenError::new(err, span)),
-                            source,
-                        )));
-                    }
-                }
-            }
-        }
-
-        loop {
-            match self.parse_eof() {
-                Ok(ParseEof::Accepted) => {
-                    break;
-                }
-                Ok(ParseEof::Reduced) => {
-                    continue;
-                }
-                Err(err) => {
-                    return Err(LexParseError::ParseError(ParseError::new(
-                        self,
-                        ParseOneError::ParseEofError(ParseEofError::new(err)),
-                        source,
-                    )));
-                }
-            }
-        }
-
-        let Symbol::NonTerminal(non_terminal) = self.stacks.symbol_stack.pop().unwrap() else {
-            unreachable!()
-        };
-
-        Ok((non_terminal.into(), self.ctx))
+        self.shift_reduce(
+            Token::lexer(source).spanned(),
+            |parser, err, span| LexParseError::LexError(LexError::new(parser, err, span, source)),
+            |parser, err| LexParseError::ParseError(ParseError::new(parser, err, source)),
+        )
     }
 
     pub fn lex_parse_with_ctx<'source>(
