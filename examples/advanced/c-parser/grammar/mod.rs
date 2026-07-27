@@ -96,7 +96,7 @@ pub mod language {
     pub struct Dot;
 
     #[token(";")]
-    pub struct SemiColumn;
+    pub struct Semicolon;
 
     #[token("(")]
     pub struct OpenPar;
@@ -203,7 +203,7 @@ pub mod language {
 
     // STRUCTS
     ebnf!(StructCreation:
-        StructDefinition -> (Struct, Ident, OpenCurly, Vec<(TypedIdent, SemiColumn)>, CloseCurly, SemiColumn),
+        StructDefinition -> (Struct, Ident, OpenCurly, Vec<(TypedIdent, Semicolon)>, CloseCurly, Semicolon),
         |ctx, (_, ident, _, fields, _, _)| {
             let ty = types::StructType {
                 fields: fields.into_iter().map(|(ty_id, _)| (ty_id.ident, ty_id.ty)).collect()
@@ -270,7 +270,7 @@ pub mod language {
     ebnf!(StatementIsBody: Statement -> (OpenCurly, Vec<Statement>, CloseCurly), |(_, statements, _)| {
         Statement::Braces(statements)
     });
-    production!(Assignment: Statement -> (Expression, Equals, Expression, SemiColumn), |ctx, (ident, _, expr, _)| {
+    production!(Assignment: Statement -> (Expression, Equals, Expression, Semicolon), |ctx, (ident, _, expr, _)| {
         // match ctx.get_type(&ident) {
         //     Some(ty) => {
         //         let expr_type = expr.get_type(ctx);
@@ -282,7 +282,7 @@ pub mod language {
         // }
         Statement::Assignment(ident, expr)
     });
-    ebnf!(DeclarationStatement: Statement -> (TypedIdent, Option<(Equals, Expression)>, SemiColumn),
+    ebnf!(DeclarationStatement: Statement -> (TypedIdent, Option<(Equals, Expression)>, Semicolon),
         |ctx, (TypedIdent { ty, ident }, val_opt, _)| {
             ctx.declare(ident.clone(), ty.clone());
             match val_opt {
@@ -295,7 +295,7 @@ pub mod language {
             }
         }
     );
-    ebnf!(ReturnStatement: Statement -> (Return, Option<Expression>, SemiColumn), |(_, expr, _)| Statement::Return(expr));
+    ebnf!(ReturnStatement: Statement -> (Return, Option<Expression>, Semicolon), |(_, expr, _)| Statement::Return(expr));
     ebnf!(
         IfStatement:
         Statement ->
@@ -317,12 +317,12 @@ pub mod language {
     );
     ebnf!(
         ForStatement:
-        Statement -> (For, OpenPar, Option<Expression>, SemiColumn, Option<Expression>, SemiColumn, Option<Expression>, ClosePar, Statement),
+        Statement -> (For, OpenPar, Option<Expression>, Semicolon, Option<Expression>, Semicolon, Option<Expression>, ClosePar, Statement),
         |(_, _, init, _, condition, _, step, _, stmt)| {
             Statement::ForStatement(init, condition, step, Box::new(stmt))
         }
     );
-    production!(StatementIsExpression: Statement -> (Expression, SemiColumn), |(expr, _)| Statement::Expression(expr));
-    production!(BreakStatement: Statement -> (Break, SemiColumn), |_| Statement::Break);
-    production!(ContinueStatement: Statement -> (Continue, SemiColumn), |_| Statement::Continue);
+    production!(StatementIsExpression: Statement -> (Expression, Semicolon), |(expr, _)| Statement::Expression(expr));
+    production!(BreakStatement: Statement -> (Break, Semicolon), |_| Statement::Break);
+    production!(ContinueStatement: Statement -> (Continue, Semicolon), |_| Statement::Continue);
 }
