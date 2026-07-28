@@ -73,7 +73,7 @@ it can be useful to create a tuple to capture the different values of the body:
 The tool provides two ways to represent inherited attributes and they should be enough to cover most cases where
 your parsing need inheritance.
 
-#### Compilation context
+### Compilation context
 
 Every grammar can have a compilation context, this is useful when dealing with information that is in different parts of
 the parse tree (like scoping). Each `production!` instance has a mutable reference to an instance of the compilation context.
