@@ -1,39 +1,31 @@
 use semasia::grammar;
 
 #[grammar]
+#[logos(skip r"\s")]
 mod abcs {
-    use auto_productions::auto_productions;
-    use semasia::production;
+    use semasia::*;
 
-    #[non_terminal]
-    pub type S = Box<B>;
-
-    #[token("a")]
-    #[derive(Debug)]
-    pub struct A;
-
-    #[token("b")]
-    #[derive(Debug)]
-    pub struct B;
-
-    production!(P: S -> B);
-
-    #[auto_productions]
     #[non_terminal]
     #[start_symbol]
-    #[derive(Debug)]
-    pub enum Test {
-        First(A, #[hide] B, Box<B>),
-        Second(S, A, B),
-    }
+    pub type Expr = usize;
+
+    #[regex(r"\d+", parse)]
+    pub type Num = usize;
+
+    #[token("+")]
+    pub struct Plus;
+
+    production!(Sum: Expr -> (Expr, Plus, Num), |(left, _, right)| left + right);
+
+    production!(Number: Expr -> Num);
 }
 
 use abcs::Parser;
 
 fn main() {
-    let res = Parser::lex_parse("abb");
+    let res = Parser::lex_parse("5 + 3 128");
     match res {
-        Ok(res) => println!("{res:?}"),
-        Err(err) => println!("{err}"),
+        Ok(res) => println!("{res}"),
+        Err(err) => eprintln!("{err}"),
     }
 }

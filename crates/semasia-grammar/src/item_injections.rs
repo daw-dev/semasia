@@ -43,8 +43,8 @@ impl<'a> Analyzed<'a> {
 
     fn uses() -> Vec<Item> {
         let file: syn::File = parse_quote! {
-            use logos::Logos;
-            use semasia_parser::Symbol;
+            use ::semasia::__private::logos::Logos;
+            use ::semasia::__private::semasia_parser::Symbol;
         };
         file.items
     }

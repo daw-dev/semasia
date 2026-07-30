@@ -5,3 +5,9 @@ pub use semasia_from_inherited::*;
 pub use semasia_grammar::*;
 pub use semasia_production::*;
 pub use semasia_auto_productions::*;
+
+#[doc(hidden)]
+pub mod __private {
+    pub use semasia_parser;
+    pub use logos;
+}

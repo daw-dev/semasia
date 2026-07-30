@@ -102,6 +102,23 @@ impl<Inh: 'static, Syn: 'static> FromInherited<Inh, Syn> {
         FromInherited::new(|t: Inh| (self.resolve(t.clone()), other.resolve(t)))
     }
 
+    pub fn inherit_ref_synthesize<F1, F2, ParentInh, ParentSyn>(
+        self,
+        inherit: F1,
+        synthesize: F2,
+    ) -> FromInherited<ParentInh, ParentSyn>
+    where
+        F1: FnOnce(&ParentInh) -> Inh + 'static,
+        F2: FnOnce(ParentInh, Syn) -> ParentSyn + 'static,
+        ParentInh: 'static,
+        ParentSyn: 'static,
+    {
+        FromInherited::new(|inh| {
+            let new_inh = (inherit)(&inh);
+            (synthesize)(inh, self.resolve(new_inh))
+        })
+    }
+
     pub fn resolve(self, value: Inh) -> Syn {
         (self.mapper)(value)
     }
