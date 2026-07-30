@@ -1,6 +1,6 @@
 [package]
 name = "semasia"
-version = "0.1.13"
+version = "0.1.14"
 edition = "2024"
 description = "a compile-time in-place parser generator in rust"
 license = "MIT OR Apache-2.0"
@@ -14,7 +14,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [dependencies]
-semasia-grammar = { path = "crates/semasia-grammar", version = "0.1.6" }
+semasia-grammar = { path = "crates/semasia-grammar", version = "0.1.7" }
 semasia-production = { path = "crates/semasia-production", version = "0.1.0" }
 semasia-from-inherited = { path = "crates/semasia-from-inherited", version = "0.1.1" }
 semasia-ebnf-proc-macro = { path = "crates/semasia-ebnf-proc-macro", version = "0.1.0" }
