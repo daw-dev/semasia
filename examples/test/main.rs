@@ -1,29 +1,22 @@
-use semasia::grammar;
+#[semasia::grammar]
+mod calculator {
+    use semasia::production;
 
-#[grammar]
-#[logos(skip r"\s")]
-mod abcs {
-    use semasia::*;
-
-    #[non_terminal]
     #[start_symbol]
-    pub type Expr = usize;
+    #[non_terminal]
+    pub type Expr = f32;
 
     #[regex(r"\d+", parse)]
-    pub type Num = usize;
-
-    #[token("+")]
-    pub struct Plus;
-
-    production!(Sum: Expr -> (Expr, Plus, Num), |(left, _, right)| left + right);
+    #[regex(r"\d*\.\d+", parse)]
+    pub type Num = f32;
 
     production!(Number: Expr -> Num);
 }
 
-use abcs::Parser;
+use calculator::Parser;
 
 fn main() {
-    let res = Parser::lex_parse("5 + 3 128");
+    let res = Parser::lex_parse("5128");
     match res {
         Ok(res) => println!("{res}"),
         Err(err) => eprintln!("{err}"),

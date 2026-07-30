@@ -43,8 +43,7 @@ impl<'a> Analyzed<'a> {
 
     fn uses() -> Vec<Item> {
         let file: syn::File = parse_quote! {
-            use ::semasia::__private::logos;
-            use ::semasia::__private::semasia_parser;
+            use ::semasia::__private::*;
         };
         file.items
     }
@@ -75,7 +74,8 @@ impl<'a> Analyzed<'a> {
                 T::default()
             }
 
-            #[derive(logos::Logos)]
+            #[derive(Logos)]
+            #[logos(crate = ::semasia::__private::logos)]
             #(#root_attributes)*
             pub enum Token {
                 #(#variants,)*
