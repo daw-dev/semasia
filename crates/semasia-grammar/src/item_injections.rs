@@ -43,8 +43,8 @@ impl<'a> Analyzed<'a> {
 
     fn uses() -> Vec<Item> {
         let file: syn::File = parse_quote! {
-            use ::semasia::__private::logos::Logos;
-            use ::semasia::__private::semasia_parser::Symbol;
+            use ::semasia::__private::logos;
+            use ::semasia::__private::semasia_parser;
         };
         file.items
     }
@@ -75,7 +75,7 @@ impl<'a> Analyzed<'a> {
                 T::default()
             }
 
-            #[derive(Logos)]
+            #[derive(logos::Logos)]
             #(#root_attributes)*
             pub enum Token {
                 #(#variants,)*
@@ -176,14 +176,14 @@ impl<'a> Analyzed<'a> {
                     SymbolicSymbol::Token(enriched_token) => {
                         let type_ident = enriched_token.extras().id();
                         quote! {
-                            let Some(Symbol::Token(Token::#type_ident(#var_name))) = stacks.symbol_stack.pop() else { unreachable!("this is not a token") };
+                            let Some(semasia_parser::Symbol::Token(Token::#type_ident(#var_name))) = stacks.symbol_stack.pop() else { unreachable!("this is not a token") };
                             stacks.state_stack.pop();
                         }
                     }
                     SymbolicSymbol::NonTerminal(enriched_non_terminal) => {
                         let type_ident = enriched_non_terminal.extras().id();
                         quote! {
-                            let Some(Symbol::NonTerminal(NonTerminal::#type_ident(#var_name))) = stacks.symbol_stack.pop() else { unreachable!("this is not a non terminal") };
+                            let Some(semasia_parser::Symbol::NonTerminal(NonTerminal::#type_ident(#var_name))) = stacks.symbol_stack.pop() else { unreachable!("this is not a non terminal") };
                             stacks.state_stack.pop();
                         }
                     }
