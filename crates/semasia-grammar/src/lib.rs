@@ -31,8 +31,6 @@ pub fn grammar(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         abort_if_dirty();
 
-        eprintln!("{}", quote!(#module));
-
         quote! { #module }.into()
     } else if let Ok(File {
         mut items, attrs, ..
