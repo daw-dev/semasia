@@ -74,7 +74,7 @@ impl<'a> Analyzed<'a> {
                 T::default()
             }
 
-            #[derive(Logos)]
+            #[derive(logos::Logos)]
             #[logos(crate = ::semasia::__private::logos)]
             #(#root_attributes)*
             pub enum Token {
