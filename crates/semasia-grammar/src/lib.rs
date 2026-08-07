@@ -16,7 +16,7 @@ pub fn grammar(attr: TokenStream, item: TokenStream) -> TokenStream {
         let ident = &module.ident;
         set_dummy(quote! {
             pub mod #ident {
-                pub type Parser = semasia_parser::dummy::DummyParser;
+                pub type Parser = semasia::parser::dummy::DummyParser;
             }
         });
         let (_, items) = module
