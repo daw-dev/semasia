@@ -1,7 +1,7 @@
-use semasia_dyn_grammar::{EnrichedBaseProduction, grammar::Body};
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
+use semasia_dyn_grammar::{EnrichedBaseProduction, grammar::Body};
 use syn::{Ident, Type, parse::Parse, spanned::Spanned};
 
 #[derive(Debug)]
@@ -161,7 +161,18 @@ impl TryFrom<&mut syn::Item> for AutoProductionsEnum {
             variants: enum_input
                 .variants
                 .iter_mut()
-                .map(TryFrom::try_from)
+                .filter_map(|variant| {
+                    if variant
+                        .attrs
+                        .iter()
+                        .all(|attr| !attr.path().is_ident("skip"))
+                    {
+                        Some(variant.try_into())
+                    } else {
+                        variant.attrs.retain(|attr| !attr.path().is_ident("skip"));
+                        None
+                    }
+                })
                 .process_results(|vars| vars.collect())?,
         })
     }
@@ -183,7 +194,12 @@ impl TryFrom<&syn::Item> for AutoProductionsEnum {
             variants: enum_input
                 .variants
                 .iter()
-                .filter(|variant| variant.attrs.iter().all(|attr| !attr.path().is_ident("skip")))
+                .filter(|variant| {
+                    variant
+                        .attrs
+                        .iter()
+                        .all(|attr| !attr.path().is_ident("skip"))
+                })
                 .map(TryFrom::try_from)
                 .process_results(|vars| vars.collect())?,
         })
