@@ -1,6 +1,6 @@
 [package]
 name = "semasia-auto-productions"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "attribute for auto productions in semasia"
 license = "MIT or Apache-2.0"
@@ -9,7 +9,7 @@ license = "MIT or Apache-2.0"
 proc-macro = true
 
 [dependencies]
-semasia-auto-productions-parser = { path = "../semasia-auto-productions-parser", version = "0.1.0" }
+semasia-auto-productions-parser = { path = "../semasia-auto-productions-parser", version = "0.1.1" }
 proc-macro2 = "1.0.106"
 quote = "1.0.45"
 syn = "2.0.117"

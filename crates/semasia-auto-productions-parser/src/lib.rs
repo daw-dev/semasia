@@ -183,6 +183,7 @@ impl TryFrom<&syn::Item> for AutoProductionsEnum {
             variants: enum_input
                 .variants
                 .iter()
+                .filter(|variant| variant.attrs.iter().all(|attr| !attr.path().is_ident("skip")))
                 .map(TryFrom::try_from)
                 .process_results(|vars| vars.collect())?,
         })

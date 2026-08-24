@@ -1,6 +1,6 @@
 [package]
 name = "semasia-auto-productions-parser"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "parser for the auto production attribute in semasia"
 license = "MIT or Apache-2.0"
