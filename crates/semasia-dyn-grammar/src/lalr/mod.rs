@@ -399,7 +399,7 @@ impl<'a> LalrAutomaton<'a> {
                         let old_reduce = &self.grammar().productions()[reduce];
                         let new_reduce = &self.grammar().productions()[production_id];
                         match old_reduce.extras().1.cmp(&new_reduce.extras().1) {
-                            Ordering::Less => {
+                            Ordering::Greater => {
                                 action = TokenAction::Reduce(reduce);
                             }
                             Ordering::Equal => {
@@ -408,7 +408,7 @@ impl<'a> LalrAutomaton<'a> {
                                     note = old_reduce.extras().0.span() => "put #[priority(<value>)]"
                                 );
                             }
-                            Ordering::Greater => {}
+                            Ordering::Less => {}
                         }
                     }
                     *entry = Some(action);
@@ -425,7 +425,7 @@ impl<'a> LalrAutomaton<'a> {
                         let old_reduce = &self.grammar().productions()[reduce];
                         let new_reduce = &self.grammar().productions()[production_id];
                         match old_reduce.extras().1.cmp(&new_reduce.extras().1) {
-                            Ordering::Less => {
+                            Ordering::Greater => {
                                 action = EofAction::Reduce(reduce);
                             }
                             Ordering::Equal => {
@@ -434,7 +434,7 @@ impl<'a> LalrAutomaton<'a> {
                                     note = old_reduce.extras().0.span() => "put #[priority(<value>)]"
                                 );
                             }
-                            Ordering::Greater => {}
+                            Ordering::Less => {}
                         }
                     }
                     *entry = Some(action);
